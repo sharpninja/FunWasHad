@@ -51,21 +51,6 @@ public class ChatService
         var chat = _chatViewModel.ChatList;
         chat.Reset();
 
-        chat.AddEntry(new TextChatEntry(FWH.Common.Chat.ViewModels.ChatAuthors.Bot, "Welcome to the chat! How can I assist you today?"));
-
-        var choices = new ChoiceChatEntry(FWH.Common.Chat.ViewModels.ChatAuthors.Bot,
-            new ChoicePayload(new[]
-            {
-                new FWH.Common.Chat.ViewModels.ChoicesItem(0, "Fun Was Had! 😁", true),
-                new FWH.Common.Chat.ViewModels.ChoicesItem(1, "It was not fun. 😕", false),
-            })
-            {
-                Prompt = "Did you have fun?",
-                Title = "#FunWasHad"
-            });
-
-        chat.AddEntry(choices);
-
         await Task.CompletedTask;
     }
 
