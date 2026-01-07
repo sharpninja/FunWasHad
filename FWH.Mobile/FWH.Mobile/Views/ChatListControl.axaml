@@ -1,0 +1,95 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:FWH.Common.Chat.ViewModels;assembly=FWH.Common.Chat"
+             xmlns:conv="clr-namespace:FWH.Mobile.ViewModels;assembly=FWH.Mobile"
+             mc:Ignorable="d" 
+             d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="FWH.Mobile.ChatListControl"
+             x:DataType="local:ChatListViewModel">
+
+    <!-- Optional: Resources for converters (recommended for alignment & colors) -->
+    <UserControl.Resources>
+        <conv:AuthorToAlignmentConverter x:Key="AuthorToAlignment"/>
+        <conv:AuthorToBrushConverter x:Key="AuthorToBackground"/>
+    </UserControl.Resources>
+
+    <Design.DataContext>
+        <!-- Design-time removed to avoid needing parameterless ctor -->
+        <x:Null />
+    </Design.DataContext>
+
+    <ItemsControl ItemsSource="{Binding Entries, Mode=OneWay}"
+             Background="Transparent"
+             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+             ScrollViewer.VerticalScrollBarVisibility="Auto"
+             Margin="8">
+
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <StackPanel Spacing="12"/>
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+
+        <ItemsControl.DataTemplates>
+
+            <!-- Text Message -->
+            <DataTemplate DataType="{x:Type local:TextChatEntry}">
+                <Border Background="{Binding Author,
+                Converter={StaticResource AuthorToBackground}}"
+                        CornerRadius="15"
+                        Padding="12"
+                        HorizontalAlignment="Right"                        
+                        BoxShadow="0 2 8 0 #44000000">  <!-- Optional subtle shadow -->
+                    <TextBlock Text="{Binding Text}"
+                               TextWrapping="Wrap"
+                               Foreground="White"
+                               FontSize="15"
+                               TextAlignment="{Binding Author, Converter={StaticResource AuthorToAlignment}}"
+                               />
+                </Border>
+            </DataTemplate>
+
+            <!-- Image Message -->
+            <DataTemplate DataType="{x:Type local:ImageChatEntry}">
+                <Border Background="{Binding Author, Converter={StaticResource AuthorToBackground}}"
+                        CornerRadius="15"
+                        Padding="4"
+                        MaxWidth="400"
+                        BoxShadow="0 2 8 0 #44000000">
+                    <Image Source="{Binding Image}"
+                           Stretch="UniformToFill"
+                           />
+                </Border>
+            </DataTemplate>
+
+            <!-- Choice Message (Bot asks, User selects) -->
+            <DataTemplate DataType="{x:Type local:ChoiceChatEntry}">
+                <StackPanel MaxWidth="500"
+                            Spacing="8">
+                    
+                    <!-- Optional prompt/title -->
+                    <TextBlock Text="{Binding Prompt}"
+                               FontWeight="SemiBold"
+                               Foreground="#FF333333"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding Prompt, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                    <!-- Show selected choice after user picks -->
+                    <Border Background="{Binding Author, Converter={StaticResource AuthorToBackground}}"
+                            CornerRadius="15"
+                            Padding="12"
+                            IsVisible="{Binding SelectedChoice, Converter={x:Static ObjectConverters.IsNotNull}}"
+                            BoxShadow="0 2 8 0 #44000000">
+                        <TextBlock Text="{Binding SelectedChoice.ChoiceText}"
+                                   Foreground="White"
+                                   FontWeight="Medium"/>
+                    </Border>
+
+                </StackPanel>
+            </DataTemplate>
+
+        </ItemsControl.DataTemplates>
+    </ItemsControl>
+</UserControl>

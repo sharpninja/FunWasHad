@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:FWH.Common.Chat.ViewModels;assembly=FWH.Common.Chat"
+             xmlns:conv="clr-namespace:FWH.Mobile.ViewModels;assembly=FWH.Mobile"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="FWH.Mobile.ChatInputControl"
+             x:DataType="local:ChatInputViewModel">
+    <UserControl.Resources>
+        <conv:ChatInputModeToTextVisibility x:Key="TextVisibility"/>
+        <conv:ChatInputModeToChoiceVisibility x:Key="ChoiceVisibility"/>
+    </UserControl.Resources>
+    <Design.DataContext>
+        <!-- Design-time removed to avoid needing parameterless ctor -->
+        <x:Null />
+    </Design.DataContext>
+    <Panel Margin="0">
+        <Grid IsVisible="{Binding InputMode, Mode=OneWay, Converter={StaticResource TextVisibility}}"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch" ColumnSpacing="8"
+              Margin="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="1"
+                    Content="Send"
+                    Command="{Binding SendCommand}"/>
+            <TextBox Grid.Column="0" AcceptsReturn="True" TextWrapping="Wrap"
+                     Text="{Binding Text, Mode=TwoWay}"
+                     HorizontalAlignment="Stretch"
+                     VerticalAlignment="Stretch"/>
+        </Grid>
+        <Grid IsVisible="{Binding InputMode, Converter={StaticResource ChoiceVisibility}}"
+              HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch" RowSpacing="8"
+              Margin="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock Grid.Row="0"
+                       Text="{Binding Choices.Prompt}"
+                       TextWrapping="Wrap"
+                       TextAlignment="Right"/>
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding Choices.Choices}" HorizontalAlignment="Right">                
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="local:ChoicesItem">
+                        <Button Content="{Binding ChoiceText}"
+                                Command="{Binding SelectChoiceCommand}"
+                                CommandParameter="{Binding}"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+    </Panel>
+</UserControl>

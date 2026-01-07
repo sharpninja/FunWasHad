@@ -1,0 +1,26 @@
+@startuml
+title Fun Was Had Workflow
+
+start;
+
+:Ask for Current Address;
+note right: Collect user's current location
+
+:Receive Address Response;
+
+if (Was fun had?) then (#FunWasHad)
+  :Record Fun Experience;
+  note right: User confirmed fun was had! 😁
+else (Was not fun)
+  :Record Not Fun Experience;
+  note right: User reported no fun 😕
+endif;
+
+stop;
+
+@enduml
+
+' Example JSON action node (for documentation)
+'
+' node: Action1
+' Note: {"action": "SendMessage", "params": {"text": "Hello, {{userName}}"}}
