@@ -1,11 +1,12 @@
 using Microsoft.Extensions.DependencyInjection;
-using FWH.Common.Workflow.Storage;
+using FWH.Common.Workflow.Actions;
+using FWH.Common.Workflow.Controllers;
 using FWH.Common.Workflow.Instance;
 using FWH.Common.Workflow.Mapping;
 using FWH.Common.Workflow.State;
-using FWH.Common.Workflow.Controllers;
+using FWH.Common.Workflow.Storage;
 using FWH.Common.Workflow.Views;
-using FWH.Common.Workflow.Actions;
+using FWH.Common.Workflow.Logging;
 using System.Collections.Generic;
 using Microsoft.Extensions.Options;
 
@@ -25,6 +26,9 @@ public static class WorkflowServiceCollectionExtensions
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddWorkflowServices(this IServiceCollection services, WorkflowActionExecutorOptions? executorOptions = null)
     {
+        // Logging infrastructure
+        services.AddSingleton<ICorrelationIdService, CorrelationIdService>();
+
         // Core workflow components (SRP-compliant with Controller pattern)
         services.AddSingleton<IWorkflowDefinitionStore, InMemoryWorkflowDefinitionStore>();
         services.AddSingleton<IWorkflowInstanceManager, InMemoryWorkflowInstanceManager>();

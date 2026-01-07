@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace FWH.Common.Workflow.Instance;
 
 /// <summary>
-/// In-memory implementation of workflow instance state management.
-/// Single Responsibility: Track current node for workflow instances in memory.
+/// Thread-safe in-memory implementation of workflow instance state management.
+/// Single Responsibility: Track current node and variables for workflow instances in memory.
 /// </summary>
 public class InMemoryWorkflowInstanceManager : IWorkflowInstanceManager
 {
@@ -35,13 +36,12 @@ public class InMemoryWorkflowInstanceManager : IWorkflowInstanceManager
     public IDictionary<string,string>? GetVariables(string workflowId)
     {
         if (string.IsNullOrWhiteSpace(workflowId)) return null;
-        if (!_vars.TryGetValue(workflowId, out var m))
-        {
-            m = new ConcurrentDictionary<string,string>(StringComparer.OrdinalIgnoreCase);
-            _vars[workflowId] = m;
-        }
+        
+        // Use GetOrAdd to atomically get or create the dictionary
+        var variables = _vars.GetOrAdd(workflowId, _ => 
+            new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 
-        return m;
+        return variables;
     }
 
     public void SetVariable(string workflowId, string key, string value)
@@ -49,7 +49,10 @@ public class InMemoryWorkflowInstanceManager : IWorkflowInstanceManager
         if (string.IsNullOrWhiteSpace(workflowId)) return;
         if (string.IsNullOrWhiteSpace(key)) return;
 
-        var m = GetVariables(workflowId)!;
-        m[key] = value;
+        // Use GetOrAdd to atomically get or create the dictionary
+        var variables = _vars.GetOrAdd(workflowId, _ => 
+            new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
+        
+        variables[key] = value;
     }
 }

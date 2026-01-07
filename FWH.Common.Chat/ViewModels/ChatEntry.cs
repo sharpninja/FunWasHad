@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace FWH.Common.Chat.ViewModels;
@@ -24,6 +25,7 @@ public class ImageChatEntry : ChatEntry<ImagePayload>
     public ImageChatEntry(ChatAuthors author, ImagePayload payload)
         : base(author, payload)
     {
+        ArgumentNullException.ThrowIfNull(payload);
     }
     public string? Image => Payload.Image; // neutral
     public bool ShowBorder => Payload.ShowBorder;
@@ -32,7 +34,7 @@ public class ImageChatEntry : ChatEntry<ImagePayload>
 public class ChoiceChatEntry : ChatEntry<ChoicePayload>
 {
     public ChoiceChatEntry(ChatAuthors author, ChoicePayload payload)
-        : base(author, payload)
+        : base(author, payload ?? throw new ArgumentNullException(nameof(payload)))
     {
     }
 

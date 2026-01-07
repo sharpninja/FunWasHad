@@ -37,6 +37,9 @@ public class OverpassLocationService : ILocationService
         IEnumerable<string>? categories = null,
         CancellationToken cancellationToken = default)
     {
+        // Validate coordinates
+        ValidateCoordinates(latitude, longitude);
+        
         try
         {
             // Validate and clamp radius
@@ -71,6 +74,7 @@ public class OverpassLocationService : ILocationService
 
             var businesses = result.Elements
                 .Where(e => e.Tags != null && !string.IsNullOrEmpty(e.Tags.GetValueOrDefault("name")))
+                .Where(e => (e.Lat.HasValue || e.Center?.Lat != null) && (e.Lon.HasValue || e.Center?.Lon != null)) // Filter out entries missing coordinates
                 .Select(e => ConvertToBusinessLocation(e, latitude, longitude))
                 .OrderBy(b => b.DistanceMeters)
                 .ToList();
@@ -93,6 +97,9 @@ public class OverpassLocationService : ILocationService
         int maxDistanceMeters = 1000,
         CancellationToken cancellationToken = default)
     {
+        // Validate coordinates
+        ValidateCoordinates(latitude, longitude);
+        
         var businesses = await GetNearbyBusinessesAsync(
             latitude,
             longitude,
@@ -101,6 +108,25 @@ public class OverpassLocationService : ILocationService
             cancellationToken);
 
         return businesses.FirstOrDefault();
+    }
+
+    private static void ValidateCoordinates(double latitude, double longitude)
+    {
+        if (latitude < -90 || latitude > 90)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(latitude),
+                latitude,
+                "Latitude must be between -90 and 90 degrees");
+        }
+
+        if (longitude < -180 || longitude > 180)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(longitude),
+                longitude,
+                "Longitude must be between -180 and 180 degrees");
+        }
     }
 
     private static string BuildOverpassQuery(

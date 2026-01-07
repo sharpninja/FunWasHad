@@ -100,7 +100,26 @@ public class ChatService
 
         using var scope = _logger.BeginScope(scopeDict);
 
-        var payload = await _workflowService.GetCurrentStatePayloadAsync(workflowId);
+        WorkflowStatePayload payload;
+        try
+        {
+            payload = await _workflowService.GetCurrentStatePayloadAsync(workflowId);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Unknown workflow"))
+        {
+            _logger.LogWarning(ex, "Workflow {WorkflowId} not found", workflowId);
+            // Add error message to chat instead of crashing
+            _chatViewModel.ChatList.AddEntry(new TextChatEntry(
+                FWH.Common.Chat.ViewModels.ChatAuthors.Bot,
+                $"Sorry, I couldn't find that workflow."));
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting workflow state for {WorkflowId}", workflowId);
+            return;
+        }
+
         var entry = _converter.ConvertToEntry(payload, workflowId);
 
         _logger.LogDebug("RenderWorkflowStateAsync - Built entry for WorkflowId={WorkflowId} IsChoice={IsChoice}", workflowId, payload.IsChoice);

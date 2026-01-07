@@ -1,74 +1,81 @@
 using Microsoft.Extensions.DependencyInjection;
-using FWH.Common.Location.Services;
+using Microsoft.Extensions.Options;
 using FWH.Common.Location.Configuration;
+using FWH.Common.Location.Services;
+using System;
 
 namespace FWH.Common.Location.Extensions;
 
-/// <summary>
-/// Extension methods for registering location services with dependency injection.
-/// Single Responsibility: Configure DI for location components.
-/// </summary>
 public static class LocationServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds location services using OpenStreetMap's Overpass API with configuration from database.
-    /// This is a free service with no API key required.
-    /// Configuration is persisted to SQLite and loaded at startup.
-    /// Default radius: 30 meters.
+    /// Adds location services with database-backed configuration.
     /// </summary>
-    /// <param name="services">The service collection to add services to.</param>
-    /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddLocationServices(this IServiceCollection services)
     {
+        // Register HttpClient for Overpass API
+        services.AddHttpClient<OverpassLocationService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "FunWasHad/1.0");
+        });
+
         // Register configuration service
         services.AddSingleton<LocationConfigurationService>();
 
-        // Configure options from database
+        // Register options
         services.AddOptions<LocationServiceOptions>()
-            .Configure<LocationConfigurationService>(async (options, configService) =>
+            .Configure<LocationConfigurationService>((options, configService) =>
             {
-                var loadedOptions = await configService.LoadOptionsAsync();
-                options.DefaultRadiusMeters = loadedOptions.DefaultRadiusMeters;
-                options.MaxRadiusMeters = loadedOptions.MaxRadiusMeters;
-                options.MinRadiusMeters = loadedOptions.MinRadiusMeters;
-                options.TimeoutSeconds = loadedOptions.TimeoutSeconds;
-                options.UserAgent = loadedOptions.UserAgent;
-                options.OverpassApiUrl = loadedOptions.OverpassApiUrl;
+                var config = configService.LoadOptionsAsync().GetAwaiter().GetResult();
+                options.DefaultRadiusMeters = config.DefaultRadiusMeters;
+                options.MaxRadiusMeters = config.MaxRadiusMeters;
+                options.MinRadiusMeters = config.MinRadiusMeters;
+                options.TimeoutSeconds = config.TimeoutSeconds;
+                options.UserAgent = config.UserAgent;
+                options.OverpassApiUrl = config.OverpassApiUrl;
             });
 
-        // Register HttpClient with factory
-        services.AddHttpClient<ILocationService, OverpassLocationService>((serviceProvider, client) =>
+        // Register the base service
+        services.AddSingleton<OverpassLocationService>();
+        
+        // Register rate-limited decorator as the main ILocationService
+        services.AddSingleton<ILocationService>(sp =>
         {
-            // Note: Options will be loaded from database via the configuration above
-            var options = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<LocationServiceOptions>>().Value;
-            
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-            client.DefaultRequestHeaders.Add("User-Agent", options.UserAgent);
+            var innerService = sp.GetRequiredService<OverpassLocationService>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<RateLimitedLocationService>>();
+            return new RateLimitedLocationService(innerService, logger, maxRequestsPerMinute: 10);
         });
 
         return services;
     }
 
     /// <summary>
-    /// Adds location services with custom in-memory configuration (for testing or override).
+    /// Adds location services with in-memory configuration (for testing).
     /// </summary>
-    /// <param name="services">The service collection to add services to.</param>
-    /// <param name="configureOptions">Action to configure the location service options.</param>
-    /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddLocationServicesWithInMemoryConfig(
         this IServiceCollection services,
         Action<LocationServiceOptions> configureOptions)
     {
-        // Configure options in memory (not persisted)
+        // Register HttpClient
+        services.AddHttpClient<OverpassLocationService>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "FunWasHad/1.0");
+        });
+
+        // Configure options
         services.Configure(configureOptions);
 
-        // Register HttpClient with factory
-        services.AddHttpClient<ILocationService, OverpassLocationService>((serviceProvider, client) =>
+        // Register the base service
+        services.AddSingleton<OverpassLocationService>();
+        
+        // Register rate-limited decorator
+        services.AddSingleton<ILocationService>(sp =>
         {
-            var options = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<LocationServiceOptions>>().Value;
-            
-            client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
-            client.DefaultRequestHeaders.Add("User-Agent", options.UserAgent);
+            var innerService = sp.GetRequiredService<OverpassLocationService>();
+            var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<RateLimitedLocationService>>();
+            return new RateLimitedLocationService(innerService, logger, maxRequestsPerMinute: 10);
         });
 
         return services;

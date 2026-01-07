@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FWH.Common.Workflow.Models;
 using Microsoft.Extensions.Logging;
+using FWH.Common.Workflow.Controllers;
+using FWH.Common.Workflow.Logging;
+using System.Diagnostics;
 
 namespace FWH.Common.Workflow;
 
@@ -19,38 +22,176 @@ public class WorkflowService : IWorkflowService
 {
     private readonly IWorkflowController _controller;
     private readonly ILogger<WorkflowService> _logger;
+    private readonly ICorrelationIdService _correlationIdService;
 
     public WorkflowService(
-        IWorkflowController controller,
-        ILogger<WorkflowService>? logger = null)
+        IWorkflowController controller, 
+        ILogger<WorkflowService> logger,
+        ICorrelationIdService? correlationIdService = null)
     {
-        _controller = controller ?? throw new ArgumentNullException(nameof(controller));
-        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<WorkflowService>.Instance;
+        _controller = controller;
+        _logger = logger;
+        _correlationIdService = correlationIdService ?? new CorrelationIdService();
     }
 
     public async Task<WorkflowDefinition> ImportWorkflowAsync(string plantUmlText, string? id = null, string? name = null)
     {
-        return await _controller.ImportWorkflowAsync(plantUmlText, id, name);
+        var sw = Stopwatch.StartNew();
+        var correlationId = _correlationIdService.GenerateCorrelationId();
+        
+        using var scope = _logger.BeginCorrelatedScope(
+            _correlationIdService, 
+            "ImportWorkflow",
+            new Dictionary<string, object>
+            {
+                ["WorkflowId"] = id ?? "auto-generated",
+                ["Name"] = name ?? "unnamed"
+            });
+
+        try
+        {
+            _logger.LogOperationStart(_correlationIdService, "ImportWorkflow", new Dictionary<string, object>
+            {
+                ["WorkflowId"] = id ?? "auto-generated"
+            });
+
+            var result = await _controller.ImportWorkflowAsync(plantUmlText, id, name);
+            
+            sw.Stop();
+            _logger.LogOperationComplete(_correlationIdService, "ImportWorkflow", sw.Elapsed, new Dictionary<string, object>
+            {
+                ["WorkflowId"] = result.Id,
+                ["NodeCount"] = result.Nodes.Count,
+                ["TransitionCount"] = result.Transitions.Count
+            });
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            _logger.LogOperationFailure(_correlationIdService, "ImportWorkflow", ex, sw.Elapsed, new Dictionary<string, object>
+            {
+                ["WorkflowId"] = id ?? "auto-generated"
+            });
+            throw;
+        }
     }
 
     public async Task StartInstanceAsync(string workflowId)
     {
-        await _controller.StartInstanceAsync(workflowId);
+        using var scope = _logger.BeginCorrelatedScope(
+            _correlationIdService,
+            "StartInstance",
+            new Dictionary<string, object> { ["WorkflowId"] = workflowId });
+
+        try
+        {
+            await _controller.StartInstanceAsync(workflowId);
+            _logger.LogInformation("Started instance for workflow {WorkflowId}", workflowId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start instance for workflow {WorkflowId}", workflowId);
+            throw;
+        }
     }
 
     public async Task RestartInstanceAsync(string workflowId)
     {
-        await _controller.RestartInstanceAsync(workflowId);
+        using var scope = _logger.BeginCorrelatedScope(
+            _correlationIdService,
+            "RestartInstance",
+            new Dictionary<string, object> { ["WorkflowId"] = workflowId });
+
+        try
+        {
+            await _controller.RestartInstanceAsync(workflowId);
+            _logger.LogInformation("Restarted instance for workflow {WorkflowId}", workflowId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to restart instance for workflow {WorkflowId}", workflowId);
+            throw;
+        }
     }
 
-    public Task<WorkflowStatePayload> GetCurrentStatePayloadAsync(string workflowId)
+    public async Task<WorkflowStatePayload> GetCurrentStatePayloadAsync(string workflowId)
     {
-        return _controller.GetCurrentStatePayloadAsync(workflowId);
+        var sw = Stopwatch.StartNew();
+        
+        using var scope = _logger.BeginCorrelatedScope(
+            _correlationIdService,
+            "GetCurrentState",
+            new Dictionary<string, object> { ["WorkflowId"] = workflowId });
+
+        try
+        {
+            var result = await _controller.GetCurrentStatePayloadAsync(workflowId);
+            
+            sw.Stop();
+            _logger.LogOperationComplete(_correlationIdService, "GetCurrentState", sw.Elapsed, new Dictionary<string, object>
+            {
+                ["WorkflowId"] = workflowId,
+                ["IsChoice"] = result.IsChoice,
+                ["ChoiceCount"] = result.Choices?.Count ?? 0
+            });
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            _logger.LogOperationFailure(_correlationIdService, "GetCurrentState", ex, sw.Elapsed, new Dictionary<string, object>
+            {
+                ["WorkflowId"] = workflowId
+            });
+            throw;
+        }
     }
 
     public async Task<bool> AdvanceByChoiceValueAsync(string workflowId, object? choiceValue)
     {
-        return await _controller.AdvanceByChoiceValueAsync(workflowId, choiceValue);
+        var sw = Stopwatch.StartNew();
+        
+        using var scope = _logger.BeginCorrelatedScope(
+            _correlationIdService,
+            "AdvanceByChoice",
+            new Dictionary<string, object>
+            {
+                ["WorkflowId"] = workflowId,
+                ["ChoiceValue"] = choiceValue?.ToString() ?? "null"
+            });
+
+        try
+        {
+            _logger.LogOperationStart(_correlationIdService, "AdvanceByChoice", new Dictionary<string, object>
+            {
+                ["WorkflowId"] = workflowId,
+                ["ChoiceValue"] = choiceValue?.ToString() ?? "null"
+            });
+
+            var result = await _controller.AdvanceByChoiceValueAsync(workflowId, choiceValue);
+            
+            sw.Stop();
+            _logger.LogOperationComplete(_correlationIdService, "AdvanceByChoice", sw.Elapsed, new Dictionary<string, object>
+            {
+                ["WorkflowId"] = workflowId,
+                ["Success"] = result
+            });
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            _logger.LogOperationFailure(_correlationIdService, "AdvanceByChoice", ex, sw.Elapsed, new Dictionary<string, object>
+            {
+                ["WorkflowId"] = workflowId,
+                ["ChoiceValue"] = choiceValue?.ToString() ?? "null"
+            });
+            throw;
+        }
     }
 
     // Backwards-compatible sync wrappers

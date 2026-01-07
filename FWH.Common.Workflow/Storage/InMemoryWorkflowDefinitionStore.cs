@@ -1,16 +1,16 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using FWH.Common.Workflow.Models;
 
 namespace FWH.Common.Workflow.Storage;
 
 /// <summary>
-/// In-memory implementation of workflow definition storage.
-/// Single Responsibility: Store workflow definitions in memory.
+/// Thread-safe in-memory implementation of workflow definition storage.
+/// Single Responsibility: Store workflow definitions in memory with concurrent access support.
 /// </summary>
 public class InMemoryWorkflowDefinitionStore : IWorkflowDefinitionStore
 {
-    private readonly Dictionary<string, WorkflowDefinition> _definitions = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, WorkflowDefinition> _definitions = new(StringComparer.Ordinal);
 
     public void Store(WorkflowDefinition definition)
     {

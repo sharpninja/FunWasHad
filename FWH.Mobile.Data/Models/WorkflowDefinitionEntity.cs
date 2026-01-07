@@ -20,4 +20,11 @@ public class WorkflowDefinitionEntity
 
     // Persist the current node id for an in-memory instance so instances survive restarts
     public string? CurrentNodeId { get; set; }
+
+    /// <summary>
+    /// Row version for optimistic concurrency control.
+    /// Automatically updated by EF Core on each save.
+    /// </summary>
+    [Timestamp]
+    public byte[]? RowVersion { get; set; }
 }
