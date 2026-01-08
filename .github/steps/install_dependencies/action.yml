@@ -1,5 +1,5 @@
 name: Install Dependencies
-description: ""
+description: "Install dependencies for FunWasHad projects"
 
 inputs:
   target-platform:
@@ -9,18 +9,18 @@ inputs:
   dotnet-version:
     description: 'Installs and sets the .NET SDK Version'
     required: false
-    default: '8.0.x'
+    default: '9.0.x'
   sdkVersion:
-    description: 'The version of the Windows Sdk'
+    description: 'The version of the Windows SDK'
     required: false
-    default: '19041'
+    default: '22621'
 
 runs:
   using: "composite"
   steps:
     # Install .NET
     - name: Setup .NET ${{ inputs.dotnet-version }}
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '${{ inputs.dotnet-version }}'
 

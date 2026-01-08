@@ -53,6 +53,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Imaging.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Location.Api", "FWH.Location.Api\FWH.Location.Api.csproj", "{5CB9DA78-6FA7-459A-8257-44F92F7F69ED}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Actions", "Actions", "{558EBDB4-8E40-4FBD-9ECA-6CB3BB381FCA}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\ci.yml = .github\workflows\ci.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -277,6 +282,7 @@ Global
 		{29DF57B8-0307-497A-8C7E-5F6E454BE097} = {63C74E0C-5DB8-4F91-BC40-105763C20BF5}
 		{5133E664-4893-48F8-A59B-F106746AD773} = {60823260-0CD0-4E4B-A88A-3D4833FCDEC1}
 		{5CB9DA78-6FA7-459A-8257-44F92F7F69ED} = {63C74E0C-5DB8-4F91-BC40-105763C20BF5}
+		{558EBDB4-8E40-4FBD-9ECA-6CB3BB381FCA} = {0DB01721-0B4D-4A42-B14D-D60C8E986277}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F48C7825-9775-49F4-8E82-09DE11C54162}
