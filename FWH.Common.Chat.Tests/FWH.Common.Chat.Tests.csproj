@@ -17,4 +17,8 @@
     <ProjectReference Include="..\FWH.Common.Chat\FWH.Common.Chat.csproj" />
     <ProjectReference Include="..\FWH.Common.Location\FWH.Common.Location.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Imaging\" />
+  </ItemGroup>
 </Project>

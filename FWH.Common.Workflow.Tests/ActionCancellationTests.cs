@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FWH.Common.Workflow.Actions;
+using FWH.Common.Workflow.Instance;
 using System.Collections.Generic;
 
 namespace FWH.Common.Workflow.Tests;
@@ -14,6 +15,7 @@ public class ActionCancellationTests
     {
         var services = new ServiceCollection();
         services.AddSingleton<IWorkflowActionHandlerRegistry, WorkflowActionHandlerRegistry>();
+        services.AddSingleton<IWorkflowInstanceManager, InMemoryWorkflowInstanceManager>();
 
         // create handler that honors cancellation
         var handler = new WorkflowActionHandlerAdapter("LongRunning", async (ctx, p, ct) =>

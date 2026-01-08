@@ -11,7 +11,7 @@ public partial class ChatListControl : UserControl
 {
     public ChatListControl()
     {
-        DataContext = App.ServiceProvider.GetRequiredService<FWH.Common.Chat.ViewModels.ChatListViewModel>();
         InitializeComponent();
+        DataContext = App.ServiceProvider.GetRequiredService<FWH.Common.Chat.ViewModels.ChatListViewModel>();
     }
 }

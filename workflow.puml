@@ -3,10 +3,8 @@ title Fun Was Had Workflow
 
 start;
 
-:Ask for Current Address;
-note right: Collect user's current location
-
-:Receive Address Response;
+:camera;
+note right: Take a photo of where you are
 
 if (Was fun had?) then (#FunWasHad)
   :Record Fun Experience;

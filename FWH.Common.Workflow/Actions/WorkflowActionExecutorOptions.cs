@@ -11,4 +11,10 @@ public class WorkflowActionExecutorOptions
     /// When true the executor will log handler execution time.
     /// </summary>
     public bool LogExecutionTime { get; set; } = true;
+
+    /// <summary>
+    /// When true handlers will be executed in background (fire-and-forget) and executor returns immediately.
+    /// Default false preserves previous synchronous behavior expected by tests.
+    /// </summary>
+    public bool ExecuteHandlersInBackground { get; set; } = false;
 }

@@ -9,7 +9,7 @@ namespace FWH.Common.Chat.ViewModels;
 public partial class ChatInputViewModel : ViewModelBase
 {
     [ObservableProperty]
-    public bool isVisible = true;
+    private bool isVisible = true;
 
     private ChatInputModes _inputMode = ChatInputModes.Text;
     public ChatInputModes InputMode
@@ -19,10 +19,13 @@ public partial class ChatInputViewModel : ViewModelBase
     }
 
     [ObservableProperty]
-    public string? text = string.Empty;
+    private string? text = string.Empty;
 
     [ObservableProperty]
-    public ChoicePayload? choices;
+    private ChoicePayload? choices;
+
+    [ObservableProperty]
+    private ImagePayload? currentImage;
 
     public ChatInputViewModel(ChatListViewModel listViewModel)
     {
@@ -43,6 +46,18 @@ public partial class ChatInputViewModel : ViewModelBase
                                 SetChoices(choicePayload);
                             }
                             break;
+                        case PayloadTypes.Image:
+                            var imgPayload = current.Payload as ImagePayload;
+                            if (imgPayload != null && imgPayload.Image == null)
+                            {
+                                // Camera node - show camera capture UI
+                                SetImageMode(imgPayload);
+                            }
+                            else
+                            {
+                                ClearInput();
+                            }
+                            break;
                         default:
                             ClearInput();
                             break;
@@ -56,12 +71,14 @@ public partial class ChatInputViewModel : ViewModelBase
     {
         Text = string.Empty;
         Choices = null;
+        this.currentImage = null;
         InputMode = ChatInputModes.Text;
     }
 
     public void SetChoices(ChoicePayload choicePayload)
     {
         Choices = choicePayload;
+        this.currentImage = null;
         InputMode = ChatInputModes.Choice;
 
         foreach (var choice in choicePayload.Choices)
@@ -76,6 +93,14 @@ public partial class ChatInputViewModel : ViewModelBase
         }
     }
 
+    public void SetImageMode(ImagePayload imagePayload)
+    {
+        this.currentImage = imagePayload;
+        Choices = null;
+        Text = string.Empty;
+        InputMode = ChatInputModes.Image;
+    }
+
     [RelayCommand]
     private void Send()
     {
@@ -88,6 +113,20 @@ public partial class ChatInputViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private async Task OpenCameraAsync()
+    {
+        CameraRequested?.Invoke(this, EventArgs.Empty);
+        await Task.CompletedTask;
+    }
+
+    public void RaiseImageCaptured(byte[] imageBytes)
+    {
+        ImageCaptured?.Invoke(this, imageBytes);
+    }
+
     public event EventHandler<string>? TextSubmitted;
     public event EventHandler<ChoicesItem?>? ChoiceSubmitted;
+    public event EventHandler? CameraRequested;
+    public event EventHandler<byte[]>? ImageCaptured;
 }

@@ -1,7 +1,10 @@
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using FWH.Common.Chat.ViewModels;
 using FWH.Common.Chat.Conversion;
 using FWH.Common.Chat.Duplicate;
+using FWH.Common.Chat.Services;
+using FWH.Common.Imaging.Extensions;
 
 namespace FWH.Common.Chat.Extensions;
 
@@ -23,6 +26,19 @@ public static class ChatServiceCollectionExtensions
         services.AddSingleton<IWorkflowToChatConverter, WorkflowToChatConverter>();
         services.AddSingleton<IChatDuplicateDetector, ChatDuplicateDetector>();
         services.AddSingleton<ChatService>();
+        
+        // Platform detection
+        services.AddSingleton<IPlatformService, PlatformService>();
+        
+        // Camera service factory
+        services.AddSingleton<CameraServiceFactory>();
+        
+        // Register camera service using factory
+        services.AddSingleton<ICameraService>(sp =>
+        {
+            var factory = sp.GetRequiredService<CameraServiceFactory>();
+            return factory.CreateCameraService();
+        });
         
         // View models
         services.AddSingleton<ChatListViewModel>();
@@ -70,6 +86,16 @@ public static class ChatServiceCollectionExtensions
         services.AddSingleton<IWorkflowToChatConverter, WorkflowToChatConverter>();
         services.AddSingleton<IChatDuplicateDetector, ChatDuplicateDetector>();
         
+        return services;
+    }
+
+    /// <summary>
+    /// Convenience method to register chat-related services plus imaging if desired.
+    /// </summary>
+    public static IServiceCollection AddChatServicesWithImaging(this IServiceCollection services)
+    {
+        services.AddChatServices();
+        services.AddImagingServices();
         return services;
     }
 }

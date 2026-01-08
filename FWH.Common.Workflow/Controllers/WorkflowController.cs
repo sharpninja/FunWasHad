@@ -76,10 +76,7 @@ public class WorkflowController : IWorkflowController
         if (string.IsNullOrWhiteSpace(workflowId))
             throw new ArgumentNullException(nameof(workflowId));
 
-        var definition = _definitionStore.Get(workflowId);
-        if (definition == null)
-            throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
-
+        var definition = _definitionStore.Get(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
         _logger.LogDebug("Starting instance for workflow {WorkflowId}", workflowId);
 
         // Try to restore from persistence
@@ -140,21 +137,19 @@ public class WorkflowController : IWorkflowController
         if (string.IsNullOrWhiteSpace(workflowId))
             throw new ArgumentNullException(nameof(workflowId));
 
-        var definition = _definitionStore.Get(workflowId);
-        if (definition == null)
-            throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
-
+        var definition = _definitionStore.Get(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
         _logger.LogDebug("Restarting workflow {WorkflowId}", workflowId);
 
         // Clear current state
         _instanceManager.ClearCurrentNode(workflowId);
 
-        // Recalculate start node
-        await StartInstanceAsync(workflowId);
+        // Calculate new start node (don't call StartInstanceAsync as it would try to restore from DB)
+        var startNode = _stateCalculator.CalculateStartNode(definition);
+        _instanceManager.SetCurrentNode(workflowId, startNode);
+        
+        _logger.LogInformation("Restarted workflow {WorkflowId} at node {NodeId}", workflowId, startNode);
 
-        var startNode = _instanceManager.GetCurrentNode(workflowId);
-
-        // Persist restart
+        // Persist the restart (update DB to new start node)
         var repo = GetRepository();
         if (repo != null)
         {
@@ -168,6 +163,16 @@ public class WorkflowController : IWorkflowController
                 _logger.LogWarning(ex, "Failed to persist restart for workflow {WorkflowId}", workflowId);
             }
         }
+        
+        // Execute action on start node if present
+        if (!string.IsNullOrWhiteSpace(startNode))
+        {
+            var startNodeObj = definition.Nodes.FirstOrDefault(n => n.Id == startNode);
+            if (startNodeObj != null)
+            {
+                await TryExecuteNodeActionAsync(definition, workflowId, startNodeObj);
+            }
+        }
     }
 
     public Task<WorkflowStatePayload> GetCurrentStatePayloadAsync(string workflowId)
@@ -175,10 +180,7 @@ public class WorkflowController : IWorkflowController
         if (string.IsNullOrWhiteSpace(workflowId))
             throw new ArgumentNullException(nameof(workflowId));
 
-        var definition = _definitionStore.Get(workflowId);
-        if (definition == null)
-            throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
-
+        var definition = _definitionStore.Get(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
         var currentNodeId = _instanceManager.GetCurrentNode(workflowId);
         var payload = _stateCalculator.CalculateCurrentPayload(definition, currentNodeId);
 
@@ -190,10 +192,7 @@ public class WorkflowController : IWorkflowController
         if (string.IsNullOrWhiteSpace(workflowId))
             throw new ArgumentNullException(nameof(workflowId));
 
-        var definition = _definitionStore.Get(workflowId);
-        if (definition == null)
-            throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
-
+        var definition = _definitionStore.Get(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
         var currentNodeId = _instanceManager.GetCurrentNode(workflowId);
         if (currentNodeId == null)
         {

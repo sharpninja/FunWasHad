@@ -11,6 +11,7 @@ using FWH.Common.Workflow.Instance;
 using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
+using System.Linq;
 
 namespace FWH.Common.Workflow.Actions;
 
@@ -44,7 +45,12 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
     {
         if (node == null) return false;
 
+        // NoteMarkdown is primary; fall back to JsonMetadata (some PlantUML notes may have been parsed into JsonMetadata)
         var note = node.NoteMarkdown?.Trim();
+        if (string.IsNullOrWhiteSpace(note) && !string.IsNullOrWhiteSpace(node.JsonMetadata))
+        {
+            note = node.JsonMetadata.Trim();
+        }
         if (string.IsNullOrWhiteSpace(note))
             return false;
 
@@ -84,7 +90,6 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
         }
 
         // Resolve templates in parameters using instance variables if available
-        // Resolve instance manager from root; when creating a scope we will re-resolve from the scope provider
         var rootInstanceManager = _serviceProvider.GetService<IWorkflowInstanceManager>();
         IDictionary<string, string>? variables = null;
         if (rootInstanceManager != null)
@@ -94,100 +99,177 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
 
         var resolved = ResolveTemplates(parameters, variables);
 
-        // Try registry for typed handler
-        if (!_registry.TryGetFactory(actionName ?? string.Empty, out var factory))
+        // Prefer any singleton handlers registered directly in DI (common for delegate adapters)
+        var directHandlersList = _serviceProvider.GetServices<IWorkflowActionHandler>();
+        var directHandler = directHandlersList.FirstOrDefault(h => string.Equals(h.Name, actionName, StringComparison.OrdinalIgnoreCase));
+        Func<IServiceProvider, IWorkflowActionHandler> factory = null!;
+        if (directHandler != null)
         {
-            // Fallback: check for any IWorkflowActionHandler singletons registered directly in the container
-            var directHandlers = _serviceProvider.GetServices<IWorkflowActionHandler>();
-            var direct = directHandlers.FirstOrDefault(h => string.Equals(h.Name, actionName, StringComparison.OrdinalIgnoreCase));
-            if (direct != null)
+            _logger.LogInformation("Using direct singleton handler for action {ActionName}", actionName);
+            factory = _ => directHandler;
+        }
+        else if (_registry.TryGetFactory(actionName ?? string.Empty, out var regFactory))
+        {
+            factory = regFactory!;
+        }
+        else
+        {
+            _logger.LogWarning("No handler registered for action {ActionName}", actionName);
+            return false;
+        }
+
+        // Execution delegate shared by sync and background paths
+        async Task ExecuteHandlerAsync(Func<IServiceProvider, IWorkflowActionHandler> factoryFunc)
+        {
+            try
             {
-                factory = _ => direct;
+                if (_options.CreateScopeForHandlers)
+                {
+                    using var scope = _serviceProvider.CreateScope();
+                    var handler = factoryFunc(scope.ServiceProvider);
+                    _logger.LogInformation("Factory produced handler instance {Handler} for action {ActionName}", handler?.Name, actionName);
+
+                    // Fallback: if factory returns null, try resolving singleton handlers from the scoped provider
+                    if (handler == null)
+                    {
+                        var direct = scope.ServiceProvider.GetServices<IWorkflowActionHandler>().FirstOrDefault(h => string.Equals(h.Name, actionName, StringComparison.OrdinalIgnoreCase));
+                        if (direct != null)
+                        {
+                            handler = direct;
+                        }
+                    }
+
+                    if (handler == null)
+                    {
+                        _logger.LogWarning("Handler factory returned null for action {ActionName}", actionName);
+                        return;
+                    }
+
+                    var scopedInstanceManager = scope.ServiceProvider.GetService<IWorkflowInstanceManager>() ?? throw new InvalidOperationException("InstanceManager required in handler context");
+                    var ctx = new ActionHandlerContext(workflowId, node, definition, scopedInstanceManager);
+
+                    var sw = Stopwatch.StartNew();
+                    IDictionary<string,string>? updates = null;
+                    try
+                    {
+                        _logger.LogInformation("Invoking handler {HandlerName} for workflow {WorkflowId} node {NodeId}", handler.Name, workflowId, node.Id);
+                        updates = await handler.HandleAsync(ctx, resolved, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogInformation("Action {ActionName} execution cancelled", actionName);
+                        throw; // Re-throw to be caught by outer try-catch
+                    }
+
+                    sw.Stop();
+                    if (_options.LogExecutionTime)
+                    {
+                        _logger.LogInformation("Action {ActionName} handled by {HandlerName} in {ElapsedMs}ms", actionName, handler.Name ?? "<null>", sw.ElapsedMilliseconds);
+                    }
+
+                    if (updates != null)
+                    {
+                        foreach (var kv in updates)
+                        {
+                            try
+                            {
+                                scopedInstanceManager.SetVariable(workflowId, kv.Key, kv.Value);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to set variable {Key} from handler {ActionName}", kv.Key, actionName);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    var handler = factoryFunc(_serviceProvider);
+                    _logger.LogInformation("Factory produced handler instance {Handler} for action {ActionName}", handler?.Name, actionName);
+
+                    // Fallback: if factory returns null, try resolving singleton handlers from the provider
+                    if (handler == null)
+                    {
+                        var direct = _serviceProvider.GetServices<IWorkflowActionHandler>().FirstOrDefault(h => string.Equals(h.Name, actionName, StringComparison.OrdinalIgnoreCase));
+                        if (direct != null)
+                        {
+                            handler = direct;
+                        }
+                    }
+
+                    if (handler == null)
+                    {
+                        _logger.LogWarning("Handler factory returned null for action {ActionName}", actionName);
+                        return;
+                    }
+
+                    var rootMgr = _serviceProvider.GetService<IWorkflowInstanceManager>() ?? throw new InvalidOperationException("InstanceManager required in handler context");
+                    var ctx = new ActionHandlerContext(workflowId, node, definition, rootMgr);
+
+                    var sw = Stopwatch.StartNew();
+                    IDictionary<string,string>? updates = null;
+                    try
+                    {
+                        _logger.LogInformation("Invoking handler {HandlerName} for workflow {WorkflowId} node {NodeId}", handler.Name, workflowId, node.Id);
+                        updates = await handler.HandleAsync(ctx, resolved, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogInformation("Action {ActionName} execution cancelled", actionName);
+                        throw; // Re-throw to be caught by outer try-catch
+                    }
+
+                    sw.Stop();
+                    if (_options.LogExecutionTime)
+                    {
+                        _logger.LogInformation("Action {ActionName} handled by {HandlerName} in {ElapsedMs}ms", actionName, handler.Name ?? "<null>", sw.ElapsedMilliseconds);
+                    }
+
+                    if (updates != null)
+                    {
+                        foreach (var kv in updates)
+                        {
+                            try
+                            {
+                                rootMgr.SetVariable(workflowId, kv.Key, kv.Value);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex, "Failed to set variable {Key} from handler {ActionName}", kv.Key, actionName);
+                            }
+                        }
+                    }
+                }
             }
-            else
+            catch (OperationCanceledException)
             {
-                _logger.LogWarning("No handler registered for action {ActionName}", actionName);
+                throw; // Propagate cancellation to outer handler
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Action handler for {ActionName} threw an exception", actionName);
+            }
+        };
+
+        if (_options.ExecuteHandlersInBackground)
+        {
+            // Launch background task
+            _ = Task.Run(() => ExecuteHandlerAsync(factory));
+            return true;
+        }
+        else
+        {
+            // Execute synchronously and await completion so callers (tests) observe effects
+            try
+            {
+                await ExecuteHandlerAsync(factory).ConfigureAwait(false);
+                return true;
+            }
+            catch (OperationCanceledException)
+            {
+                // Return false only when cancellation occurs in synchronous mode
                 return false;
             }
-        }
- 
-         try
-         {
-             // Create a scope depending on options
-             if (_options.CreateScopeForHandlers)
-             {
-                using var scope = _serviceProvider.CreateScope();
-                var handler = factory(scope.ServiceProvider);
-                if (handler == null)
-                {
-                    _logger.LogWarning("Handler factory returned null for action {ActionName}", actionName);
-                    return false;
-                }
-                
-                // Resolve instance manager from the created scope so handler and state updates target same instance
-                var scopedInstanceManager = scope.ServiceProvider.GetService<IWorkflowInstanceManager>() ?? throw new InvalidOperationException("InstanceManager required in handler context");
-                var ctx = new ActionHandlerContext(workflowId, node, definition, scopedInstanceManager);
-                
-                var sw = Stopwatch.StartNew();
-                var updates = await handler.HandleAsync(ctx, resolved, cancellationToken);
-                sw.Stop();
-                
-                if (_options.LogExecutionTime)
-                {
-                    _logger.LogInformation("Action {ActionName} handled by {HandlerName} in {ElapsedMs}ms", actionName, handler.Name ?? "<null>", sw.ElapsedMilliseconds);
-                }
-                
-                // If handler returned variable updates, apply them to instance manager
-                if (updates != null)
-                {
-                    foreach (var kv in updates)
-                    {
-                        scopedInstanceManager.SetVariable(workflowId, kv.Key, kv.Value);
-                    }
-                }
-             }
-             else
-             {
-                var handler = factory(_serviceProvider);
-                if (handler == null)
-                {
-                    _logger.LogWarning("Handler factory returned null for action {ActionName}", actionName);
-                    return false;
-                }
-                
-                var rootMgr = _serviceProvider.GetService<IWorkflowInstanceManager>() ?? throw new InvalidOperationException("InstanceManager required in handler context");
-                var ctx = new ActionHandlerContext(workflowId, node, definition, rootMgr);
-                
-                var sw = Stopwatch.StartNew();
-                var updates = await handler.HandleAsync(ctx, resolved, cancellationToken);
-                sw.Stop();
-                
-                if (_options.LogExecutionTime)
-                {
-                    _logger.LogInformation("Action {ActionName} handled by {HandlerName} in {ElapsedMs}ms", actionName, handler.Name ?? "<null>", sw.ElapsedMilliseconds);
-                }
-                
-                // If handler returned variable updates, apply them to instance manager
-                if (updates != null)
-                {
-                    foreach (var kv in updates)
-                    {
-                        rootMgr.SetVariable(workflowId, kv.Key, kv.Value);
-                    }
-                }
-             }
-
-             return true;
-         }
-        catch (OperationCanceledException)
-        {
-            _logger.LogInformation("Action {ActionName} execution cancelled", actionName);
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Action handler for {ActionName} threw an exception", actionName);
-            return false;
         }
     }
 

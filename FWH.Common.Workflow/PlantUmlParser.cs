@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 using FWH.Common.Workflow.Models;
 
 namespace FWH.Common.Workflow;
@@ -89,7 +90,8 @@ public sealed class PlantUmlParser
                 var noteText = shorthandNoteMatch.Groups[2].Value.Trim();
                 if (!string.IsNullOrEmpty(noteText) && currentNodeId != null && nodes.TryGetValue(currentNodeId, out var targetNode))
                 {
-                    nodes[currentNodeId] = new WorkflowNode(targetNode.Id, targetNode.Label) { NoteMarkdown = noteText };
+                    // check for JSON|Markdown split
+                    SplitAndAttachMetadata(currentNodeId, targetNode, noteText);
                 }
 
                 continue;
@@ -174,7 +176,7 @@ public sealed class PlantUmlParser
             // fallback original elseif handling
             if (!elseIfMatch.Success)
             {
-                elseIfMatch = Regex.Match(rawLine, @"^else\s*(?:if\s*\((.*?)\)\s*then)?(?:\s*\((.*?)\))?$", RegexOptions.IgnoreCase);
+                elseIfMatch = Regex.Match(rawLine, @"^else\\s*(?:if\\s*\\((.*?)\\)\\s*then)?(?:\\s*\\((.*?)\\))?$", RegexOptions.IgnoreCase);
             }
 
             if (elseIfMatch.Success && ifStack.Count > 0)
@@ -325,7 +327,8 @@ public sealed class PlantUmlParser
                     var stereo = stereoMatch.Groups[1].Value.Trim();
                     if (nodes.TryGetValue(nodeId, out var node))
                     {
-                        nodes[nodeId] = new WorkflowNode(node.Id, node.Label) { NoteMarkdown = (node.NoteMarkdown ?? string.Empty) + $"\n<<{stereo}>>" };
+                        // preserve existing JsonMetadata while appending note text
+                        nodes[nodeId] = new WorkflowNode(node.Id, node.Label, node.JsonMetadata, (node.NoteMarkdown ?? string.Empty) + $"\n<<{stereo}>>");
                     }
                 }
 
@@ -379,6 +382,36 @@ public sealed class PlantUmlParser
         var nodeList = nodes.Values.ToList();
 
         return new WorkflowDefinition(id ?? Guid.NewGuid().ToString("D"), name ?? "ImportedWorkflow", nodeList, transitions, startPoints);
+    }
+
+    private void SplitAndAttachMetadata(string nodeId, WorkflowNode targetNode, string noteText)
+    {
+        // If the note contains a pipe '|' split, treat left side as JSON metadata and right side as note markdown.
+        var parts = noteText.Split(new[] { '|' }, 2);
+        if (parts.Length == 2)
+        {
+            var left = parts[0].Trim();
+            var right = parts[1].Trim();
+
+            // Validate left side is JSON object; if not, attach whole note as markdown
+            try
+            {
+                using var doc = JsonDocument.Parse(left);
+                if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    var jsonStr = left; // preserve original json string
+                    nodes[nodeId] = new WorkflowNode(targetNode.Id, targetNode.Label, jsonStr, right);
+                    return;
+                }
+            }
+            catch (JsonException)
+            {
+                // not JSON - fallthrough
+            }
+        }
+
+        // No pipe or invalid JSON - attach as normal note markdown, preserving existing JsonMetadata
+        nodes[nodeId] = new WorkflowNode(targetNode.Id, targetNode.Label, targetNode.JsonMetadata, noteText);
     }
 
     private static string NormalizeLabel(string raw)
@@ -445,8 +478,8 @@ public sealed class PlantUmlParser
         var targetId = GetOrCreateNode(targetRaw);
         if (nodes.TryGetValue(targetId, out var node))
         {
-            // replace existing node record (with note)
-            nodes[targetId] = new WorkflowNode(node.Id, node.Label) { NoteMarkdown = noteText };
+            // replace existing node record (with note) while preserving any JsonMetadata
+            nodes[targetId] = new WorkflowNode(node.Id, node.Label, node.JsonMetadata, noteText);
         }
     }
 

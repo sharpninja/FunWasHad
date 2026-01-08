@@ -1,6 +1,8 @@
 using System;
 using System.Linq;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Avalonia;
 using Avalonia.Controls;
@@ -12,17 +14,25 @@ using Microsoft.Extensions.DependencyInjection;
 
 using FWH.Mobile.ViewModels;
 using FWH.Mobile.Views;
+using FWH.Common.Chat.Services;
 using FWH.Common.Chat.ViewModels;
 using FWH.Common.Workflow;
 using FWH.Common.Workflow.Extensions;
 using FWH.Common.Chat;
 using FWH.Common.Chat.Extensions;
-using FWH.Common.Location.Extensions;
+using FWH.Common.Location;
 using FWH.Mobile.Data.Extensions;
+using FWH.Common.Imaging.Extensions;
+using FWH.Mobile.Options;
+using FWH.Mobile.Services;
 
 namespace FWH.Mobile;
+
 public partial class App : Application
 {
+    private static bool _isDatabaseInitialized = false;
+    private static readonly SemaphoreSlim _initializationLock = new SemaphoreSlim(1, 1);
+
     static App()
     {
         var services = new ServiceCollection();
@@ -35,27 +45,105 @@ public partial class App : Application
         services.AddWorkflowServices();
 
         // Register chat services using extension method
+        // This now includes platform detection and camera service factory
         services.AddChatServices();
 
-        // Register location services (will load configuration from database)
-        // Default radius: 30 meters (persisted to SQLite)
-        services.AddLocationServices();
+        // Register typed client that talks to the Location Web API
+        var apiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "https://localhost:5001/";
+        services.Configure<LocationApiClientOptions>(options =>
+        {
+            options.BaseAddress = apiBaseAddress;
+            options.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddHttpClient<ILocationService, LocationApiClient>();
+
+        // Register imaging services
+        services.AddImagingServices();
+
+        // Register platform-specific camera services using runtime detection
+        // These extension methods will be no-ops if the platform assembly isn't loaded
+        TryRegisterPlatformCameraServices(services);
+
+        // Register camera capture ViewModel
+        services.AddSingleton<CameraCaptureViewModel>();
 
         ServiceProvider = services.BuildServiceProvider();
 
-        // Ensure database is created
-        InitializeDatabaseAsync().GetAwaiter().GetResult();
+        // Database initialization deferred to OnFrameworkInitializationCompleted
+        // to avoid blocking the UI thread during app startup
     }
 
-    internal static IServiceProvider ServiceProvider { get; }
+    public static IServiceProvider ServiceProvider { get; }
 
-    private static async System.Threading.Tasks.Task InitializeDatabaseAsync()
+    /// <summary>
+    /// Attempts to register platform-specific camera services using reflection
+    /// to avoid compile-time dependencies
+    /// </summary>
+    private static void TryRegisterPlatformCameraServices(IServiceCollection services)
     {
-        using var scope = ServiceProvider.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<FWH.Mobile.Data.Data.NotesDbContext>();
-        
-        // Create database if it doesn't exist
-        await dbContext.Database.EnsureCreatedAsync();
+        try
+        {
+            // Try to find and invoke Android extension method
+            var androidAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.GetName().Name == "FWH.Mobile.Android");
+            
+            if (androidAssembly != null)
+            {
+                var androidExtensions = androidAssembly.GetType("FWH.Mobile.Android.AndroidServiceCollectionExtensions");
+                var addAndroidMethod = androidExtensions?.GetMethod("AddAndroidCameraService");
+                addAndroidMethod?.Invoke(null, new object[] { services });
+            }
+        }
+        catch
+        {
+            // Silently ignore - Android platform not available
+        }
+
+        try
+        {
+            // Try to find and invoke iOS extension method
+            var iosAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.GetName().Name == "FWH.Mobile.iOS");
+            
+            if (iosAssembly != null)
+            {
+                var iosExtensions = iosAssembly.GetType("FWH.Mobile.iOS.iOSServiceCollectionExtensions");
+                var addIOSMethod = iosExtensions?.GetMethod("AddIOSCameraService");
+                addIOSMethod?.Invoke(null, new object[] { services });
+            }
+        }
+        catch
+        {
+            // Silently ignore - iOS platform not available
+        }
+    }
+
+    /// <summary>
+    /// Ensures the database is initialized. Safe to call multiple times.
+    /// </summary>
+    private static async Task EnsureDatabaseInitializedAsync()
+    {
+        if (_isDatabaseInitialized)
+            return;
+
+        await _initializationLock.WaitAsync();
+        try
+        {
+            if (_isDatabaseInitialized)
+                return;
+
+            using var scope = ServiceProvider.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<FWH.Mobile.Data.Data.NotesDbContext>();
+
+            // Create database if it doesn't exist
+            await dbContext.Database.EnsureCreatedAsync();
+
+            _isDatabaseInitialized = true;
+        }
+        finally
+        {
+            _initializationLock.Release();
+        }
     }
 
     public override void Initialize()
@@ -65,6 +153,9 @@ public partial class App : Application
 
     public override async void OnFrameworkInitializationCompleted()
     {
+        // Initialize database asynchronously before setting up the UI
+        await EnsureDatabaseInitializedAsync();
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
@@ -82,7 +173,7 @@ public partial class App : Application
                 Height = 600,
                 Title = "Fun Was Had"
             };
-            
+
             desktop.MainWindow = mainWindow;
             mainWindow.Show();
         }
@@ -102,46 +193,49 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private async System.Threading.Tasks.Task InitializeWorkflowAsync()
+    private async Task InitializeWorkflowAsync()
     {
+        // Always start chat to ensure initial messages are shown even if workflow file is missing
+        var chatService = ServiceProvider.GetRequiredService<ChatService>();
+        await chatService.StartAsync();
+
+        string? pumlPath = null;
+        string? pumlContent = null;
+
         try
         {
             // Load workflow.puml file
             var currentDir = Directory.GetCurrentDirectory();
-            var pumlPath = Path.Combine(currentDir, "workflow.puml");
-            
+            pumlPath = Path.Combine(currentDir, "workflow.puml");
+
             if (!File.Exists(pumlPath))
             {
                 // Try alternative path (for development/deployment scenarios)
                 var baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 var altPath = Path.Combine(baseDir, "workflow.puml");
-                
+
                 if (File.Exists(altPath))
                 {
                     pumlPath = altPath;
                 }
-                else
-                {
-                    return;
-                }
             }
 
-            var pumlContent = await File.ReadAllTextAsync(pumlPath);
+            if (pumlPath != null && File.Exists(pumlPath))
+            {
+                pumlContent = await File.ReadAllTextAsync(pumlPath);
+            }
+            else
+            {
+                // Fallback workflow so Android still shows camera node even without file
+                pumlContent = "@startuml\nstart\n:camera;\nnote right: Take a photo of where you are\nif (Was fun had?) then (yes)\n  :Record Fun Experience;\nelse (no)\n  :Record Not Fun Experience;\nendif\nstop\n@enduml";
+            }
 
             // Import the workflow
             var workflowService = ServiceProvider.GetRequiredService<IWorkflowService>();
             var workflow = await workflowService.ImportWorkflowAsync(
-                pumlContent, 
-                "fun-was-had-main", 
+                pumlContent,
+                "fun-was-had-main",
                 "Fun Was Had");
-
-            // Get the chat service and render the initial workflow state
-            var chatService = ServiceProvider.GetRequiredService<ChatService>();
-            var chatViewModel = ServiceProvider.GetRequiredService<ChatViewModel>();
-            var chatList = ServiceProvider.GetRequiredService<ChatListViewModel>();
-
-            // Start the chat service (this sets up initial welcome message)
-            await chatService.StartAsync();
 
             // Render the first activity node from the workflow
             await chatService.RenderWorkflowStateAsync(workflow.Id);

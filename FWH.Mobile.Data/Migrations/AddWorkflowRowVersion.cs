@@ -2,30 +2,29 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace FWH.Mobile.Data.Migrations
-{
-    /// <summary>
-    /// Adds RowVersion column for optimistic concurrency control
-    /// </summary>
-    public partial class AddWorkflowRowVersion : Migration
-    {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<byte[]>(
-                name: "RowVersion",
-                table: "WorkflowDefinitions",
-                type: "BLOB",
-                rowVersion: true,
-                nullable: true);
-        }
+namespace FWH.Mobile.Data.Migrations;
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "RowVersion",
-                table: "WorkflowDefinitions");
-        }
+/// <summary>
+/// Adds RowVersion column for optimistic concurrency control
+/// </summary>
+public partial class AddWorkflowRowVersion : Migration
+{
+    /// <inheritdoc />
+    protected override void Up(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.AddColumn<byte[]>(
+            name: "RowVersion",
+            table: "WorkflowDefinitions",
+            type: "BLOB",
+            rowVersion: true,
+            nullable: true);
+    }
+
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "RowVersion",
+            table: "WorkflowDefinitions");
     }
 }

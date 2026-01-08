@@ -29,7 +29,14 @@ public class WorkflowStateCalculator : IWorkflowStateCalculator
         {
             var outgoing = definition.Transitions.Where(t => t.FromNodeId == start).ToList();
 
-            if (outgoing.Count == 1)
+            // Only auto-advance if the start node is literally named "start" (case-insensitive)
+            // or if it's an implicit start point without a label
+            var startNode = definition.Nodes.FirstOrDefault(n => n.Id == start);
+            var shouldAutoAdvance = startNode == null || 
+                                   string.Equals(startNode.Label, "start", StringComparison.OrdinalIgnoreCase) ||
+                                   string.IsNullOrWhiteSpace(startNode.Label);
+
+            if (shouldAutoAdvance && outgoing.Count == 1)
             {
                 var targetId = outgoing[0].ToNodeId;
                 var targetNode = definition.Nodes.FirstOrDefault(n => n.Id == targetId);
@@ -69,7 +76,7 @@ public class WorkflowStateCalculator : IWorkflowStateCalculator
                 return new WorkflowChoiceOption(idx, display, t.ToNodeId, t.Condition);
             }).ToList();
 
-            return new WorkflowStatePayload(true, node?.NoteMarkdown, choices);
+            return new WorkflowStatePayload(true, node?.NoteMarkdown, choices, node?.Label);
         }
 
         // If the node contains a JSON action in the note, detect and present a concise action hint
@@ -101,6 +108,6 @@ public class WorkflowStateCalculator : IWorkflowStateCalculator
         }
 
         text ??= !string.IsNullOrWhiteSpace(node?.NoteMarkdown) ? node!.NoteMarkdown : node?.Label;
-        return new WorkflowStatePayload(false, text, Array.Empty<WorkflowChoiceOption>());
+        return new WorkflowStatePayload(false, text, Array.Empty<WorkflowChoiceOption>(), node?.Label);
     }
 }

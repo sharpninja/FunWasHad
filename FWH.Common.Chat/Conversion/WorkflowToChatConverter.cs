@@ -15,6 +15,18 @@ public class WorkflowToChatConverter : IWorkflowToChatConverter
     {
         if (payload == null) throw new ArgumentNullException(nameof(payload));
 
+        // Check if this is a camera node
+        if (!string.IsNullOrWhiteSpace(payload.NodeLabel) && 
+            payload.NodeLabel.Equals("camera", StringComparison.OrdinalIgnoreCase))
+        {
+            var imagePayload = new ImagePayload
+            {
+                Image = null, // Will be populated by camera capture
+                ShowBorder = true
+            };
+            return new ImageChatEntry(ChatAuthors.Bot, imagePayload);
+        }
+
         if (!payload.IsChoice)
         {
             return new TextChatEntry(ChatAuthors.Bot, payload.Text ?? string.Empty);

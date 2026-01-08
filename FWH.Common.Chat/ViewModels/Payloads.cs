@@ -6,7 +6,8 @@ namespace FWH.Common.Chat.ViewModels;
 public enum ChatInputModes
 {
     Text,
-    Choice
+    Choice,
+    Image
 }
 
 public enum PayloadTypes { Text, Image, Choice, Xaml }
@@ -30,7 +31,7 @@ public partial class ImagePayload : ObservableObject, IPayload
     public PayloadTypes PayloadType => PayloadTypes.Image;
 
     [ObservableProperty]
-    public string? image; // neutral type for library
+    public byte[]? image; 
 
     [ObservableProperty]
     public bool showBorder = false;

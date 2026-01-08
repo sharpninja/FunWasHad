@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FWH.Mobile.ViewModels"
+             x:Class="FWH.Mobile.Views.CameraCaptureControl"
+             x:DataType="vm:CameraCaptureViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Status Bar -->
+        <Border Grid.Row="0"
+                Background="#F5F5F5"
+                Padding="12,8"
+                BorderBrush="#E0E0E0"
+                BorderThickness="0,0,0,1">
+            <TextBlock Text="{Binding StatusMessage}"
+                       FontSize="14"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Image Display Area -->
+        <Border Grid.Row="1"
+                Background="#FAFAFA"
+                Padding="16"
+                ClipToBounds="True">
+            <StackPanel>
+                <TextBlock Text="Captured Image Preview" FontWeight="Bold" FontSize="16" />
+                <!-- Show captured image when available -->
+                <Image Source="{Binding CapturedImage}"
+                       Stretch="Uniform"
+                       IsVisible="{Binding HasImage}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+
+                <!-- Placeholder when no image -->
+                <StackPanel IsVisible="{Binding !HasImage}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Spacing="12">
+                    <TextBlock Text="📷"
+                               FontSize="64"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="No photo captured"
+                               FontSize="16"
+                               Foreground="#757575"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Spacing="12"
+                    Margin="16">
+
+            <!-- Capture Button -->
+            <Button Command="{Binding CapturePhotoCommand}"
+                    IsEnabled="{Binding IsCameraAvailable}"
+                    Padding="24,12"
+                    MinWidth="140"
+                    HorizontalContentAlignment="Center">
+                <TextBlock Text="Take Photo"
+                           FontSize="14"
+                           FontWeight="SemiBold" />
+            </Button>
+
+            <!-- Clear Button -->
+            <Button Command="{Binding ClearPhotoCommand}"
+                    IsVisible="{Binding HasImage}"
+                    Padding="24,12"
+                    MinWidth="100"
+                    HorizontalContentAlignment="Center">
+                <TextBlock Text="Clear"
+                           FontSize="14"
+                           FontWeight="SemiBold" />
+            </Button>
+        </StackPanel>
+
+        <!-- Loading Overlay -->
+        <Border Grid.Row="0"
+                Grid.RowSpan="3"
+                Background="#CC000000"
+                IsVisible="{Binding IsCapturing}">
+            <StackPanel HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                <ProgressBar IsIndeterminate="True"
+                             Width="200"
+                             Height="4" />
+                <TextBlock Text="Opening camera..."
+                           FontSize="16"
+                           Foreground="White"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

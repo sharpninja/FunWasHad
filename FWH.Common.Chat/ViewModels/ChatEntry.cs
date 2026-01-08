@@ -27,7 +27,7 @@ public class ImageChatEntry : ChatEntry<ImagePayload>
     {
         ArgumentNullException.ThrowIfNull(payload);
     }
-    public string? Image => Payload.Image; // neutral
+    public byte[]? Image => Payload.Image; 
     public bool ShowBorder => Payload.ShowBorder;
 }
 

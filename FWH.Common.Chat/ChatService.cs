@@ -47,9 +47,15 @@ public class ChatService
     {
         _chatViewModel.ChatInput.ChoiceSubmitted += OnChoiceSubmitted;
         _chatViewModel.ChatInput.TextSubmitted += OnTextSubmitted;
+        _chatViewModel.ChatInput.ImageCaptured += OnImageCaptured;
 
         var chat = _chatViewModel.ChatList;
         chat.Reset();
+        
+        // Add initial welcome message
+        chat.AddEntry(new TextChatEntry(
+            FWH.Common.Chat.ViewModels.ChatAuthors.Bot,
+            "Welcome! Let's capture your fun experiences."));
 
         await Task.CompletedTask;
     }
@@ -107,7 +113,8 @@ public class ChatService
 
         var entry = _converter.ConvertToEntry(payload, workflowId);
 
-        _logger.LogDebug("RenderWorkflowStateAsync - Built entry for WorkflowId={WorkflowId} IsChoice={IsChoice}", workflowId, payload.IsChoice);
+        _logger.LogDebug("RenderWorkflowStateAsync - Built entry for WorkflowId={WorkflowId} IsChoice={IsChoice} PayloadType={PayloadType}", 
+            workflowId, payload.IsChoice, entry.Payload.PayloadType);
 
         // If entry is a choice, subscribe to ChatInput.ChoiceSubmitted once so the selection is handled exactly once.
         if (entry is ChoiceChatEntry)
@@ -166,9 +173,14 @@ public class ChatService
             // Attach handler to ChatInput.ChoiceSubmitted which is raised by ChatInputViewModel when a choice is selected.
             _chatViewModel.ChatInput.ChoiceSubmitted += inputHandler;
         }
+        else if (entry.Payload.PayloadType == PayloadTypes.Image)
+        {
+            // For image/camera nodes, the workflow will auto-advance when image is captured
+            _logger.LogDebug("Image/camera node rendered - waiting for image capture to advance workflow");
+        }
         else
         {
-            // For non-choice states (TextChatEntry), the workflow waits for user text input
+            // For non-choice, non-image states (TextChatEntry), the workflow waits for user text input
             // The OnTextSubmitted handler will advance the workflow when user responds
             _logger.LogDebug("Non-choice state rendered - waiting for user text input to advance workflow");
         }
@@ -186,7 +198,7 @@ public class ChatService
             }
             else
             {
-                _logger.LogDebug("Skipped adding duplicate choice entry for WorkflowId={WorkflowId}", workflowId);
+                _logger.LogDebug("Skipped adding duplicate entry for WorkflowId={WorkflowId}", workflowId);
             }
         }
         catch (Exception ex)
@@ -285,6 +297,50 @@ public class ChatService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling text submission for workflow {WorkflowId}", _currentWorkflowId);
+        }
+    }
+
+    private async void OnImageCaptured(object? sender, byte[] imageBytes)
+    {
+        if (string.IsNullOrWhiteSpace(_currentWorkflowId))
+        {
+            _logger.LogDebug("OnImageCaptured - no active workflow");
+            return;
+        }
+
+        if (_workflowService == null)
+        {
+            _logger.LogWarning("OnImageCaptured - WorkflowService not available");
+            return;
+        }
+
+        _logger.LogDebug("OnImageCaptured - ImageSize={Size} WorkflowId={WorkflowId}", imageBytes.Length, _currentWorkflowId);
+
+        try
+        {
+            // Image was captured, advance the workflow
+            // Camera nodes are treated as non-choice nodes that auto-advance
+            _logger.LogDebug("Attempting to advance workflow after image capture");
+            var advanced = await _workflowService.AdvanceByChoiceValueAsync(_currentWorkflowId, null);
+            
+            if (advanced)
+            {
+                _logger.LogDebug("Workflow advanced successfully after image capture");
+                // Render the next state
+                await RenderWorkflowStateAsync(
+                    _currentWorkflowId, 
+                    _currentUserId, 
+                    _currentTenantId, 
+                    _currentCorrelationId);
+            }
+            else
+            {
+                _logger.LogWarning("Failed to advance workflow after image capture");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling image capture for workflow {WorkflowId}", _currentWorkflowId);
         }
     }
 

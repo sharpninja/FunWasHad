@@ -14,6 +14,8 @@ using FWH.Common.Workflow.State;
 using FWH.Common.Workflow.Actions;
 using FWH.Common.Workflow.Controllers;
 using FWH.Common.Workflow.Views;
+using FWH.Common.Workflow.Extensions;
+using System.Collections.Generic;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -37,6 +39,14 @@ public class WorkflowPersistenceActionTests
         // Register action handler registry and registrar required by WorkflowActionExecutor
         services.AddSingleton<FWH.Common.Workflow.Actions.IWorkflowActionHandlerRegistry, FWH.Common.Workflow.Actions.WorkflowActionHandlerRegistry>();
         services.AddSingleton<FWH.Common.Workflow.Actions.WorkflowActionHandlerRegistrar>();
+        
+        // Register a dummy SendMessage handler so the workflow can auto-advance
+        services.AddWorkflowActionHandler("SendMessage", (ctx, p, ct) =>
+        {
+            // Simple no-op handler
+            return Task.FromResult<IDictionary<string, string>>(new Dictionary<string, string>());
+        });
+        
         services.AddSingleton<IWorkflowActionExecutor, WorkflowActionExecutor>();
         services.AddSingleton<IWorkflowController, WorkflowController>();
         services.AddSingleton<IWorkflowService, WorkflowService>();

@@ -9,9 +9,17 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Svg.Skia" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="System.Drawing.Common" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FWH.Common.Workflow\FWH.Common.Workflow.csproj" />
+    <ProjectReference Include="..\FWH.Common.Imaging\FWH.Common.Imaging.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Imaging\*.cs" />
   </ItemGroup>
 </Project>

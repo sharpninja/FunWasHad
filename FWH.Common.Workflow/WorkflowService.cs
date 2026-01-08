@@ -11,7 +11,7 @@ using System.Diagnostics;
 namespace FWH.Common.Workflow;
 
 public record WorkflowChoiceOption(int Order, string DisplayText, string TargetNodeId, string? Condition = null);
-public record WorkflowStatePayload(bool IsChoice, string? Text, IReadOnlyList<WorkflowChoiceOption> Choices);
+public record WorkflowStatePayload(bool IsChoice, string? Text, IReadOnlyList<WorkflowChoiceOption> Choices, string? NodeLabel = null);
 
 /// <summary>
 /// Service facade for workflow operations.

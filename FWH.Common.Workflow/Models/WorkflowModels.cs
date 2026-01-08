@@ -16,7 +16,8 @@ public record WorkflowDefinition(
     IReadOnlyList<Transition> Transitions,
     IReadOnlyList<StartPoint> StartPoints);
 
-public record WorkflowNode(string Id, string Label, string? NoteMarkdown = null);
+// Added JsonMetadata as a new property to hold structured JSON attached to a node (left-side of note).
+public record WorkflowNode(string Id, string Label, string? JsonMetadata = null, string? NoteMarkdown = null);
 
 public record Transition(string Id, string FromNodeId, string ToNodeId, string? Condition = null);
 
