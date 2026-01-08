@@ -21,7 +21,7 @@ public enum Anchor
 public class ImagingOptions
 {
     public FitMode FitMode { get; set; } = FitMode.BestFit;
-    public Anchor Anchor { get; set; } = Anchor.Center;
+    public Anchor Anchor { get; set; } = Anchor.TopLeft;
 
     /// <summary>
     /// Padding in pixels applied around the SVG when fitting.

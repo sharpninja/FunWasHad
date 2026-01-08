@@ -13,6 +13,7 @@ public class ImagingServiceScalingTransformTests
     [Fact]
     public void RenderSvgOverlay_ViewBoxScaling_AppliesCorrectScale()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddImagingServices();
         var sp = services.BuildServiceProvider();
@@ -30,16 +31,16 @@ public class ImagingServiceScalingTransformTests
                         <rect x='0' y='0' width='100' height='100' fill='#FF0000' />
                     </svg>";
 
+        // Act
         using var result = svc.RenderSvgOverlay(baseBitmap, svg, x: 10f, y: 10f);
 
-        // Since rect covers the whole viewBox and width/height 50x50, the rendered rect should be 50x50
-        // Check center pixel within expected scaled area
+        // Assert - Center area should be red
         var center = GetPixel(result, 10 + 25, 10 + 25); // center of the 50x50 area
         Assert.Equal(255, center.Red);
         Assert.Equal(0, center.Green);
         Assert.Equal(0, center.Blue);
 
-        // Outside area remains white
+        // Assert - Outside area should remain white
         var outside = GetPixel(result, 5, 5);
         Assert.Equal(255, outside.Red);
         Assert.Equal(255, outside.Green);
@@ -49,6 +50,7 @@ public class ImagingServiceScalingTransformTests
     [Fact]
     public void RenderSvgOverlay_RotatedSvg_RendersRotatedContent()
     {
+        // Arrange
         var services = new ServiceCollection();
         services.AddImagingServices();
         var sp = services.BuildServiceProvider();
@@ -66,13 +68,14 @@ public class ImagingServiceScalingTransformTests
                         <rect x='10' y='0' width='20' height='40' fill='#FF0000' transform='rotate(45 20 20)' />
                     </svg>";
 
+        // Act
         using var result = svc.RenderSvgOverlay(baseBitmap, svg, x: 30f, y: 30f);
 
-        // Rotated shape should place red pixels off the original axis; check a couple of expected locations
+        // Assert - Rotated shape should place red pixels off the original axis; check a couple of expected locations
         var p1 = GetPixel(result, 30 + 20, 30 + 20); // center area should be red
         Assert.Equal(255, p1.Red);
 
-        // A corner outside rotated rect should remain white
+        // Assert - A corner outside rotated rect should remain white
         var outside = GetPixel(result, 30 + 0, 30 + 0);
         Assert.Equal(255, outside.Red);
         Assert.Equal(255, outside.Green);

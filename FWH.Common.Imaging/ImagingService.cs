@@ -25,25 +25,24 @@ public class ImagingService : IImagingService
         if (string.IsNullOrWhiteSpace(svg)) throw new ArgumentException("SVG must not be empty", nameof(svg));
         if (outputWidth <= 0 || outputHeight <= 0) throw new ArgumentException("Output dimensions must be positive");
 
-        // Load SVG
+        // Load SVG using Svg.Skia
         var svgDrawable = new SKSvg();
         using var svgStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(svg));
-        svgDrawable.Load(svgStream);
+        var svgPicture = svgDrawable.Load(svgStream);
 
-        var svgPicture = svgDrawable.Picture;
-        if (svgPicture == null) throw new InvalidOperationException("Failed to parse SVG into drawable picture.");
-
-        var srcRect = svgPicture.CullRect;
-
-        // Determine source size
-        var srcWidth = (float)srcRect.Width;
-        var srcHeight = (float)srcRect.Height;
-        if (srcWidth <= 0 || srcHeight <= 0)
+        if (svgPicture == null)
         {
-            // Fallback minimal size
-            srcWidth = Math.Max(1, srcWidth);
-            srcHeight = Math.Max(1, srcHeight);
+            throw new InvalidOperationException("Failed to parse SVG into drawable picture.");
         }
+
+        // Get the SVG's natural size
+        var srcRect = svgPicture.CullRect;
+        var srcWidth = srcRect.Width;
+        var srcHeight = srcRect.Height;
+
+        // Fallback to minimal size if needed
+        if (srcWidth <= 0) srcWidth = 1;
+        if (srcHeight <= 0) srcHeight = 1;
 
         // Apply padding to output dimensions
         var paddedOutputWidth = Math.Max(1, outputWidth - options.Padding * 2);
@@ -124,65 +123,80 @@ public class ImagingService : IImagingService
             // Paint background color if provided
             canvas.Clear(options.BackgroundColor);
 
-            // Draw scaled base bitmap to fit output area (centered) by default
-            // We will draw the base bitmap into the output at 0,0 if same size; otherwise scale to fit
-            if (baseBitmap.Width == outputWidth && baseBitmap.Height == outputHeight)
+            // Draw scaled base bitmap within the padded area
+            if (options.Padding > 0)
             {
-                canvas.DrawBitmap(baseBitmap, 0, 0);
-            }
-            else
-            {
-                // Fit base bitmap into output preserving aspect ratio (letterbox)
-                var bw = baseBitmap.Width;
-                var bh = baseBitmap.Height;
-                var scaleX = (float)outputWidth / bw;
-                var scaleY = (float)outputHeight / bh;
-                var baseScale = Math.Min(scaleX, scaleY);
-                var drawW = bw * baseScale;
-                var drawH = bh * baseScale;
-                var drawX = (outputWidth - drawW) / 2f;
-                var drawY = (outputHeight - drawH) / 2f;
+                // Draw base bitmap only within padded area
+                var paddedRect = new SKRect(options.Padding, options.Padding, 
+                    outputWidth - options.Padding, outputHeight - options.Padding);
+                
                 canvas.Save();
-                canvas.Translate(drawX, drawY);
-                canvas.Scale(baseScale, baseScale);
+                canvas.ClipRect(paddedRect);
+                canvas.Translate(options.Padding, options.Padding);
+                
+                // Scale to fit the padded area if needed
+                if (baseBitmap.Width != paddedOutputWidth || baseBitmap.Height != paddedOutputHeight)
+                {
+                    var scaleX = (float)paddedOutputWidth / baseBitmap.Width;
+                    var scaleY = (float)paddedOutputHeight / baseBitmap.Height;
+                    var scale = Math.Min(scaleX, scaleY);
+                    canvas.Scale(scale, scale);
+                }
+                
                 canvas.DrawBitmap(baseBitmap, 0, 0);
                 canvas.Restore();
             }
-
-            // Render SVG into an SKBitmap of desired size
-            using var svgBitmap = new SKBitmap(new SKImageInfo(desiredWidth, desiredHeight, outInfo.ColorType, outInfo.AlphaType));
-            using (var svgCanvas = new SKCanvas(svgBitmap))
+            else
             {
-                svgCanvas.Clear(SKColors.Transparent);
-
-                if (srcRect.Width > 0 && srcRect.Height > 0)
+                // No padding - draw base bitmap normally
+                if (baseBitmap.Width == outputWidth && baseBitmap.Height == outputHeight)
                 {
-                    var sx = desiredWidthF / (float)srcRect.Width;
-                    var sy = desiredHeightF / (float)srcRect.Height;
-                    svgCanvas.Save();
-                    svgCanvas.Scale(sx, sy);
-                    svgCanvas.Translate(-srcRect.Left, -srcRect.Top);
-                    svgCanvas.DrawPicture(svgPicture);
-                    svgCanvas.Restore();
+                    canvas.DrawBitmap(baseBitmap, 0, 0);
                 }
                 else
                 {
-                    svgCanvas.DrawPicture(svgPicture);
+                    // Fit base bitmap into output preserving aspect ratio (letterbox)
+                    var bw = baseBitmap.Width;
+                    var bh = baseBitmap.Height;
+                    var scaleX = (float)outputWidth / bw;
+                    var scaleY = (float)outputHeight / bh;
+                    var baseScale = Math.Min(scaleX, scaleY);
+                    var drawW = bw * baseScale;
+                    var drawH = bh * baseScale;
+                    var drawX = (outputWidth - drawW) / 2f;
+                    var drawY = (outputHeight - drawH) / 2f;
+                    canvas.Save();
+                    canvas.Translate(drawX, drawY);
+                    canvas.Scale(baseScale, baseScale);
+                    canvas.DrawBitmap(baseBitmap, 0, 0);
+                    canvas.Restore();
                 }
-
-                svgCanvas.Flush();
             }
 
-            // Composite svg onto output using computed offset (float)
+            // Render SVG directly onto the canvas at the computed position
+            // Round to nearest pixel to avoid anti-aliasing artifacts at fractional positions
+            var roundedOffsetX = (float)Math.Round(offsetX);
+            var roundedOffsetY = (float)Math.Round(offsetY);
+            
             canvas.Save();
-            canvas.Translate(offsetX, offsetY);
-            canvas.DrawBitmap(svgBitmap, 0, 0);
-            canvas.Restore();
+            canvas.Translate(roundedOffsetX, roundedOffsetY);
 
+            // Calculate scale to match desired size
+            var scaleToFitX = desiredWidthF / srcWidth;
+            var scaleToFitY = desiredHeightF / srcHeight;
+            canvas.Scale(scaleToFitX, scaleToFitY);
+
+            // Translate to handle SVG's CullRect offset
+            canvas.Translate(-srcRect.Left, -srcRect.Top);
+
+            // Draw the SVG picture
+            canvas.DrawPicture(svgPicture);
+
+            canvas.Restore();
             canvas.Flush();
         }
 
-        return outBitmap; // caller disposes
+        return outBitmap;
     }
 
     public Stream RenderSvgOverlayToPngStream(SKBitmap baseBitmap, string svg, int outputWidth, int outputHeight, float x = 0, float y = 0, ImagingOptions? options = null)

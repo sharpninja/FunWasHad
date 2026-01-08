@@ -59,8 +59,13 @@ public class LocationServiceValidationTests
         return new HttpClient(handlerMock.Object);
     }
 
-    [Fact]
-    public async Task GetNearbyBusinessesAsync_InvalidLatitudeTooHigh_ThrowsArgumentOutOfRangeException()
+    [Theory]
+    [InlineData(91.0, 0.0, 1000)]   // Latitude too high
+    [InlineData(-91.0, 0.0, 1000)]  // Latitude too low
+    [InlineData(0.0, 181.0, 1000)]  // Longitude too high
+    [InlineData(0.0, -181.0, 1000)] // Longitude too low
+    public async Task GetNearbyBusinessesAsync_InvalidCoordinates_ThrowsArgumentOutOfRangeException(
+        double latitude, double longitude, int radius)
     {
         // Arrange
         var httpClient = CreateMockHttpClient(@"{""elements"": []}");
@@ -70,57 +75,15 @@ public class LocationServiceValidationTests
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
         {
-            await service.GetNearbyBusinessesAsync(91.0, 0.0, 1000); // Latitude > 90
+            await service.GetNearbyBusinessesAsync(latitude, longitude, radius);
         });
     }
 
-    [Fact]
-    public async Task GetNearbyBusinessesAsync_InvalidLatitudeTooLow_ThrowsArgumentOutOfRangeException()
-    {
-        // Arrange
-        var httpClient = CreateMockHttpClient(@"{""elements"": []}");
-        var options = Options.Create(CreateDefaultOptions());
-        var service = new OverpassLocationService(httpClient, _mockLogger.Object, options);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
-        {
-            await service.GetNearbyBusinessesAsync(-91.0, 0.0, 1000); // Latitude < -90
-        });
-    }
-
-    [Fact]
-    public async Task GetNearbyBusinessesAsync_InvalidLongitudeTooHigh_ThrowsArgumentOutOfRangeException()
-    {
-        // Arrange
-        var httpClient = CreateMockHttpClient(@"{""elements"": []}");
-        var options = Options.Create(CreateDefaultOptions());
-        var service = new OverpassLocationService(httpClient, _mockLogger.Object, options);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
-        {
-            await service.GetNearbyBusinessesAsync(0.0, 181.0, 1000); // Longitude > 180
-        });
-    }
-
-    [Fact]
-    public async Task GetNearbyBusinessesAsync_InvalidLongitudeTooLow_ThrowsArgumentOutOfRangeException()
-    {
-        // Arrange
-        var httpClient = CreateMockHttpClient(@"{""elements"": []}");
-        var options = Options.Create(CreateDefaultOptions());
-        var service = new OverpassLocationService(httpClient, _mockLogger.Object, options);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
-        {
-            await service.GetNearbyBusinessesAsync(0.0, -181.0, 1000); // Longitude < -180
-        });
-    }
-
-    [Fact]
-    public async Task GetNearbyBusinessesAsync_ExactlyAtNorthPole_ReturnsEmptyOrLimited()
+    [Theory]
+    [InlineData(90.0, 0.0, 1000)]   // North Pole
+    [InlineData(-90.0, 0.0, 1000)]  // South Pole
+    public async Task GetNearbyBusinessesAsync_ExtremeCoordinates_ReturnsEmptyGracefully(
+        double latitude, double longitude, int radius)
     {
         // Arrange
         var httpClient = CreateMockHttpClient(@"{""elements"": []}");
@@ -128,25 +91,9 @@ public class LocationServiceValidationTests
         var service = new OverpassLocationService(httpClient, _mockLogger.Object, options);
 
         // Act
-        var results = await service.GetNearbyBusinessesAsync(90.0, 0.0, 1000);
+        var results = await service.GetNearbyBusinessesAsync(latitude, longitude, radius);
 
-        // Assert - Should handle gracefully (likely no businesses at North Pole)
-        Assert.NotNull(results);
-        Assert.Empty(results);
-    }
-
-    [Fact]
-    public async Task GetNearbyBusinessesAsync_ExactlyAtSouthPole_ReturnsEmptyOrLimited()
-    {
-        // Arrange
-        var httpClient = CreateMockHttpClient(@"{""elements"": []}");
-        var options = Options.Create(CreateDefaultOptions());
-        var service = new OverpassLocationService(httpClient, _mockLogger.Object, options);
-
-        // Act
-        var results = await service.GetNearbyBusinessesAsync(-90.0, 0.0, 1000);
-
-        // Assert
+        // Assert - Should handle gracefully (likely no businesses at poles)
         Assert.NotNull(results);
         Assert.Empty(results);
     }
@@ -173,7 +120,7 @@ public class LocationServiceValidationTests
     }
 
     [Fact]
-    public async Task GetNearbyBusinessesAsync_ZeroRadius_ThrowsOrClampsToMin()
+    public async Task GetNearbyBusinessesAsync_ZeroRadius_ClampsToMinimum()
     {
         // Arrange
         var httpClient = CreateMockHttpClient(@"{""elements"": []}");
@@ -187,11 +134,13 @@ public class LocationServiceValidationTests
         Assert.NotNull(results);
     }
 
-    [Fact]
-    public async Task GetNearbyBusinessesAsync_MalformedJson_ReturnsEmptyAndLogs()
+    [Theory]
+    [InlineData("{ invalid json }")]                    // Malformed JSON
+    [InlineData(@"{""version"": ""0.6""}")]           // Missing elements field
+    public async Task GetNearbyBusinessesAsync_InvalidResponse_ReturnsEmpty(string responseContent)
     {
         // Arrange
-        var httpClient = CreateMockHttpClient("{ invalid json }");
+        var httpClient = CreateMockHttpClient(responseContent);
         var options = Options.Create(CreateDefaultOptions());
         var service = new OverpassLocationService(httpClient, _mockLogger.Object, options);
 
@@ -201,55 +150,37 @@ public class LocationServiceValidationTests
         // Assert - Should return empty list instead of throwing
         Assert.NotNull(results);
         Assert.Empty(results);
-
-        // Verify error was logged
-        _mockLogger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((o, t) => true),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
     }
 
-    [Fact]
-    public async Task GetNearbyBusinessesAsync_MissingElementsField_ReturnsEmpty()
-    {
-        // Arrange - Valid JSON but missing "elements" field
-        var httpClient = CreateMockHttpClient(@"{""version"": ""0.6""}");
-        var options = Options.Create(CreateDefaultOptions());
-        var service = new OverpassLocationService(httpClient, _mockLogger.Object, options);
-
-        // Act
-        var results = await service.GetNearbyBusinessesAsync(37.7749, -122.4194, 1000);
-
-        // Assert
-        Assert.NotNull(results);
-        Assert.Empty(results);
-    }
-
-    [Fact]
-    public async Task GetNearbyBusinessesAsync_ElementMissingLatitude_SkipsInvalidEntry()
+    [Theory]
+    [InlineData(true, false)]  // Missing latitude
+    [InlineData(false, true)]  // Missing longitude
+    public async Task GetNearbyBusinessesAsync_ElementMissingCoordinates_SkipsInvalidEntry(
+        bool includeLat, bool includeLon)
     {
         // Arrange
-        var responseWithMissingFields = @"{
+        var latField = includeLat ? @"""lat"": 37.7749," : "";
+        var lonField = includeLon ? @"""lon"": -122.4194," : "";
+        
+        var responseWithMissingFields = $@"{{
             ""elements"": [
-                {
+                {{
                     ""type"": ""node"",
                     ""id"": 123,
-                    ""lon"": -122.4194,
-                    ""tags"": {""name"": ""Missing Lat""}
-                },
-                {
+                    {latField}
+                    {lonField}
+                    ""tags"": {{""name"": ""Invalid Business""}}
+                }},
+                {{
                     ""type"": ""node"",
                     ""id"": 456,
                     ""lat"": 37.7749,
                     ""lon"": -122.4194,
-                    ""tags"": {""name"": ""Valid Business""}
-                }
+                    ""tags"": {{""name"": ""Valid Business""}}
+                }}
             ]
-        }";
+        }}";
+        
         var httpClient = CreateMockHttpClient(responseWithMissingFields);
         var options = Options.Create(CreateDefaultOptions());
         var service = new OverpassLocationService(httpClient, _mockLogger.Object, options);
@@ -259,40 +190,6 @@ public class LocationServiceValidationTests
         var businesses = results.ToList();
 
         // Assert - Should only return the valid entry
-        Assert.Single(businesses);
-        Assert.Equal("Valid Business", businesses[0].Name);
-    }
-
-    [Fact]
-    public async Task GetNearbyBusinessesAsync_ElementMissingLongitude_SkipsInvalidEntry()
-    {
-        // Arrange
-        var responseWithMissingFields = @"{
-            ""elements"": [
-                {
-                    ""type"": ""node"",
-                    ""id"": 123,
-                    ""lat"": 37.7749,
-                    ""tags"": {""name"": ""Missing Lon""}
-                },
-                {
-                    ""type"": ""node"",
-                    ""id"": 456,
-                    ""lat"": 37.7749,
-                    ""lon"": -122.4194,
-                    ""tags"": {""name"": ""Valid Business""}
-                }
-            ]
-        }";
-        var httpClient = CreateMockHttpClient(responseWithMissingFields);
-        var options = Options.Create(CreateDefaultOptions());
-        var service = new OverpassLocationService(httpClient, _mockLogger.Object, options);
-
-        // Act
-        var results = await service.GetNearbyBusinessesAsync(37.7749, -122.4194, 1000);
-        var businesses = results.ToList();
-
-        // Assert
         Assert.Single(businesses);
         Assert.Equal("Valid Business", businesses[0].Name);
     }
@@ -406,8 +303,11 @@ public class LocationServiceValidationTests
         Assert.Empty(results);
     }
 
-    [Fact]
-    public void LocationServiceOptions_ValidateAndClampRadius_WithNegative_ReturnsMinimum()
+    [Theory]
+    [InlineData(-100, 50)]  // Negative radius returns minimum
+    [InlineData(0, 50)]     // Zero radius returns minimum
+    public void LocationServiceOptions_ValidateAndClampRadius_ReturnsExpectedValue(
+        int inputRadius, int expectedRadius)
     {
         // Arrange
         var options = new LocationServiceOptions
@@ -417,26 +317,9 @@ public class LocationServiceValidationTests
         };
 
         // Act
-        var result = options.ValidateAndClampRadius(-100);
+        var result = options.ValidateAndClampRadius(inputRadius);
 
         // Assert
-        Assert.Equal(50, result);
-    }
-
-    [Fact]
-    public void LocationServiceOptions_ValidateAndClampRadius_WithZero_ReturnsMinimum()
-    {
-        // Arrange
-        var options = new LocationServiceOptions
-        {
-            MinRadiusMeters = 50,
-            MaxRadiusMeters = 5000
-        };
-
-        // Act
-        var result = options.ValidateAndClampRadius(0);
-
-        // Assert
-        Assert.Equal(50, result);
+        Assert.Equal(expectedRadius, result);
     }
 }

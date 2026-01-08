@@ -1,0 +1,146 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:FWH.Mobile.ViewModels"
+             x:Class="FWH.Mobile.Views.LocationTestView"
+             x:DataType="vm:LocationTestViewModel">
+
+    <ScrollViewer>
+        <StackPanel Margin="20" Spacing="15">
+            
+            <!-- Header -->
+            <Border Background="#2196F3" 
+                    Padding="15" 
+                    CornerRadius="8">
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Location API Test" 
+                               FontSize="24" 
+                               FontWeight="Bold"
+                               Foreground="White"/>
+                    <TextBlock Text="Test connectivity to FWH.Location.Api" 
+                               FontSize="14" 
+                               Foreground="White"
+                               Opacity="0.9"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Quick Test Buttons -->
+            <Border Background="#F5F5F5" 
+                    Padding="15" 
+                    CornerRadius="8">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Quick Tests" 
+                               FontSize="16" 
+                               FontWeight="SemiBold"/>
+                    <WrapPanel>
+                        <Button Content="San Francisco" 
+                                Command="{Binding QuickTestCommand}"
+                                CommandParameter="SanFrancisco"
+                                Margin="0,0,10,10"/>
+                        <Button Content="New York" 
+                                Command="{Binding QuickTestCommand}"
+                                CommandParameter="NewYork"
+                                Margin="0,0,10,10"/>
+                        <Button Content="London" 
+                                Command="{Binding QuickTestCommand}"
+                                CommandParameter="London"
+                                Margin="0,0,10,10"/>
+                        <Button Content="Tokyo" 
+                                Command="{Binding QuickTestCommand}"
+                                CommandParameter="Tokyo"
+                                Margin="0,0,10,10"/>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Coordinates Input -->
+            <Border Background="White" 
+                    BorderBrush="#E0E0E0" 
+                    BorderThickness="1"
+                    Padding="15" 
+                    CornerRadius="8">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Coordinates" 
+                               FontSize="16" 
+                               FontWeight="SemiBold"/>
+                    
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Latitude:"/>
+                        <TextBox Text="{Binding Latitude}"/>
+
+                        <TextBlock Text="Longitude:"/>
+                        <TextBox Text="{Binding Longitude}"/>
+
+                        <TextBlock Text="Radius (meters):"/>
+                        <TextBox Text="{Binding RadiusMeters}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Test Buttons -->
+            <Border Background="White" 
+                    BorderBrush="#E0E0E0" 
+                    BorderThickness="1"
+                    Padding="15" 
+                    CornerRadius="8">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="API Methods" 
+                               FontSize="16" 
+                               FontWeight="SemiBold"/>
+                    
+                    <StackPanel Spacing="10">
+                        <Button Content="Get Nearby Businesses" 
+                                Command="{Binding TestGetNearbyCommand}"
+                                IsEnabled="{Binding !IsLoading}"
+                                HorizontalAlignment="Stretch"/>
+                        
+                        <Button Content="Get Closest Business" 
+                                Command="{Binding TestGetClosestCommand}"
+                                IsEnabled="{Binding !IsLoading}"
+                                HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+
+                    <!-- Loading Indicator -->
+                    <TextBlock Text="Loading..." 
+                               IsVisible="{Binding IsLoading}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Results Display -->
+            <Border Background="White" 
+                    BorderBrush="#E0E0E0" 
+                    BorderThickness="1"
+                    Padding="15" 
+                    CornerRadius="8">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Results" 
+                               FontSize="16" 
+                               FontWeight="SemiBold"/>
+                    
+                    <ScrollViewer MaxHeight="400">
+                        <TextBlock Text="{Binding ResultMessage}" 
+                                   TextWrapping="Wrap"
+                                   Padding="10"/>
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+
+            <!-- Help Text -->
+            <Border Background="#FFF3E0" 
+                    Padding="15" 
+                    CornerRadius="8">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Prerequisites" 
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="• Location API must be running: dotnet run --project FWH.Location.Api" 
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="• Default URL: https://localhost:5001/" 
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="• Android Emulator: Use http://10.0.2.2:5000/" 
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>
