@@ -63,6 +63,16 @@ public partial class ChatListViewModel(IServiceProvider? serviceProvider = null)
                     OnPropertyChanged(nameof(Current));
                 }
                 break;
+            
+            case PayloadTypes.Image:
+                // Notify that Current has changed so ChatInputViewModel can detect image mode
+                OnPropertyChanged(nameof(Current));
+                break;
+                
+            case PayloadTypes.Text:
+                // Notify that Current has changed for text entries too
+                OnPropertyChanged(nameof(Current));
+                break;
         }
     }
 

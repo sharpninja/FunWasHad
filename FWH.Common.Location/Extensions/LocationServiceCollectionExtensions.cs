@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using FWH.Common.Location.Configuration;
 using FWH.Common.Location.Services;
+using FWH.Common.Chat.Services;
 using System;
 
 namespace FWH.Common.Location.Extensions;
@@ -47,6 +48,15 @@ public static class LocationServiceCollectionExtensions
             return new RateLimitedLocationService(innerService, logger, maxRequestsPerMinute: 10);
         });
 
+        // Register GPS service factory and service
+        // Note: Requires IPlatformService from FWH.Common.Chat to be registered first
+        services.AddSingleton<GpsServiceFactory>();
+        services.AddSingleton<IGpsService>(sp =>
+        {
+            var factory = sp.GetRequiredService<GpsServiceFactory>();
+            return factory.CreateGpsService();
+        });
+
         return services;
     }
 
@@ -76,6 +86,14 @@ public static class LocationServiceCollectionExtensions
             var innerService = sp.GetRequiredService<OverpassLocationService>();
             var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<RateLimitedLocationService>>();
             return new RateLimitedLocationService(innerService, logger, maxRequestsPerMinute: 10);
+        });
+
+        // Register GPS service factory and service
+        services.AddSingleton<GpsServiceFactory>();
+        services.AddSingleton<IGpsService>(sp =>
+        {
+            var factory = sp.GetRequiredService<GpsServiceFactory>();
+            return factory.CreateGpsService();
         });
 
         return services;

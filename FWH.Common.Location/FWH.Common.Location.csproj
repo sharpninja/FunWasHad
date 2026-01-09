@@ -16,6 +16,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\FWH.Mobile.Data\FWH.Mobile.Data.csproj" />
+      <ProjectReference Include="..\FWH.Common.Chat\FWH.Common.Chat.csproj" />
     </ItemGroup>
 
 </Project>

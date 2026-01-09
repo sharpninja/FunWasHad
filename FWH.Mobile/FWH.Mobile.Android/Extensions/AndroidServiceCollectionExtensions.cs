@@ -1,7 +1,9 @@
 using Android.App;
 using Microsoft.Extensions.DependencyInjection;
 using FWH.Common.Chat.Services;
+using FWH.Common.Location;
 using FWH.Mobile.Droid.Services;
+using FWH.Mobile.Android.Services;
 
 namespace FWH.Mobile.Android;
 
@@ -17,6 +19,16 @@ public static class AndroidServiceCollectionExtensions
     {
         // Register with "Android" key for platform-specific resolution
         services.AddKeyedSingleton<ICameraService, AndroidCameraService>("Android");
+        return services;
+    }
+
+    /// <summary>
+    /// Registers Android-specific GPS service
+    /// </summary>
+    public static IServiceCollection AddAndroidGpsService(this IServiceCollection services)
+    {
+        // Register with "Android" key for platform-specific resolution
+        services.AddKeyedSingleton<IGpsService, AndroidGpsService>("Android");
         return services;
     }
 }

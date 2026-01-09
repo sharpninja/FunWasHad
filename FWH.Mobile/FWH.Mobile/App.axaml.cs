@@ -21,6 +21,7 @@ using FWH.Common.Workflow.Extensions;
 using FWH.Common.Chat;
 using FWH.Common.Chat.Extensions;
 using FWH.Common.Location;
+using FWH.Common.Location.Extensions;
 using FWH.Mobile.Data.Extensions;
 using FWH.Common.Imaging.Extensions;
 using FWH.Mobile.Options;
@@ -48,6 +49,10 @@ public partial class App : Application
         // This now includes platform detection and camera service factory
         services.AddChatServices();
 
+        // Register location services (includes GPS service factory)
+        // Requires IPlatformService from AddChatServices() to be registered first
+        services.AddLocationServices();
+
         // Register typed client that talks to the Location Web API
         var apiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "https://localhost:5001/";
         services.Configure<LocationApiClientOptions>(options =>
@@ -59,6 +64,14 @@ public partial class App : Application
 
         // Register imaging services
         services.AddImagingServices();
+
+        // Register notification service (uses chat UI for notifications)
+        services.AddSingleton<INotificationService, ChatNotificationService>();
+
+        // Register workflow action handler for GPS + nearby businesses
+        services.AddScoped<GetNearbyBusinessesActionHandler>();
+        services.AddScoped<FWH.Common.Workflow.Actions.IWorkflowActionHandler>(sp => 
+            sp.GetRequiredService<GetNearbyBusinessesActionHandler>());
 
         // Register platform-specific camera services using runtime detection
         // These extension methods will be no-ops if the platform assembly isn't loaded
@@ -76,22 +89,28 @@ public partial class App : Application
     public static IServiceProvider ServiceProvider { get; }
 
     /// <summary>
-    /// Attempts to register platform-specific camera services using reflection
+    /// Attempts to register platform-specific camera and GPS services using reflection
     /// to avoid compile-time dependencies
     /// </summary>
     private static void TryRegisterPlatformCameraServices(IServiceCollection services)
     {
         try
         {
-            // Try to find and invoke Android extension method
+            // Try to find and invoke Android extension methods
             var androidAssembly = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.GetName().Name == "FWH.Mobile.Android");
             
             if (androidAssembly != null)
             {
                 var androidExtensions = androidAssembly.GetType("FWH.Mobile.Android.AndroidServiceCollectionExtensions");
-                var addAndroidMethod = androidExtensions?.GetMethod("AddAndroidCameraService");
-                addAndroidMethod?.Invoke(null, new object[] { services });
+                
+                // Register camera service
+                var addAndroidCameraMethod = androidExtensions?.GetMethod("AddAndroidCameraService");
+                addAndroidCameraMethod?.Invoke(null, new object[] { services });
+                
+                // Register GPS service
+                var addAndroidGpsMethod = androidExtensions?.GetMethod("AddAndroidGpsService");
+                addAndroidGpsMethod?.Invoke(null, new object[] { services });
             }
         }
         catch
@@ -101,20 +120,46 @@ public partial class App : Application
 
         try
         {
-            // Try to find and invoke iOS extension method
+            // Try to find and invoke iOS extension methods
             var iosAssembly = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.GetName().Name == "FWH.Mobile.iOS");
             
             if (iosAssembly != null)
             {
                 var iosExtensions = iosAssembly.GetType("FWH.Mobile.iOS.iOSServiceCollectionExtensions");
-                var addIOSMethod = iosExtensions?.GetMethod("AddIOSCameraService");
-                addIOSMethod?.Invoke(null, new object[] { services });
+                
+                // Register camera service
+                var addIOSCameraMethod = iosExtensions?.GetMethod("AddIOSCameraService");
+                addIOSCameraMethod?.Invoke(null, new object[] { services });
+                
+                // Register GPS service
+                var addIOSGpsMethod = iosExtensions?.GetMethod("AddIOSGpsService");
+                addIOSGpsMethod?.Invoke(null, new object[] { services });
             }
         }
         catch
         {
             // Silently ignore - iOS platform not available
+        }
+
+        try
+        {
+            // Try to find and invoke Desktop extension methods
+            var desktopAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a => a.GetName().Name == "FWH.Mobile.Desktop");
+            
+            if (desktopAssembly != null)
+            {
+                var desktopExtensions = desktopAssembly.GetType("FWH.Mobile.Desktop.DesktopServiceCollectionExtensions");
+                
+                // Register GPS service (Desktop doesn't have camera service yet)
+                var addDesktopGpsMethod = desktopExtensions?.GetMethod("AddDesktopGpsService");
+                addDesktopGpsMethod?.Invoke(null, new object[] { services });
+            }
+        }
+        catch
+        {
+            // Silently ignore - Desktop platform not available or Windows SDK not available
         }
     }
 

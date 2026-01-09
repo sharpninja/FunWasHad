@@ -3,6 +3,17 @@ title Fun Was Had Workflow
 
 start;
 
+:get_nearby_businesses;
+note right
+{
+  "action": "get_nearby_businesses",
+  "params": {
+    "radius": "1000"
+  }
+}
+Get your current GPS location
+and find nearby businesses
+
 :camera;
 note right: Take a photo of where you are
 
@@ -18,7 +29,17 @@ stop;
 
 @enduml
 
-' Example JSON action node (for documentation)
+' Workflow Variables Available After get_nearby_businesses:
+' - status: success/error/permission_denied/location_unavailable/cancelled
+' - latitude: Current latitude (e.g., "37.774929")
+' - longitude: Current longitude (e.g., "-122.419418")
+' - accuracy: GPS accuracy in meters (e.g., "25")
+' - radius: Search radius used (e.g., "1000")
+' - count: Number of businesses found (e.g., "15")
+' - businesses: Comma-separated business names (top 5)
+' - closest_business: Name of closest business
+' - closest_distance: Distance to closest business in meters
 '
-' node: Action1
-' Note: {"action": "SendMessage", "params": {"text": "Hello, {{userName}}"}}
+' Example usage in subsequent nodes:
+' node: ShowResults
+' Note: {"action": "SendMessage", "params": {"text": "Found {{count}} businesses near {{closest_business}}"}}

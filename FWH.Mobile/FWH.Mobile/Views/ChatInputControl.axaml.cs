@@ -6,13 +6,16 @@ using Microsoft.Extensions.DependencyInjection;
 using FWH.Common.Chat.ViewModels;
 using FWH.Common.Chat;
 using FWH.Common.Chat.Services;
+using FWH.Mobile.Services;
 using System;
+using System.Diagnostics;
 
 namespace FWH.Mobile;
 
 public partial class ChatInputControl : UserControl
 {
     private readonly ChatService? _chatService;
+    private readonly INotificationService? _notificationService;
 
     public ChatInputControl()
     {
@@ -20,6 +23,7 @@ public partial class ChatInputControl : UserControl
         
         var chatInput = App.ServiceProvider.GetRequiredService<FWH.Common.Chat.ViewModels.ChatInputViewModel>();
         _chatService = App.ServiceProvider.GetService<ChatService>();
+        _notificationService = App.ServiceProvider.GetService<INotificationService>();
         
         DataContext = chatInput;
         
@@ -33,9 +37,12 @@ public partial class ChatInputControl : UserControl
         try
         {
             // Get the camera service and capture a photo
-            var cameraService = App.ServiceProvider.GetService<ICameraService>();
+            var cameraService = App.ServiceProvider.GetService<FWH.Common.Chat.Services.ICameraService>();
             if (cameraService == null)
+            {
+                ShowCameraError("Camera service not available");
                 return;
+            }
 
             var imageBytes = await cameraService.TakePhotoAsync();
             
@@ -51,11 +58,24 @@ public partial class ChatInputControl : UserControl
                     chatInput.RaiseImageCaptured(imageBytes);
                 }
             }
+            else
+            {
+                // Camera could not capture image - show notification
+                ShowCameraError("Camera could not be opened. Please try again or check camera permissions.");
+            }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error capturing photo: {ex}");
+            Debug.WriteLine($"Error capturing photo: {ex}");
+            ShowCameraError($"Camera error: {ex.Message}");
         }
+    }
+
+    private void ShowCameraError(string message)
+    {
+        // Use notification service to show error
+        // This will display in chat UI with emoji prefix and log to debug output
+        _notificationService?.ShowError(message, "Camera Error");
     }
 
     private async void OnImageCaptured(object? sender, byte[] imageBytes)
@@ -76,7 +96,7 @@ public partial class ChatInputControl : UserControl
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error after image capture: {ex}");
+            Debug.WriteLine($"Error after image capture: {ex}");
         }
     }
 }
