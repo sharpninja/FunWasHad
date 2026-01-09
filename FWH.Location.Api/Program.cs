@@ -5,7 +5,6 @@ using FWH.Common.Location.Extensions;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
 
 var locationOptions = builder.Configuration.GetSection("LocationService").Get<LocationServiceOptions>() ?? new();
 
@@ -20,11 +19,6 @@ builder.Services.AddLocationServicesWithInMemoryConfig(options =>
 });
 
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
 app.UseHttpsRedirection();
 

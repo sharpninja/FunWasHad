@@ -4,10 +4,13 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Disable OpenAPI source generators that are incompatible with .NET 9 -->
+    <OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <!-- Temporarily removed OpenAPI packages due to .NET 9 compatibility issues -->
+    <!-- <PackageReference Include="Microsoft.AspNetCore.OpenApi" /> -->
   </ItemGroup>
 
   <ItemGroup>

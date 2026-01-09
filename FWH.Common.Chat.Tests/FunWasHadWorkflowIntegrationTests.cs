@@ -267,7 +267,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
         
         // Get decision state
-        var decisionState = await workflowController.GetCurrentStatePayloadAsync(workworkflow.Id);
+        var decisionState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
         Assert.True(decisionState.IsChoice);
         
         // Look for the "not fun" choice
@@ -283,8 +283,8 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         Assert.True(advanced);
         
         // Verify we reached the "Record Not Fun Experience" state
-        var finalState = await workflowController.GetCurrentStatePayloadAsync(workworkflow.Id);
-        var currentNode = workflowController.GetCurrentNodeId(workworkflow.Id);
+        var finalState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
+        var currentNode = workflowController.GetCurrentNodeId(workflow.Id);
         
         Assert.NotNull(currentNode);
         Assert.NotNull(finalState);
@@ -332,7 +332,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
                 else
                 {
                     // Try to advance; if no transitions available, we're at end
-                    var advanced = await workflowController.AdvanceByChoiceValueAsync(workworkflow.Id, null);
+                    var advanced = await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
                     if (!advanced)
                     {
                         reachedEnd = true;
@@ -423,7 +423,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         
         // Advance past get_nearby_businesses to camera
         await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
-        await chatService.RenderWorkflowStateAsync(workworkflow.Id);
+        await chatService.RenderWorkflowStateAsync(workflow.Id);
         
         // Should have ImageChatEntry for camera
         Assert.True(chatList.Entries.Count >= initialCount);
@@ -431,17 +431,17 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         Assert.True(hasImageEntry);
         
         // Advance past camera to decision
-        await workflowController.AdvanceByChoiceValueAsync(workworkflow.Id, null);
-        await chatService.RenderWorkflowStateAsync(workworkflow.Id);
+        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
+        await chatService.RenderWorkflowStateAsync(workflow.Id);
         
         // Should now have choice entry
-        var state = await workflowController.GetCurrentStatePayloadAsync(workworkflow.Id);
+        var state = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
         if (state.IsChoice && state.Choices.Any())
         {
             // Simulate user selecting a choice
             var choice = state.Choices[0];
-            await workflowController.AdvanceByChoiceValueAsync(workworkflow.Id, choice.TargetNodeId);
-            await chatService.RenderWorkflowStateAsync(workworkflow.Id);
+            await workflowController.AdvanceByChoiceValueAsync(workflow.Id, choice.TargetNodeId);
+            await chatService.RenderWorkflowStateAsync(workflow.Id);
             
             // Chat should have been updated with the result
             Assert.True(chatList.Entries.Count >= initialCount);
@@ -461,12 +461,12 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
 
         // Act - Advance past get_nearby_businesses -> camera -> decision
         await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null); // past get_nearby_businesses
-        await workflowController.AdvanceByChoiceValueAsync(workworkflow.Id, null); // past camera
+        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null); // past camera
         
-        var state = await workflowController.GetCurrentStatePayloadAsync(workworkflow.Id);
+        var state = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
         if (state.IsChoice && state.Choices.Any())
         {
-            await workflowController.AdvanceByChoiceValueAsync(workworkflow.Id, state.Choices[0].TargetNodeId);
+            await workflowController.AdvanceByChoiceValueAsync(workflow.Id, state.Choices[0].TargetNodeId);
         }
         
         var savedNodeId = workflowController.GetCurrentNodeId(workflow.Id);
@@ -477,8 +477,8 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         Assert.Equal(savedNodeId, persisted!.CurrentNodeId);
 
         // Act - Restart instance (which should restore from persistence)
-        await workflowController.StartInstanceAsync(workworkflow.Id);
-        var restoredNodeId = workflowController.GetCurrentNodeId(workworkflow.Id);
+        await workflowController.StartInstanceAsync(workflow.Id);
+        var restoredNodeId = workflowController.GetCurrentNodeId(workflow.Id);
 
         // Assert - State should be restored
         Assert.Equal(savedNodeId, restoredNodeId);

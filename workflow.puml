@@ -4,7 +4,7 @@ title Fun Was Had Workflow
 start;
 
 :get_nearby_businesses;
-note right
+note right of get_nearby_businesses
 {
   "action": "get_nearby_businesses",
   "params": {
@@ -13,6 +13,7 @@ note right
 }
 Get your current GPS location
 and find nearby businesses
+end note
 
 :camera;
 note right: Take a photo of where you are
