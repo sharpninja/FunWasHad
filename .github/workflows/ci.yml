@@ -78,8 +78,11 @@ jobs:
           distribution: 'microsoft'
           java-version: '17'
 
-      - name: Install Android workload
-        run: dotnet workload install android
+      - name: Install .NET MAUI Android workload
+        timeout-minutes: 15
+        run: |
+          dotnet workload install android --source https://api.nuget.org/v3/index.json
+          dotnet workload list
 
       - name: Restore dependencies
         timeout-minutes: 10
