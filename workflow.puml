@@ -5,14 +5,16 @@ start;
 
 :get_nearby_businesses;
 note right of get_nearby_businesses
+Get your current GPS location
+and find nearby businesses
+end note
+note left of get_nearby_businesses
 {
   "action": "get_nearby_businesses",
   "params": {
-    "radius": "1000"
+    "radius": "100"
   }
 }
-Get your current GPS location
-and find nearby businesses
 end note
 
 :camera;

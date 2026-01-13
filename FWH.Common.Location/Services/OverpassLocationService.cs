@@ -77,6 +77,7 @@ public class OverpassLocationService : ILocationService
                 .Where(e => (e.Lat.HasValue || e.Center?.Lat != null) && (e.Lon.HasValue || e.Center?.Lon != null)) // Filter out entries missing coordinates
                 .Select(e => ConvertToBusinessLocation(e, latitude, longitude))
                 .OrderBy(b => b.DistanceMeters)
+                .ThenBy(b => b.Name)
                 .ToList();
 
             _logger.LogInformation("Found {Count} businesses near ({Lat}, {Lon}) within {Radius}m",

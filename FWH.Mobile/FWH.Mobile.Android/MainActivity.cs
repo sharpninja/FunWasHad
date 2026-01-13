@@ -20,7 +20,7 @@ namespace FWH.Mobile.Android;
 public class MainActivity : AvaloniaMainActivity<App>
 {
     private AndroidCameraService? _cameraService;
-    private const int CameraPermissionRequestCode = 100;
+    private const int PermissionsRequestCode = 100;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -32,8 +32,8 @@ public class MainActivity : AvaloniaMainActivity<App>
         // Get camera service instance (if registered in DI)
         _cameraService = App.ServiceProvider.GetService<ICameraService>() as AndroidCameraService;
         
-        // Request camera permission on startup
-        RequestCameraPermissionIfNeeded();
+        // Request all required permissions on startup
+        RequestRequiredPermissions();
     }
 
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
@@ -50,13 +50,33 @@ public class MainActivity : AvaloniaMainActivity<App>
         _cameraService?.OnActivityResult(requestCode, resultCode, data);
     }
 
-    private void RequestCameraPermissionIfNeeded()
+    private void RequestRequiredPermissions()
     {
         if (Build.VERSION.SdkInt >= BuildVersionCodes.M)
         {
+            var permissionsToRequest = new System.Collections.Generic.List<string>();
+
+            // Check camera permission
             if (CheckSelfPermission(global::Android.Manifest.Permission.Camera) != Permission.Granted)
             {
-                RequestPermissions(new[] { global::Android.Manifest.Permission.Camera }, CameraPermissionRequestCode);
+                permissionsToRequest.Add(global::Android.Manifest.Permission.Camera);
+            }
+
+            // Check location permissions
+            if (CheckSelfPermission(global::Android.Manifest.Permission.AccessFineLocation) != Permission.Granted)
+            {
+                permissionsToRequest.Add(global::Android.Manifest.Permission.AccessFineLocation);
+            }
+
+            if (CheckSelfPermission(global::Android.Manifest.Permission.AccessCoarseLocation) != Permission.Granted)
+            {
+                permissionsToRequest.Add(global::Android.Manifest.Permission.AccessCoarseLocation);
+            }
+
+            // Request all missing permissions at once
+            if (permissionsToRequest.Count > 0)
+            {
+                RequestPermissions(permissionsToRequest.ToArray(), PermissionsRequestCode);
             }
         }
     }
@@ -65,17 +85,21 @@ public class MainActivity : AvaloniaMainActivity<App>
     {
         base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
         
-        if (requestCode == CameraPermissionRequestCode)
+        if (requestCode == PermissionsRequestCode)
         {
-            if (grantResults.Length > 0 && grantResults[0] == Permission.Granted)
+            for (int i = 0; i < permissions.Length; i++)
             {
-                // Permission granted - camera can now be used
-                System.Diagnostics.Debug.WriteLine("Camera permission granted");
-            }
-            else
-            {
-                // Permission denied - show message to user
-                System.Diagnostics.Debug.WriteLine("Camera permission denied");
+                var permission = permissions[i];
+                var result = grantResults[i];
+                
+                if (result == Permission.Granted)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Permission granted: {permission}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"Permission denied: {permission}");
+                }
             }
         }
     }

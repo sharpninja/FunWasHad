@@ -3,6 +3,7 @@
     "Uno.Sdk": "6.4.53"
   },
   "sdk": {
+    "version": "9.0.100",
     "allowPrerelease": false
   }
 }

@@ -11,10 +11,20 @@
   <ItemGroup>
     <!-- Temporarily removed OpenAPI packages due to .NET 9 compatibility issues -->
     <!-- <PackageReference Include="Microsoft.AspNetCore.OpenApi" /> -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FWH.Common.Location\FWH.Common.Location.csproj" />
+    <ProjectReference Include="..\FWH.ServiceDefaults\FWH.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <!-- Copy migration scripts to output directory -->
+  <ItemGroup>
+    <Content Include="Migrations\*.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

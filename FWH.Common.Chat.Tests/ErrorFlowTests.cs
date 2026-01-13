@@ -34,6 +34,7 @@ public class ErrorFlowTests : IClassFixture<SqliteTestFixture>
         public Task<IEnumerable<WorkflowDefinitionEntity>> GetAllAsync(CancellationToken cancellationToken = default) => _inner.GetAllAsync(cancellationToken);
         public Task<WorkflowDefinitionEntity?> GetByIdAsync(string id, CancellationToken cancellationToken = default) => _inner.GetByIdAsync(id, cancellationToken);
         public Task<WorkflowDefinitionEntity> UpdateAsync(WorkflowDefinitionEntity def, CancellationToken cancellationToken = default) => _inner.UpdateAsync(def, cancellationToken);
+        public Task<IEnumerable<WorkflowDefinitionEntity>> FindByNamePatternAsync(string namePattern, DateTimeOffset since, CancellationToken cancellationToken = default) => _inner.FindByNamePatternAsync(namePattern, since, cancellationToken);
         public Task<bool> UpdateCurrentNodeIdAsync(string workflowDefinitionId, string? currentNodeId, CancellationToken cancellationToken = default)
         {
             throw new InvalidOperationException("Simulated persistence failure on update");
@@ -52,6 +53,7 @@ public class ErrorFlowTests : IClassFixture<SqliteTestFixture>
         public Task<IEnumerable<WorkflowDefinitionEntity>> GetAllAsync(CancellationToken cancellationToken = default) => _inner.GetAllAsync(cancellationToken);
         public Task<WorkflowDefinitionEntity?> GetByIdAsync(string id, CancellationToken cancellationToken = default) => _inner.GetByIdAsync(id, cancellationToken);
         public Task<WorkflowDefinitionEntity> UpdateAsync(WorkflowDefinitionEntity def, CancellationToken cancellationToken = default) => _inner.UpdateAsync(def, cancellationToken);
+        public Task<IEnumerable<WorkflowDefinitionEntity>> FindByNamePatternAsync(string namePattern, DateTimeOffset since, CancellationToken cancellationToken = default) => _inner.FindByNamePatternAsync(namePattern, since, cancellationToken);
         public Task<bool> UpdateCurrentNodeIdAsync(string workflowDefinitionId, string? currentNodeId, CancellationToken cancellationToken = default) => _inner.UpdateCurrentNodeIdAsync(workflowDefinitionId, currentNodeId, cancellationToken);
     }
 

@@ -88,7 +88,7 @@ public sealed class PlantUmlParser
             if (shorthandNoteMatch.Success)
             {
                 var noteText = shorthandNoteMatch.Groups[2].Value.Trim();
-                if (!string.IsNullOrEmpty(noteText) && currentNodeId != null && nodes.TryGetValue(currentNodeId, out var targetNode))
+                if (!string.IsNullOrEmpty(noteText) && currentNodeId != null && nodes.TryGetValue(currentNodeId, out var targetNode) && targetNode != null)
                 {
                     // check for JSON|Markdown split
                     SplitAndAttachMetadata(currentNodeId, targetNode, noteText);
@@ -325,7 +325,7 @@ public sealed class PlantUmlParser
                 if (stereoMatch.Success)
                 {
                     var stereo = stereoMatch.Groups[1].Value.Trim();
-                    if (nodes.TryGetValue(nodeId, out var node))
+                    if (nodes.TryGetValue(nodeId, out var node) && node != null)
                     {
                         // preserve existing JsonMetadata while appending note text
                         nodes[nodeId] = new WorkflowNode(node.Id, node.Label, node.JsonMetadata, (node.NoteMarkdown ?? string.Empty) + $"\n<<{stereo}>>");
@@ -476,7 +476,7 @@ public sealed class PlantUmlParser
     private void AttachNoteToNode(string targetRaw, string noteText)
     {
         var targetId = GetOrCreateNode(targetRaw);
-        if (nodes.TryGetValue(targetId, out var node))
+        if (nodes.TryGetValue(targetId, out var node) && node != null)
         {
             // replace existing node record (with note) while preserving any JsonMetadata
             nodes[targetId] = new WorkflowNode(node.Id, node.Label, node.JsonMetadata, noteText);

@@ -72,6 +72,37 @@ public class EfWorkflowRepository : IWorkflowRepository
         }
     }
 
+    public async Task<IEnumerable<WorkflowDefinitionEntity>> FindByNamePatternAsync(
+        string namePattern, 
+        DateTimeOffset since, 
+        CancellationToken cancellationToken = default)
+    {
+        using var scope = _logger.BeginScope(new Dictionary<string, object> 
+        { 
+            ["Operation"] = "FindByNamePattern", 
+            ["Pattern"] = namePattern,
+            ["Since"] = since
+        });
+        
+        try
+        {
+            _logger.LogDebug("Finding workflows matching pattern {Pattern} since {Since}", namePattern, since);
+            
+            return await _context.WorkflowDefinitions
+                .Include(w => w.Nodes)
+                .Include(w => w.Transitions)
+                .Include(w => w.StartPoints)
+                .Where(w => w.Name.Contains(namePattern) && w.CreatedAt >= since)
+                .OrderByDescending(w => w.CreatedAt)
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error finding workflows by name pattern {Pattern}", namePattern);
+            throw;
+        }
+    }
+
     public async Task<WorkflowDefinitionEntity> UpdateAsync(WorkflowDefinitionEntity def, CancellationToken cancellationToken = default)
     {
         using var scope = _logger.BeginScope(new Dictionary<string, object> { ["Operation"] = "UpdateWorkflow", ["WorkflowId"] = def.Id });

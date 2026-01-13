@@ -32,12 +32,14 @@ public sealed class LocationApiClient : ILocationService
             throw new InvalidOperationException("The Location API base address has not been configured.");
         }
 
+        // Only set BaseAddress if not already configured by HttpClient factory
         if (_httpClient.BaseAddress == null)
         {
             _httpClient.BaseAddress = EnsureTrailingSlash(resolvedOptions.BaseAddress);
         }
 
-        if (resolvedOptions.Timeout > TimeSpan.Zero)
+        // Update timeout if specified and different from default
+        if (resolvedOptions.Timeout > TimeSpan.Zero && _httpClient.Timeout != resolvedOptions.Timeout)
         {
             _httpClient.Timeout = resolvedOptions.Timeout;
         }
@@ -78,6 +80,51 @@ public sealed class LocationApiClient : ILocationService
         {
             _logger.LogError(ex, "Failed to fetch closest business from Location API.");
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Updates the device location on the server.
+    /// </summary>
+    /// <param name="deviceId">Unique device identifier</param>
+    /// <param name="latitude">Device latitude</param>
+    /// <param name="longitude">Device longitude</param>
+    /// <param name="accuracyMeters">GPS accuracy in meters</param>
+    /// <param name="timestamp">Timestamp when location was captured</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if update was successful</returns>
+    public async Task<bool> UpdateDeviceLocationAsync(
+        string deviceId,
+        double latitude,
+        double longitude,
+        double? accuracyMeters = null,
+        DateTimeOffset? timestamp = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var request = new
+            {
+                DeviceId = deviceId,
+                Latitude = latitude,
+                Longitude = longitude,
+                AccuracyMeters = accuracyMeters,
+                Timestamp = timestamp ?? DateTimeOffset.UtcNow
+            };
+
+            using var response = await _httpClient.PostAsJsonAsync(
+                "api/locations/device",
+                request,
+                _serializerOptions,
+                cancellationToken);
+
+            response.EnsureSuccessStatusCode();
+            return true;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            _logger.LogError(ex, "Failed to update device location");
+            return false;
         }
     }
 

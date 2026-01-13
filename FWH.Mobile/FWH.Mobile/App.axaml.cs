@@ -39,6 +39,10 @@ public partial class App : Application
         var services = new ServiceCollection();
         services.AddLogging();
 
+        // Note: Service discovery is available when Microsoft.Extensions.ServiceDiscovery package is added
+        // For now, using direct URL configuration for mobile app
+        // services.AddServiceDiscovery();
+
         // Register data services (includes configuration repository)
         services.AddDataServices();
 
@@ -54,13 +58,56 @@ public partial class App : Application
         services.AddLocationServices();
 
         // Register typed client that talks to the Location Web API
-        var apiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "https://localhost:5001/";
+        // Platform-specific URL configuration for Android
+        string apiBaseAddress;
+        
+        // Detect platform at runtime instead of compile-time
+        if (OperatingSystem.IsAndroid())
+        {
+            // Android emulator: 10.0.2.2 is special alias for host machine's localhost
+            // Use HTTP port 4748 (where FWH.Location.Api actually runs)
+            // Android physical device: Set LOCATION_API_BASE_URL environment variable to your machine's IP
+            apiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "http://10.0.2.2:4748/";
+        }
+        else
+        {
+            // Desktop/iOS: Use HTTPS with the port where API is actually running (4747)
+            apiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "https://localhost:4747/";
+        }
+        
         services.Configure<LocationApiClientOptions>(options =>
         {
             options.BaseAddress = apiBaseAddress;
             options.Timeout = TimeSpan.FromSeconds(30);
         });
-        services.AddHttpClient<ILocationService, LocationApiClient>();
+        
+        // Configure HttpClient with base address
+        services.AddHttpClient<LocationApiClient>(client =>
+        {
+            client.BaseAddress = new Uri(apiBaseAddress.EndsWith('/') ? apiBaseAddress : apiBaseAddress + "/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        // Register LocationApiClient separately for direct injection
+        services.AddSingleton<LocationApiClient>();
+
+        // Register as ILocationService for compatibility
+        services.AddSingleton<ILocationService>(sp => sp.GetRequiredService<LocationApiClient>());
+
+        // Register location tracking service
+        services.AddSingleton<ILocationTrackingService, LocationTrackingService>();
+
+        // Register location workflow service for address-based workflows
+        services.AddSingleton<LocationWorkflowService>();
+
+        // Register activity tracking service
+        services.AddSingleton<ActivityTrackingService>();
+        
+        // Register activity tracking ViewModel
+        services.AddSingleton<ActivityTrackingViewModel>();
+
+        // Register movement state logger (for demonstration)
+        services.AddSingleton<MovementStateLogger>();
 
         // Register imaging services
         services.AddImagingServices();
@@ -221,6 +268,9 @@ public partial class App : Application
 
             desktop.MainWindow = mainWindow;
             mainWindow.Show();
+
+            // Start location tracking on desktop
+            await StartLocationTrackingAsync();
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
@@ -233,9 +283,42 @@ public partial class App : Application
             {
                 DataContext = chatViewModel
             };
+
+            // Start location tracking on mobile
+            await StartLocationTrackingAsync();
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private async Task StartLocationTrackingAsync()
+    {
+        try
+        {
+            var trackingService = ServiceProvider.GetRequiredService<ILocationTrackingService>();
+            
+            // Start tracking with default settings (50m threshold, 30s interval)
+            await trackingService.StartTrackingAsync();
+
+            System.Diagnostics.Debug.WriteLine("Location tracking started successfully");
+
+            // Start activity tracking service
+            var activityTracking = ServiceProvider.GetRequiredService<ActivityTrackingService>();
+            activityTracking.StartMonitoring();
+
+            System.Diagnostics.Debug.WriteLine("Activity tracking started successfully");
+
+            // Start movement state logger for demonstration
+            var stateLogger = ServiceProvider.GetRequiredService<MovementStateLogger>();
+            stateLogger.StartLogging();
+
+            System.Diagnostics.Debug.WriteLine("Movement state logging started successfully");
+        }
+        catch (Exception ex)
+        {
+            // Don't fail app startup if location tracking fails
+            System.Diagnostics.Debug.WriteLine($"Failed to start location tracking: {ex.Message}");
+        }
     }
 
     private async Task InitializeWorkflowAsync()
@@ -244,35 +327,17 @@ public partial class App : Application
         var chatService = ServiceProvider.GetRequiredService<ChatService>();
         await chatService.StartAsync();
 
-        string? pumlPath = null;
         string? pumlContent = null;
 
         try
         {
-            // Load workflow.puml file
-            var currentDir = Directory.GetCurrentDirectory();
-            pumlPath = Path.Combine(currentDir, "workflow.puml");
+            // Try to load workflow.puml from platform-specific location
+            pumlContent = await LoadWorkflowFileAsync();
 
-            if (!File.Exists(pumlPath))
+            if (string.IsNullOrEmpty(pumlContent))
             {
-                // Try alternative path (for development/deployment scenarios)
-                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                var altPath = Path.Combine(baseDir, "workflow.puml");
-
-                if (File.Exists(altPath))
-                {
-                    pumlPath = altPath;
-                }
-            }
-
-            if (pumlPath != null && File.Exists(pumlPath))
-            {
-                pumlContent = await File.ReadAllTextAsync(pumlPath);
-            }
-            else
-            {
-                // Fallback workflow so Android still shows camera node even without file
-                pumlContent = "@startuml\nstart\n:camera;\nnote right: Take a photo of where you are\nif (Was fun had?) then (yes)\n  :Record Fun Experience;\nelse (no)\n  :Record Not Fun Experience;\nendif\nstop\n@enduml";
+                // Fallback workflow if file cannot be loaded
+                throw new InvalidOperationException("Cannot locate workflow definition file.");
             }
 
             // Import the workflow
@@ -289,6 +354,68 @@ public partial class App : Application
         {
             // Silently fail - workflow initialization is optional
         }
+    }
+
+    /// <summary>
+    /// Loads workflow.puml file from platform-specific location
+    /// </summary>
+    private async Task<string?> LoadWorkflowFileAsync()
+    {
+        // For Android, try loading from assets first
+        if (OperatingSystem.IsAndroid())
+        {
+            try
+            {
+                // On Android, assets are accessed via reflection to avoid compile-time dependency
+                var contextType = Type.GetType("Android.App.Application, Mono.Android");
+                var contextProperty = contextType?.GetProperty("Context");
+                var context = contextProperty?.GetValue(null);
+                
+                var assetsProperty = context?.GetType().GetProperty("Assets");
+                var assets = assetsProperty?.GetValue(context);
+                
+                var openMethod = assets?.GetType().GetMethod("Open", new[] { typeof(string) });
+                var stream = openMethod?.Invoke(assets, new object[] { "workflow.puml" }) as Stream;
+                
+                if (stream != null)
+                {
+                    using (stream)
+                    using (var reader = new StreamReader(stream))
+                    {
+                        return await reader.ReadToEndAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load workflow.puml from Android assets: {ex.Message}");
+            }
+        }
+
+        // For other platforms (Desktop, iOS, Browser), try file system
+        try
+        {
+            var currentDir = Directory.GetCurrentDirectory();
+            var pumlPath = Path.Combine(currentDir, "workflow.puml");
+
+            if (!File.Exists(pumlPath))
+            {
+                // Try alternative path (for development/deployment scenarios)
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                pumlPath = Path.Combine(baseDir, "workflow.puml");
+            }
+
+            if (File.Exists(pumlPath))
+            {
+                return await File.ReadAllTextAsync(pumlPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load workflow.puml from file system: {ex.Message}");
+        }
+
+        return null;
     }
 
     private void DisableAvaloniaDataAnnotationValidation()

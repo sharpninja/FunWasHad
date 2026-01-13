@@ -1,0 +1,123 @@
+@startuml
+title New Location Detected Workflow
+
+start;
+
+:Welcome to New Location;
+note right of Welcome to New Location
+Address: {{address}}
+Latitude: {{latitude}}
+Longitude: {{longitude}}
+end note
+
+if (First time at this location?) then (yes)
+  :Introduce Location Features;
+  note right
+  Show available features:
+  - Nearby businesses
+  - Local events
+  - Save as favorite
+  end note
+else (returning)
+  :Welcome Back;
+  note right
+  Last visit: {{last_visit}}
+  Previous activities: {{activity_count}}
+  end note
+endif
+
+:Check Nearby Businesses;
+note left of Check Nearby Businesses
+{
+  "action": "get_nearby_businesses",
+  "params": {
+    "radius": "100"
+  }
+}
+end note
+
+if (Businesses found?) then (yes)
+  :Display Nearby Options;
+  note right
+  Show top businesses:
+  {{businesses}}
+  end note
+  
+  if (Want to log activity?) then (yes)
+    :camera;
+    note right: Take a photo of the location
+    
+    if (Was fun had?) then (#FunWasHad)
+      :Record Fun Experience at Address;
+      note right
+      Saving fun experience
+      Address: {{address}}
+      Business: {{closest_business}}
+      Time: {{timestamp}}
+      end note
+    else (Was not fun)
+      :Record Visit Only;
+      note right
+      Recording location visit
+      No fun logged
+      end note
+    endif
+  else (skip)
+    :Save Location Visit;
+    note right
+    Recording visit without activity
+    end note
+  endif
+  
+else (no businesses)
+  :Record New Location Visit;
+  note right
+  Remote or residential area
+  No nearby businesses
+  end note
+  
+  :Ask to Save as Landmark;
+  if (Save this location?) then (yes)
+    :Save Custom Location;
+    note right
+    User defined location name
+    end note
+  endif
+endif
+
+:Update Location History;
+note right
+Persist to database:
+- Address
+- Visit timestamp
+- Activities logged
+- Businesses visited
+end note
+
+stop;
+
+@enduml
+
+' Workflow Variables Available:
+' - address: Current address or coordinates (e.g., "123 Main St, San Francisco, CA")
+' - latitude: Current latitude (e.g., "37.774929")
+' - longitude: Current longitude (e.g., "-122.419418")
+' - accuracy: GPS accuracy in meters (e.g., "25")
+' - previous_address: Previous address before change (e.g., "456 Oak St")
+' - timestamp: When address change was detected (ISO 8601 format)
+' - is_first_visit: Boolean indicating if this is the first visit to this address
+' - last_visit: Last visit timestamp if returning (ISO 8601 format)
+' - activity_count: Number of previous activities at this location
+' - radius: Search radius for businesses (default "100")
+' - count: Number of businesses found
+' - businesses: Comma-separated business names (top 5)
+' - closest_business: Name of closest business
+' - closest_distance: Distance to closest business in meters
+'
+' Workflow Instance Key Format:
+' Key: "location:{address_hash}" (e.g., "location:sha256_of_address")
+' This allows resuming workflow for same address within time window
+'
+' Example usage:
+' node: ShowResults
+' Note: {"action": "SendMessage", "params": {"text": "Welcome to {{address}}! Found {{count}} nearby businesses."}}
