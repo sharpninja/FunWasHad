@@ -66,9 +66,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.MarketingApi", "src\FWH
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Services.Tests", "tests\FWH.Mobile.Services.Tests\FWH.Mobile.Services.Tests.csproj", "{C39AADDC-7C6C-4B72-90E8-44336C13A039}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orchestrix.Contracts", "src\Orchestrix.Contracts\Orchestrix.Contracts.csproj", "{C48905EA-42D2-4F39-B690-191931601764}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Orchestrix.Contracts", "src\FWH.Orchestrix.Contracts\FWH.Orchestrix.Contracts.csproj", "{C48905EA-42D2-4F39-B690-191931601764}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orchestrix.Mediator.Remote", "src\Orchestrix.Mediator.Remote\Orchestrix.Mediator.Remote.csproj", "{9A02388E-A27D-4C1C-8E1F-A15F9D6D6E87}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Orchestrix.Mediator.Remote", "src\FWH.Orchestrix.Mediator.Remote\FWH.Orchestrix.Mediator.Remote.csproj", "{9A02388E-A27D-4C1C-8E1F-A15F9D6D6E87}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{994F152A-4A7C-4BBA-B520-2A3F7C6FA021}"
 	ProjectSection(SolutionItems) = preProject

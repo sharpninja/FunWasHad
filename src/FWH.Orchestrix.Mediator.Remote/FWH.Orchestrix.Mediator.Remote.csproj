@@ -4,7 +4,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>Orchestrix.Mediator.Remote</RootNamespace>
+    <RootNamespace>FWH.Orchestrix.Mediator.Remote</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Orchestrix.Contracts\Orchestrix.Contracts.csproj" />
+    <ProjectReference Include="..\FWH.Orchestrix.Contracts\FWH.Orchestrix.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

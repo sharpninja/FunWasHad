@@ -1,7 +1,7 @@
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
-using Orchestrix.Contracts.Location;
-using Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Contracts.Location;
+using FWH.Orchestrix.Contracts.Mediator;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -29,13 +29,13 @@ public class LocationTrackingService : ILocationTrackingService
     private Task? _trackingTask;
     private GpsCoordinates? _lastKnownLocation;
     private GpsCoordinates? _lastReportedLocation;
-    
+
     // Movement state tracking
     private MovementState _currentMovementState = MovementState.Unknown;
     private DateTimeOffset _lastStateChangeTime = DateTimeOffset.UtcNow;
     private readonly Queue<(DateTimeOffset timestamp, double distance, double? speed)> _recentMovements = new();
     private const int MaxRecentMovements = 10;
-    
+
     // Speed tracking
     private double? _currentSpeedMetersPerSecond;
     private DateTimeOffset? _lastLocationTime;
@@ -75,11 +75,11 @@ public class LocationTrackingService : ILocationTrackingService
     public GpsCoordinates? LastKnownLocation => _lastKnownLocation;
     public MovementState CurrentMovementState => _currentMovementState;
     public double? CurrentSpeedMetersPerSecond => _currentSpeedMetersPerSecond;
-    public double? CurrentSpeedMph => _currentSpeedMetersPerSecond.HasValue 
-        ? GpsCalculator.MetersPerSecondToMph(_currentSpeedMetersPerSecond.Value) 
+    public double? CurrentSpeedMph => _currentSpeedMetersPerSecond.HasValue
+        ? GpsCalculator.MetersPerSecondToMph(_currentSpeedMetersPerSecond.Value)
         : null;
-    public double? CurrentSpeedKmh => _currentSpeedMetersPerSecond.HasValue 
-        ? GpsCalculator.MetersPerSecondToKmh(_currentSpeedMetersPerSecond.Value) 
+    public double? CurrentSpeedKmh => _currentSpeedMetersPerSecond.HasValue
+        ? GpsCalculator.MetersPerSecondToKmh(_currentSpeedMetersPerSecond.Value)
         : null;
     public double MinimumDistanceMeters { get; set; }
     public TimeSpan PollingInterval { get; set; }
@@ -112,7 +112,7 @@ public class LocationTrackingService : ILocationTrackingService
             }
         }
 
-        _logger.LogInformation("Starting location tracking with {Distance}m threshold and {Speed} mph walking/riding threshold", 
+        _logger.LogInformation("Starting location tracking with {Distance}m threshold and {Speed} mph walking/riding threshold",
             MinimumDistanceMeters, WalkingRidingSpeedThresholdMph);
 
         _trackingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -194,7 +194,7 @@ public class LocationTrackingService : ILocationTrackingService
                     if (speed.HasValue && speed.Value >= 0)
                     {
                         _currentSpeedMetersPerSecond = speed.Value;
-                        
+
                         _logger.LogDebug(
                             "Speed: {SpeedMph:F1} mph ({SpeedKmh:F1} km/h, {SpeedMs:F2} m/s)",
                             GpsCalculator.MetersPerSecondToMph(speed.Value),
@@ -204,7 +204,7 @@ public class LocationTrackingService : ILocationTrackingService
 
                     // Track recent movements for state detection
                     TrackMovement(currentTime, distanceMoved.Value, speed);
-                    
+
                     // Detect and update movement state
                     UpdateMovementState(distanceMoved.Value, speed);
                 }
@@ -320,7 +320,7 @@ public class LocationTrackingService : ILocationTrackingService
         if (_lastKnownLocation == null)
             return;
 
-        _logger.LogInformation("Device became stationary, starting {Delay} countdown for address change check", 
+        _logger.LogInformation("Device became stationary, starting {Delay} countdown for address change check",
             StationaryAddressCheckDelay);
 
         _stationaryLocationForAddressCheck = _lastKnownLocation;
@@ -366,7 +366,7 @@ public class LocationTrackingService : ILocationTrackingService
     {
         try
         {
-            _logger.LogInformation("Checking for address change at ({Lat:F6}, {Lon:F6})", 
+            _logger.LogInformation("Checking for address change at ({Lat:F6}, {Lon:F6})",
                 location.Latitude, location.Longitude);
 
             // Get closest business/POI to determine address
@@ -375,16 +375,16 @@ public class LocationTrackingService : ILocationTrackingService
                 location.Longitude,
                 maxDistanceMeters: 100); // Check within 100m
 
-            var currentAddress = closestBusiness?.Address ?? 
+            var currentAddress = closestBusiness?.Address ??
                                 $"{location.Latitude:F6}, {location.Longitude:F6}";
 
-            _logger.LogDebug("Current address: {Address}, Previous address: {PreviousAddress}", 
+            _logger.LogDebug("Current address: {Address}, Previous address: {PreviousAddress}",
                 currentAddress, _lastKnownAddress ?? "none");
 
             // Check if address has changed
             if (_lastKnownAddress != currentAddress)
             {
-                _logger.LogInformation("Address changed: {Previous} → {Current}", 
+                _logger.LogInformation("Address changed: {Previous} → {Current}",
                     _lastKnownAddress ?? "none", currentAddress);
 
                 var eventArgs = new LocationAddressChangedEventArgs(
@@ -439,7 +439,7 @@ public class LocationTrackingService : ILocationTrackingService
                     return MovementState.Walking;
                 }
             }
-            
+
             return _currentMovementState;
         }
 
@@ -449,20 +449,20 @@ public class LocationTrackingService : ILocationTrackingService
 
         // Calculate average speed from movements with speed data
         var movementsWithSpeed = recentMovementsInWindow.Where(m => m.speed.HasValue).ToList();
-        double? avgSpeed = movementsWithSpeed.Any() 
-            ? movementsWithSpeed.Average(m => m.speed!.Value) 
+        double? avgSpeed = movementsWithSpeed.Any()
+            ? movementsWithSpeed.Average(m => m.speed!.Value)
             : null;
 
         _logger.LogDebug(
             "Movement analysis: avg={AvgDist:F1}m, max={MaxDist:F1}m, avgSpeed={AvgSpeed:F2} m/s ({AvgSpeedMph:F1} mph), samples={Count}",
-            avgDistance, 
+            avgDistance,
             maxDistance,
             avgSpeed ?? 0,
             avgSpeed.HasValue ? GpsCalculator.MetersPerSecondToMph(avgSpeed.Value) : 0,
             recentMovementsInWindow.Count);
 
         // Determine state based on movement patterns and speed
-        
+
         // Check for stationary state
         if (maxDistance < StationaryDistanceThresholdMeters && avgDistance < StationaryDistanceThresholdMeters / 2)
         {
@@ -474,11 +474,11 @@ public class LocationTrackingService : ILocationTrackingService
         {
             // Device is moving, now determine if walking or riding based on speed
             double? speedToCheck = currentSpeed ?? avgSpeed;
-            
+
             if (speedToCheck.HasValue)
             {
                 var speedMph = GpsCalculator.MetersPerSecondToMph(speedToCheck.Value);
-                
+
                 if (speedMph >= WalkingRidingSpeedThresholdMph)
                 {
                     return MovementState.Riding;
@@ -488,7 +488,7 @@ public class LocationTrackingService : ILocationTrackingService
                     return MovementState.Walking;
                 }
             }
-            
+
             // Speed not available or invalid, use legacy Moving state
             return MovementState.Moving;
         }

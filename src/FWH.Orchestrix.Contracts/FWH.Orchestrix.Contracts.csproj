@@ -4,9 +4,9 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>Orchestrix.Contracts</RootNamespace>
+    <RootNamespace>FWH.Orchestrix.Contracts</RootNamespace>
   </PropertyGroup>
 
-  
+
 
 </Project>

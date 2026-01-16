@@ -1,9 +1,9 @@
 using System.Net.Http.Json;
-using Orchestrix.Contracts.Location;
+using FWH.Orchestrix.Contracts.Location;
 using Microsoft.Extensions.Logging;
-using Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Contracts.Mediator;
 
-namespace Orchestrix.Mediator.Remote.Location;
+namespace FWH.Orchestrix.Mediator.Remote.Location;
 
 /// <summary>
 /// Remote handler for updating device location via HTTP API.

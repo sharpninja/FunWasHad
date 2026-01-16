@@ -2,8 +2,8 @@ using Microsoft.Extensions.Logging;
 using FWH.Common.Workflow.Models;
 using FWH.Common.Workflow.Instance;
 using Microsoft.Extensions.DependencyInjection;
-using Orchestrix.Mediator.Remote.Extensions;
-using Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Mediator.Remote.Extensions;
+using FWH.Orchestrix.Contracts.Mediator;
 using FWH.Common.Workflow.Actions;
 using FWH.Common.Workflow.Controllers;
 using FWH.Common.Workflow.Mapping;
@@ -49,7 +49,7 @@ public static class WorkflowServiceCollectionExtensions
         // Controller and service
         services.AddSingleton<IWorkflowController, WorkflowController>();
         services.AddSingleton<IWorkflowService, WorkflowService>();
-        
+
         // View (transient for multiple workflow instances)
         services.AddTransient<IWorkflowView, WorkflowView>();
 

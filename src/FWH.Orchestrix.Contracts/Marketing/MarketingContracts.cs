@@ -1,6 +1,6 @@
-using Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Contracts.Mediator;
 
-namespace Orchestrix.Contracts.Marketing;
+namespace FWH.Orchestrix.Contracts.Marketing;
 
 /// <summary>
 /// Base response for marketing operations.

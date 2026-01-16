@@ -1,10 +1,10 @@
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
-using Orchestrix.Contracts.Location;
+using FWH.Orchestrix.Contracts.Location;
 using FWH.Mobile.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
-using Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Contracts.Mediator;
 using Xunit;
 
 namespace FWH.Mobile.Services.Tests;

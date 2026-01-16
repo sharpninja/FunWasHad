@@ -1,4 +1,4 @@
-namespace Orchestrix.Contracts.Mediator;
+namespace FWH.Orchestrix.Contracts.Mediator;
 
 /// <summary>
 /// Marker interface for mediator requests.

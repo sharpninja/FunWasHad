@@ -1,7 +1,7 @@
-# Orchestrix.Mediator Architecture Refactoring
+# FWH.Orchestrix.Mediator Architecture Refactoring
 
-**Date:** 2026-01-13  
-**Status:** ✅ **COMPLETE** (Phase 1 - Infrastructure)  
+**Date:** 2026-01-13
+**Status:** ✅ **COMPLETE** (Phase 1 - Infrastructure)
 **Feature:** Mediator Pattern for API Abstraction
 
 ---
@@ -70,16 +70,16 @@ Successfully refactored the application to use MediatR (standard .NET mediator i
 
 ### New Projects Created
 
-#### 1. **FWH.Contracts**
+#### 1. **FWH.Orchestrix.Contracts**
 **Purpose:** Shared request/response contracts
 
 ```
-FWH.Contracts/
+FWH.Orchestrix.Contracts/
 ├── Location/
 │   └── LocationContracts.cs      # Location API requests/responses
 ├── Marketing/
 │   └── MarketingContracts.cs     # Marketing API requests/responses
-└── FWH.Contracts.csproj
+└── FWH.Orchestrix.Contracts.csproj
 ```
 
 **Key Classes:**
@@ -88,18 +88,18 @@ FWH.Contracts/
 - `GetBusinessMarketingRequest` / `GetBusinessMarketingResponse`
 - `SubmitFeedbackRequest` / `SubmitFeedbackResponse`
 
-#### 2. **FWH.Mediator.Remote**
+#### 2. **FWH.Orchestrix.Mediator.Remote**
 **Purpose:** HTTP-based remote handlers
 
 ```
-FWH.Mediator.Remote/
+FWH.Orchestrix.Mediator.Remote/
 ├── Location/
 │   └── LocationHandlers.cs       # Remote Location API handlers
 ├── Marketing/
 │   └── MarketingHandlers.cs      # Remote Marketing API handlers
 ├── Extensions/
 │   └── MediatorServiceCollectionExtensions.cs
-└── FWH.Mediator.Remote.csproj
+└── FWH.Orchestrix.Mediator.Remote.csproj
 ```
 
 **Key Classes:**
@@ -118,12 +118,12 @@ FWH.Mediator.Remote/
 public class LocationTrackingService
 {
     private readonly LocationApiClient _locationApiClient;
-    
+
     public LocationTrackingService(LocationApiClient locationApiClient)
     {
         _locationApiClient = locationApiClient;
     }
-    
+
     public async Task UpdateLocationAsync(GpsCoordinates location)
     {
         // Direct HTTP call - tightly coupled
@@ -151,12 +151,12 @@ public class LocationTrackingService
 public class LocationTrackingService
 {
     private readonly IMediator _mediator;
-    
+
     public LocationTrackingService(IMediator mediator)
     {
         _mediator = mediator;
     }
-    
+
     public async Task UpdateLocationAsync(GpsCoordinates location)
     {
         // Send request through mediator - location transparent
@@ -167,7 +167,7 @@ public class LocationTrackingService
             Longitude = location.Longitude,
             Timestamp = DateTimeOffset.UtcNow
         });
-        
+
         if (!response.Success)
         {
             _logger.LogWarning("Failed to update location: {Error}", response.ErrorMessage);
@@ -234,7 +234,7 @@ services.AddMediatR(cfg =>
 {
     // Register local handlers first (higher priority)
     cfg.RegisterServicesFromAssembly(typeof(LocalLocationHandler).Assembly);
-    
+
     // Register remote handlers as fallback
     cfg.RegisterServicesFromAssembly(typeof(RemoteLocationHandler).Assembly);
 });
@@ -369,7 +369,7 @@ if (response.Success)
             ContentType = "image/jpeg",
             FileData = photo.Bytes
         };
-        
+
         await _mediator.Send(uploadRequest);
     }
 }
@@ -497,7 +497,7 @@ services.AddDbContext<LocalLocationDbContext>(options =>
 
 ```csharp
 // FWH.Mediator.Local/Location/LocalUpdateDeviceLocationHandler.cs
-public class LocalUpdateDeviceLocationHandler 
+public class LocalUpdateDeviceLocationHandler
     : IRequestHandler<UpdateDeviceLocationRequest, UpdateDeviceLocationResponse>
 {
     private readonly LocalLocationDbContext _dbContext;
@@ -529,7 +529,7 @@ public class LocalUpdateDeviceLocationHandler
             _dbContext.DeviceLocations.Add(location);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Saved location locally for device {DeviceId}", 
+            _logger.LogInformation("Saved location locally for device {DeviceId}",
                 request.DeviceId);
 
             return new UpdateDeviceLocationResponse
@@ -571,7 +571,7 @@ public class LocalUpdateDeviceLocationHandler
 ### Caching
 ```csharp
 // Add caching layer
-public class CachedGetBusinessThemeHandler 
+public class CachedGetBusinessThemeHandler
     : IRequestHandler<GetBusinessThemeRequest, GetBusinessThemeResponse>
 {
     private readonly IMemoryCache _cache;
@@ -582,14 +582,14 @@ public class CachedGetBusinessThemeHandler
         CancellationToken cancellationToken)
     {
         var cacheKey = $"theme_{request.BusinessId}";
-        
+
         if (_cache.TryGetValue(cacheKey, out GetBusinessThemeResponse? cached))
         {
             return cached!;
         }
 
         var response = await _innerHandler.Handle(request, cancellationToken);
-        
+
         if (response.Success)
         {
             _cache.Set(cacheKey, response, TimeSpan.FromHours(1));
@@ -623,11 +623,11 @@ var response = await _mediator.Send(new UpdateDeviceLocationRequest { ... });
 if (!response.Success)
 {
     _logger.LogWarning("Operation failed: {Error}", response.ErrorMessage);
-    
+
     // Show user-friendly message
     await _notificationService.ShowErrorAsync(
         "Unable to update location. Please check your connection.");
-    
+
     // Retry logic
     if (IsTransient(response.ErrorMessage))
     {
@@ -671,13 +671,13 @@ if (!response.Success)
 
 ### Phase 1 - Infrastructure ✅
 
-1. ✅ `FWH.Contracts/FWH.Contracts.csproj`
-2. ✅ `FWH.Contracts/Location/LocationContracts.cs`
-3. ✅ `FWH.Contracts/Marketing/MarketingContracts.cs`
-4. ✅ `FWH.Mediator.Remote/FWH.Mediator.Remote.csproj`
-5. ✅ `FWH.Mediator.Remote/Location/LocationHandlers.cs`
-6. ✅ `FWH.Mediator.Remote/Marketing/MarketingHandlers.cs`
-7. ✅ `FWH.Mediator.Remote/Extensions/MediatorServiceCollectionExtensions.cs`
+1. ✅ `FWH.Orchestrix.Contracts/FWH.Orchestrix.Contracts.csproj`
+2. ✅ `FWH.Orchestrix.Contracts/Location/LocationContracts.cs`
+3. ✅ `FWH.Orchestrix.Contracts/Marketing/MarketingContracts.cs`
+4. ✅ `FWH.Orchestrix.Mediator.Remote/FWH.Orchestrix.Mediator.Remote.csproj`
+5. ✅ `FWH.Orchestrix.Mediator.Remote/Location/LocationHandlers.cs`
+6. ✅ `FWH.Orchestrix.Mediator.Remote/Marketing/MarketingHandlers.cs`
+7. ✅ `FWH.Orchestrix.Mediator.Remote/Extensions/MediatorServiceCollectionExtensions.cs`
 8. ✅ `Directory.Packages.props` (updated with MediatR)
 
 ### Modified Files ✅
@@ -719,13 +719,13 @@ Successfully created the infrastructure for mediator-based API abstraction:
 
 ---
 
-**Implementation Status:** ✅ **PHASE 1 COMPLETE**  
-**Build Status:** ⏳ **PENDING MOBILE APP UPDATES**  
+**Implementation Status:** ✅ **PHASE 1 COMPLETE**
+**Build Status:** ⏳ **PENDING MOBILE APP UPDATES**
 **Next Phase:** Update mobile services to use mediator
 
 ---
 
-*Document Version: 1.0*  
-*Author: GitHub Copilot*  
-*Date: 2026-01-13*  
+*Document Version: 1.0*
+*Author: GitHub Copilot*
+*Date: 2026-01-13*
 *Status: Phase 1 Complete*

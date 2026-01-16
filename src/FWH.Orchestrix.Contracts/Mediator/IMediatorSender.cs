@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Orchestrix.Contracts.Mediator;
+namespace FWH.Orchestrix.Contracts.Mediator;
 
 /// <summary>
 /// Contract for sending mediator requests.

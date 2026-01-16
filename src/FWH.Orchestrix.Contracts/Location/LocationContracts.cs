@@ -1,6 +1,6 @@
-using Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Contracts.Mediator;
 
-namespace Orchestrix.Contracts.Location;
+namespace FWH.Orchestrix.Contracts.Location;
 
 /// <summary>
 /// Base request for location-related operations.

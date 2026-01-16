@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using FWH.Common.Workflow.Instance;
-using Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Contracts.Mediator;
 
 namespace FWH.Common.Workflow.Actions;
 

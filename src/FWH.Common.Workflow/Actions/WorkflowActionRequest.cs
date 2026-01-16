@@ -1,5 +1,5 @@
 using FWH.Common.Workflow.Models;
-using Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Contracts.Mediator;
 
 namespace FWH.Common.Workflow.Actions;
 

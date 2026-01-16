@@ -12,7 +12,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Linq;
-using Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Contracts.Mediator;
 
 namespace FWH.Common.Workflow.Actions;
 

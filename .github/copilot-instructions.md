@@ -8,7 +8,7 @@
 - Keep Technical (./docs/technical-requirements.md) and Functional (./docs/functional-requirements.md) requirements up-to-date.
 
 ## Code Style
-- Avoid using banned libraries: 
-  - Use `Orchestrix.Mediator` instead of `MediatR`.
+- Avoid using banned libraries:
+  - Use `FWH.Orchestrix.Mediator` instead of `MediatR`.
   - Use `NSubstitute` instead of `Moq`.
   - Use `EF Core` instead of `Dapper`.

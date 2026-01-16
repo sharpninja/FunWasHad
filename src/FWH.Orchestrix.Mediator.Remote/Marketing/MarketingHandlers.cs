@@ -1,9 +1,9 @@
 using System.Net.Http.Json;
-using Orchestrix.Contracts.Marketing;
+using FWH.Orchestrix.Contracts.Marketing;
 using Microsoft.Extensions.Logging;
-using Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Contracts.Mediator;
 
-namespace Orchestrix.Mediator.Remote.Marketing;
+namespace FWH.Orchestrix.Mediator.Remote.Marketing;
 
 /// <summary>
 /// Remote handler for getting business marketing data via HTTP API.

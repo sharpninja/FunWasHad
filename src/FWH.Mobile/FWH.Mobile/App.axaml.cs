@@ -27,7 +27,7 @@ using FWH.Mobile.Data.Extensions;
 using FWH.Common.Imaging.Extensions;
 using FWH.Mobile.Options;
 using FWH.Mobile.Services;
-using Orchestrix.Mediator.Remote.Extensions;
+using FWH.Orchestrix.Mediator.Remote.Extensions;
 
 namespace FWH.Mobile;
 
@@ -65,7 +65,7 @@ public partial class App : Application
         // Configure API HTTP clients with platform-specific URLs
         string locationApiBaseAddress;
         string marketingApiBaseAddress;
-        
+
         // Detect platform at runtime instead of compile-time
         if (OperatingSystem.IsAndroid())
         {
@@ -79,7 +79,7 @@ public partial class App : Application
             locationApiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "https://localhost:4747/";
             marketingApiBaseAddress = Environment.GetEnvironmentVariable("MARKETING_API_BASE_URL") ?? "https://localhost:4749/";
         }
-        
+
         services.AddApiHttpClients(options =>
         {
             options.LocationApiBaseUrl = locationApiBaseAddress;
@@ -92,7 +92,7 @@ public partial class App : Application
             var clientFactory = sp.GetRequiredService<IHttpClientFactory>();
             var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
             var httpClient = clientFactory.CreateClient("LocationApi");
-            
+
             return new LocationApiClient(
                 httpClient,
                 Microsoft.Extensions.Options.Options.Create(new LocationApiClientOptions
@@ -111,7 +111,7 @@ public partial class App : Application
 
         // Register activity tracking service
         services.AddSingleton<ActivityTrackingService>();
-        
+
         // Register activity tracking ViewModel
         services.AddSingleton<ActivityTrackingViewModel>();
 
@@ -126,7 +126,7 @@ public partial class App : Application
 
         // Register workflow action handler for GPS + nearby businesses
         services.AddScoped<GetNearbyBusinessesActionHandler>();
-        services.AddScoped<FWH.Common.Workflow.Actions.IWorkflowActionHandler>(sp => 
+        services.AddScoped<FWH.Common.Workflow.Actions.IWorkflowActionHandler>(sp =>
             sp.GetRequiredService<GetNearbyBusinessesActionHandler>());
 
         // Register platform-specific camera services using runtime detection
@@ -155,15 +155,15 @@ public partial class App : Application
             // Try to find and invoke Android extension methods
             var androidAssembly = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.GetName().Name == "FWH.Mobile.Android");
-            
+
             if (androidAssembly != null)
             {
                 var androidExtensions = androidAssembly.GetType("FWH.Mobile.Android.AndroidServiceCollectionExtensions");
-                
+
                 // Register camera service
                 var addAndroidCameraMethod = androidExtensions?.GetMethod("AddAndroidCameraService");
                 addAndroidCameraMethod?.Invoke(null, new object[] { services });
-                
+
                 // Register GPS service
                 var addAndroidGpsMethod = androidExtensions?.GetMethod("AddAndroidGpsService");
                 addAndroidGpsMethod?.Invoke(null, new object[] { services });
@@ -179,15 +179,15 @@ public partial class App : Application
             // Try to find and invoke iOS extension methods
             var iosAssembly = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.GetName().Name == "FWH.Mobile.iOS");
-            
+
             if (iosAssembly != null)
             {
                 var iosExtensions = iosAssembly.GetType("FWH.Mobile.iOS.iOSServiceCollectionExtensions");
-                
+
                 // Register camera service
                 var addIOSCameraMethod = iosExtensions?.GetMethod("AddIOSCameraService");
                 addIOSCameraMethod?.Invoke(null, new object[] { services });
-                
+
                 // Register GPS service
                 var addIOSGpsMethod = iosExtensions?.GetMethod("AddIOSGpsService");
                 addIOSGpsMethod?.Invoke(null, new object[] { services });
@@ -203,11 +203,11 @@ public partial class App : Application
             // Try to find and invoke Desktop extension methods
             var desktopAssembly = AppDomain.CurrentDomain.GetAssemblies()
                 .FirstOrDefault(a => a.GetName().Name == "FWH.Mobile.Desktop");
-            
+
             if (desktopAssembly != null)
             {
                 var desktopExtensions = desktopAssembly.GetType("FWH.Mobile.Desktop.DesktopServiceCollectionExtensions");
-                
+
                 // Register GPS service (Desktop doesn't have camera service yet)
                 var addDesktopGpsMethod = desktopExtensions?.GetMethod("AddDesktopGpsService");
                 addDesktopGpsMethod?.Invoke(null, new object[] { services });
@@ -259,7 +259,7 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
+            // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
             DisableAvaloniaDataAnnotationValidation();
 
             // Initialize workflow from workflow.puml
@@ -305,7 +305,7 @@ public partial class App : Application
         try
         {
             var trackingService = ServiceProvider.GetRequiredService<ILocationTrackingService>();
-            
+
             // Start tracking with default settings (50m threshold, 30s interval)
             await trackingService.StartTrackingAsync();
 
@@ -379,13 +379,13 @@ public partial class App : Application
                 var contextType = Type.GetType("Android.App.Application, Mono.Android");
                 var contextProperty = contextType?.GetProperty("Context");
                 var context = contextProperty?.GetValue(null);
-                
+
                 var assetsProperty = context?.GetType().GetProperty("Assets");
                 var assets = assetsProperty?.GetValue(context);
-                
+
                 var openMethod = assets?.GetType().GetMethod("Open", new[] { typeof(string) });
                 var stream = openMethod?.Invoke(assets, new object[] { "workflow.puml" }) as Stream;
-                
+
                 if (stream != null)
                 {
                     using (stream)
