@@ -8,7 +8,14 @@ namespace FWH.Location.Api.Controllers;
 
 /// <summary>
 /// REST API surface for the shared location service.
+/// Implements TR-API-005: Location API Endpoints for device location tracking.
 /// </summary>
+/// <remarks>
+/// This controller provides endpoints for:
+/// - Device location updates (TR-API-005)
+/// - Nearby business discovery (TR-API-002)
+/// - Location confirmations
+/// </remarks>
 [ApiController]
 [Route("api/[controller]")]
 public sealed class LocationsController : ControllerBase
@@ -29,7 +36,15 @@ public sealed class LocationsController : ControllerBase
 
     /// <summary>
     /// Returns nearby businesses for the supplied coordinates.
+    /// Implements TR-API-002: Marketing endpoints - nearby business discovery.
     /// </summary>
+    /// <param name="latitude">Latitude coordinate (-90 to 90)</param>
+    /// <param name="longitude">Longitude coordinate (-180 to 180)</param>
+    /// <param name="radiusMeters">Search radius in meters (default: 30)</param>
+    /// <param name="categories">Optional category filters</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of nearby business locations</returns>
+    /// <exception cref="BadRequestResult">Thrown when coordinates are invalid or radius is invalid</exception>
     [HttpGet("nearby")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -68,6 +83,13 @@ public sealed class LocationsController : ControllerBase
     /// <summary>
     /// Returns the closest business for the supplied coordinates.
     /// </summary>
+    /// <param name="latitude">Latitude coordinate (-90 to 90)</param>
+    /// <param name="longitude">Longitude coordinate (-180 to 180)</param>
+    /// <param name="maxDistanceMeters">Maximum distance to search in meters (default: 1000)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The closest business location, or null if none found</returns>
+    /// <exception cref="BadRequestResult">Thrown when coordinates are invalid or max distance is invalid</exception>
+    /// <exception cref="NotFoundResult">Thrown when no business is found within the specified distance</exception>
     [HttpGet("closest")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -111,6 +133,10 @@ public sealed class LocationsController : ControllerBase
     /// <summary>
     /// Records a confirmed business location with the reporting GPS coordinates.
     /// </summary>
+    /// <param name="request">Location confirmation request with business and user coordinates</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Created location confirmation with ID</returns>
+    /// <exception cref="BadRequestResult">Thrown when request is invalid, coordinates are out of range, or business name is missing</exception>
     [HttpPost("confirmed")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -171,23 +197,48 @@ public sealed class LocationsController : ControllerBase
 
     /// <summary>
     /// Updates the location of a device. Used for location tracking.
+    /// Implements TR-API-005: Location API Endpoints - POST /api/location/device/{deviceId}.
     /// </summary>
+    /// <param name="deviceId">Device ID from route (optional, can also be in request body)</param>
+    /// <param name="request">Device location update request</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Updated device location with ID and timestamp</returns>
+    /// <exception cref="BadRequestResult">Thrown when request is null, device ID is missing, or coordinates are invalid</exception>
+    /// <remarks>
+    /// This endpoint accepts device location updates for tracking purposes.
+    /// Coordinates are validated to be within valid ranges (latitude: -90 to 90, longitude: -180 to 180).
+    /// Implements TR-API-005 and TR-SEC-001 (data validation).
+    /// Supports both route-based deviceId (/api/locations/device/{deviceId}) and body-based deviceId (/api/locations/device).
+    /// </remarks>
     [HttpPost("device")]
+    [HttpPost("device/{deviceId}")] // Route matching TR-API-005 specification
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateDeviceLocation(
-        [FromBody] DeviceLocationUpdateRequest request,
+        [FromRoute] string? deviceId,
+        [FromBody] DeviceLocationUpdateRequest? request,
         CancellationToken cancellationToken = default)
     {
+        // Support both route-based and body-based deviceId (TR-API-005)
+        var finalDeviceId = deviceId ?? request?.DeviceId;
+
         if (request is null)
         {
             return BadRequest("Request body is required.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.DeviceId))
+        if (string.IsNullOrWhiteSpace(finalDeviceId))
         {
-            return BadRequest("Device ID is required.");
+            return BadRequest("Device ID is required (provide in route or request body).");
         }
+
+        // Use route deviceId if provided, otherwise use body deviceId
+        if (!string.IsNullOrWhiteSpace(deviceId) && !string.IsNullOrWhiteSpace(request.DeviceId) && deviceId != request.DeviceId)
+        {
+            return BadRequest("Device ID in route must match device ID in request body.");
+        }
+
+        var effectiveDeviceId = deviceId ?? request.DeviceId;
 
         if (!IsValidCoordinate(request.Latitude, -90, 90))
         {
@@ -201,7 +252,7 @@ public sealed class LocationsController : ControllerBase
 
         var entity = new DeviceLocation
         {
-            DeviceId = request.DeviceId,
+            DeviceId = effectiveDeviceId,
             Latitude = request.Latitude,
             Longitude = request.Longitude,
             AccuracyMeters = request.AccuracyMeters,

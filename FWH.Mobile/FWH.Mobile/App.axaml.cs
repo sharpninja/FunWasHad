@@ -11,6 +11,7 @@ using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 using FWH.Mobile.ViewModels;
 using FWH.Mobile.Views;
@@ -26,6 +27,7 @@ using FWH.Mobile.Data.Extensions;
 using FWH.Common.Imaging.Extensions;
 using FWH.Mobile.Options;
 using FWH.Mobile.Services;
+using Orchestrix.Mediator.Remote.Extensions;
 
 namespace FWH.Mobile;
 
@@ -57,42 +59,49 @@ public partial class App : Application
         // Requires IPlatformService from AddChatServices() to be registered first
         services.AddLocationServices();
 
-        // Register typed client that talks to the Location Web API
-        // Platform-specific URL configuration for Android
-        string apiBaseAddress;
+        // Register MediatR handlers for remote API calls
+        services.AddRemoteMediatorHandlers();
+
+        // Configure API HTTP clients with platform-specific URLs
+        string locationApiBaseAddress;
+        string marketingApiBaseAddress;
         
         // Detect platform at runtime instead of compile-time
         if (OperatingSystem.IsAndroid())
         {
             // Android emulator: 10.0.2.2 is special alias for host machine's localhost
-            // Use HTTP port 4748 (where FWH.Location.Api actually runs)
-            // Android physical device: Set LOCATION_API_BASE_URL environment variable to your machine's IP
-            apiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "http://10.0.2.2:4748/";
+            locationApiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "http://10.0.2.2:4748/";
+            marketingApiBaseAddress = Environment.GetEnvironmentVariable("MARKETING_API_BASE_URL") ?? "http://10.0.2.2:4749/";
         }
         else
         {
-            // Desktop/iOS: Use HTTPS with the port where API is actually running (4747)
-            apiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "https://localhost:4747/";
+            // Desktop/iOS: Use HTTPS with the ports where APIs are actually running
+            locationApiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "https://localhost:4747/";
+            marketingApiBaseAddress = Environment.GetEnvironmentVariable("MARKETING_API_BASE_URL") ?? "https://localhost:4749/";
         }
         
-        services.Configure<LocationApiClientOptions>(options =>
+        services.AddApiHttpClients(options =>
         {
-            options.BaseAddress = apiBaseAddress;
-            options.Timeout = TimeSpan.FromSeconds(30);
-        });
-        
-        // Configure HttpClient with base address
-        services.AddHttpClient<LocationApiClient>(client =>
-        {
-            client.BaseAddress = new Uri(apiBaseAddress.EndsWith('/') ? apiBaseAddress : apiBaseAddress + "/");
-            client.Timeout = TimeSpan.FromSeconds(30);
+            options.LocationApiBaseUrl = locationApiBaseAddress;
+            options.MarketingApiBaseUrl = marketingApiBaseAddress;
         });
 
-        // Register LocationApiClient separately for direct injection
-        services.AddSingleton<LocationApiClient>();
-
-        // Register as ILocationService for compatibility
-        services.AddSingleton<ILocationService>(sp => sp.GetRequiredService<LocationApiClient>());
+        // Keep ILocationService registered for GetNearbyBusinessesActionHandler and other services that need it
+        services.AddSingleton<ILocationService>(sp =>
+        {
+            var clientFactory = sp.GetRequiredService<IHttpClientFactory>();
+            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            var httpClient = clientFactory.CreateClient("LocationApi");
+            
+            return new LocationApiClient(
+                httpClient,
+                Microsoft.Extensions.Options.Options.Create(new LocationApiClientOptions
+                {
+                    BaseAddress = locationApiBaseAddress,
+                    Timeout = TimeSpan.FromSeconds(30)
+                }),
+                loggerFactory.CreateLogger<LocationApiClient>());
+        });
 
         // Register location tracking service
         services.AddSingleton<ILocationTrackingService, LocationTrackingService>();

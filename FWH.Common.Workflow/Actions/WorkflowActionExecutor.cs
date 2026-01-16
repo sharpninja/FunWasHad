@@ -12,6 +12,7 @@ using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Linq;
+using Orchestrix.Contracts.Mediator;
 
 namespace FWH.Common.Workflow.Actions;
 
@@ -27,18 +28,29 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
     private readonly ILogger<WorkflowActionExecutor> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly IWorkflowActionHandlerRegistry _registry;
+    private readonly IMediatorSender? _mediator;
     private readonly WorkflowActionExecutorOptions _options;
 
     public WorkflowActionExecutor(IServiceProvider serviceProvider, IWorkflowActionHandlerRegistry registry, IOptions<WorkflowActionExecutorOptions>? options = null, ILogger<WorkflowActionExecutor>? logger = null)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        _mediator = null;
         _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<WorkflowActionExecutor>.Instance;
         _options = options?.Value ?? new WorkflowActionExecutorOptions();
 
         // Eagerly trigger registrar if available so handlers registered as singletons get wired when DI builds
         var registrar = _serviceProvider.GetService<WorkflowActionHandlerRegistrar>();
         // registrar's constructor performs registration
+    }
+
+    public WorkflowActionExecutor(IServiceProvider serviceProvider, IMediatorSender mediator, IOptions<WorkflowActionExecutorOptions>? options = null, ILogger<WorkflowActionExecutor>? logger = null)
+    {
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _registry = _serviceProvider.GetService<IWorkflowActionHandlerRegistry>() ?? new WorkflowActionHandlerRegistry();
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<WorkflowActionExecutor>.Instance;
+        _options = options?.Value ?? new WorkflowActionExecutorOptions();
     }
 
     public async Task<bool> ExecuteAsync(string workflowId, WorkflowNode node, WorkflowDefinition definition, CancellationToken cancellationToken = default)
@@ -98,6 +110,35 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
         }
 
         var resolved = ResolveTemplates(parameters, variables);
+
+        if (_mediator != null)
+        {
+            try
+            {
+                var response = await _mediator.SendAsync(new WorkflowActionRequest
+                {
+                    WorkflowId = workflowId,
+                    Node = node,
+                    Definition = definition,
+                    ActionName = actionName,
+                    Parameters = resolved
+                }, cancellationToken).ConfigureAwait(false);
+
+                if (response.Success && response.VariableUpdates != null && rootInstanceManager != null)
+                {
+                    foreach (var update in response.VariableUpdates)
+                    {
+                        rootInstanceManager.SetVariable(workflowId, update.Key, update.Value);
+                    }
+                }
+
+                return response.Success;
+            }
+            catch (OperationCanceledException)
+            {
+                return false;
+            }
+        }
 
         // Prefer any singleton handlers registered directly in DI (common for delegate adapters)
         var directHandlersList = _serviceProvider.GetServices<IWorkflowActionHandler>();

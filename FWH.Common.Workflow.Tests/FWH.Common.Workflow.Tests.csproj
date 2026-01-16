@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" PackageVersion="17.9.0" />
-    <PackageReference Include="Moq" />
+    <PackageReference Include="NSubstitute" />
     <PackageReference Include="xunit" PackageVersion="2.5.3" />
     <PackageReference Include="xunit.runner.visualstudio" PackageVersion="2.5.3" />
     <PackageReference Include="coverlet.collector" PackageVersion="4.2.0" />

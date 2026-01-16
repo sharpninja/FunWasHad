@@ -4,7 +4,12 @@ namespace FWH.Location.Api.Models;
 
 /// <summary>
 /// Request model for updating device location.
+/// Implements TR-API-005: Location API Endpoints request validation.
 /// </summary>
+/// <remarks>
+/// Used by the device location update endpoint (TR-API-005).
+/// All fields are validated according to TR-SEC-001 (data validation).
+/// </remarks>
 public sealed record DeviceLocationUpdateRequest
 {
     /// <summary>

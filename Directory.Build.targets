@@ -1,2 +1,19 @@
 ﻿<Project>
+  <!-- DocFX documentation generation target -->
+  <Target Name="GenerateDocumentation" AfterTargets="Build" Condition="'$(GenerateDocumentation)' == 'true'">
+    <PropertyGroup>
+      <DocFxPath>$(MSBuildThisFileDirectory)docs</DocFxPath>
+      <DocFxOutputPath>$(MSBuildThisFileDirectory)docs\_site</DocFxOutputPath>
+    </PropertyGroup>
+
+    <Message Text="Generating documentation with DocFX..." Importance="high" />
+
+    <!-- Install DocFX tool if not already installed -->
+    <Exec Command="dotnet tool install -g docfx" WorkingDirectory="$(DocFxPath)" ContinueOnError="true" Condition="!Exists('$(UserProfile)\.dotnet\tools\docfx.exe')" />
+
+    <!-- Generate documentation -->
+    <Exec Command="docfx docfx.json" WorkingDirectory="$(DocFxPath)" ContinueOnError="false" />
+
+    <Message Text="Documentation generated at: $(DocFxOutputPath)" Importance="high" />
+  </Target>
 </Project>

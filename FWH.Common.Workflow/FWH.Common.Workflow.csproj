@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FWH.Mobile.Data\FWH.Mobile.Data.csproj" />
+    <ProjectReference Include="..\Orchestrix.Mediator.Remote\Orchestrix.Mediator.Remote.csproj" />
   </ItemGroup>
 
 </Project>

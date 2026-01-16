@@ -16,6 +16,7 @@ using FWH.Mobile.Data.Repositories;
 using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using FWH.Common.Workflow.Actions;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -58,9 +59,9 @@ public class WorkflowExecutorOptionsTests
         services.AddDbContext<NotesDbContext>(o => o.UseSqlite(connection));
 
         services.AddScoped<ScopedDep>();
-        // Register HandlerUsingDep as scoped and expose a factory so registry can resolve it per-scope
         services.AddScoped<HandlerUsingDep>();
-        services.AddSingleton<Func<IServiceProvider, IWorkflowActionHandler>>(sp => (provider) => provider.GetRequiredService<HandlerUsingDep>());
+        // Expose factory so the registry can create scoped handler instances
+        services.AddSingleton<Func<IServiceProvider, IWorkflowActionHandler>>(_ => provider => provider.GetRequiredService<HandlerUsingDep>());
 
         services.AddSingleton<IWorkflowDefinitionStore, InMemoryWorkflowDefinitionStore>();
         services.AddSingleton<IWorkflowInstanceManager, InMemoryWorkflowInstanceManager>();
@@ -68,6 +69,8 @@ public class WorkflowExecutorOptionsTests
         services.AddSingleton<IWorkflowStateCalculator, WorkflowStateCalculator>();
         services.AddSingleton<IWorkflowActionHandlerRegistry, WorkflowActionHandlerRegistry>();
         services.AddSingleton<WorkflowActionHandlerRegistrar>();
+
+        // Mediation no longer uses MediatR; registry/handler registrar covers action dispatch in these tests.
         
         logger = new TestLogger<WorkflowActionExecutor>();
         services.AddSingleton<ILogger<WorkflowActionExecutor>>(logger);

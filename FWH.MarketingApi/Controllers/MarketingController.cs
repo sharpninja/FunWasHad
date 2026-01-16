@@ -7,7 +7,14 @@ namespace FWH.MarketingApi.Controllers;
 
 /// <summary>
 /// API controller for retrieving business marketing data (themes, coupons, menus, news).
+/// Implements TR-API-002: Marketing endpoints.
 /// </summary>
+/// <remarks>
+/// This controller provides all marketing-related endpoints as specified in TR-API-002:
+/// - Complete marketing data retrieval
+/// - Theme, coupons, menu, and news endpoints
+/// - Nearby business discovery
+/// </remarks>
 [ApiController]
 [Route("api/[controller]")]
 public class MarketingController : ControllerBase
@@ -23,8 +30,11 @@ public class MarketingController : ControllerBase
 
     /// <summary>
     /// Get complete marketing data for a business (theme, coupons, menu, news).
+    /// Implements TR-API-002: GET /api/marketing/{businessId}.
     /// </summary>
     /// <param name="businessId">Business ID</param>
+    /// <returns>Complete marketing data including theme, coupons, menu items, and news</returns>
+    /// <exception cref="NotFoundResult">Thrown when business is not found or not subscribed</exception>
     [HttpGet("{businessId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -59,8 +69,11 @@ public class MarketingController : ControllerBase
 
     /// <summary>
     /// Get active theme for a business.
+    /// Implements TR-API-002: GET /api/marketing/{businessId}/theme.
     /// </summary>
     /// <param name="businessId">Business ID</param>
+    /// <returns>Active business theme</returns>
+    /// <exception cref="NotFoundResult">Thrown when theme is not found or business is not subscribed</exception>
     [HttpGet("{businessId}/theme")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -81,8 +94,10 @@ public class MarketingController : ControllerBase
 
     /// <summary>
     /// Get active coupons for a business.
+    /// Implements TR-API-002: GET /api/marketing/{businessId}/coupons.
     /// </summary>
     /// <param name="businessId">Business ID</param>
+    /// <returns>List of active coupons for the business</returns>
     [HttpGet("{businessId}/coupons")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<List<Coupon>>> GetCoupons(long businessId)
@@ -90,9 +105,9 @@ public class MarketingController : ControllerBase
         var now = DateTimeOffset.UtcNow;
         var coupons = await _context.Coupons
             .Include(c => c.Business)
-            .Where(c => c.BusinessId == businessId 
-                && c.IsActive 
-                && c.ValidFrom <= now 
+            .Where(c => c.BusinessId == businessId
+                && c.IsActive
+                && c.ValidFrom <= now
                 && c.ValidUntil >= now
                 && c.Business.IsSubscribed
                 && (c.MaxRedemptions == null || c.CurrentRedemptions < c.MaxRedemptions))
@@ -105,9 +120,11 @@ public class MarketingController : ControllerBase
 
     /// <summary>
     /// Get menu items for a business, optionally filtered by category.
+    /// Implements TR-API-002: GET /api/marketing/{businessId}/menu.
     /// </summary>
     /// <param name="businessId">Business ID</param>
     /// <param name="category">Optional category filter</param>
+    /// <returns>List of menu items, optionally filtered by category</returns>
     [HttpGet("{businessId}/menu")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<List<MenuItem>>> GetMenu(long businessId, [FromQuery] string? category = null)
@@ -133,8 +150,10 @@ public class MarketingController : ControllerBase
 
     /// <summary>
     /// Get menu categories for a business.
+    /// Implements TR-API-002: GET /api/marketing/{businessId}/menu/categories.
     /// </summary>
     /// <param name="businessId">Business ID</param>
+    /// <returns>List of distinct menu categories</returns>
     [HttpGet("{businessId}/menu/categories")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<List<string>>> GetMenuCategories(long businessId)
@@ -152,9 +171,11 @@ public class MarketingController : ControllerBase
 
     /// <summary>
     /// Get news items for a business.
+    /// Implements TR-API-002: GET /api/marketing/{businessId}/news.
     /// </summary>
     /// <param name="businessId">Business ID</param>
-    /// <param name="limit">Maximum number of news items to return (default 10)</param>
+    /// <param name="limit">Maximum number of news items to return (default 10, max 50)</param>
+    /// <returns>List of published news items for the business</returns>
     [HttpGet("{businessId}/news")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<List<NewsItem>>> GetNews(long businessId, [FromQuery] int limit = 10)
@@ -162,8 +183,8 @@ public class MarketingController : ControllerBase
         var now = DateTimeOffset.UtcNow;
         var newsItems = await _context.NewsItems
             .Include(n => n.Business)
-            .Where(n => n.BusinessId == businessId 
-                && n.IsPublished 
+            .Where(n => n.BusinessId == businessId
+                && n.IsPublished
                 && n.PublishedAt <= now
                 && n.Business.IsSubscribed
                 && (n.ExpiresAt == null || n.ExpiresAt > now))
@@ -178,10 +199,13 @@ public class MarketingController : ControllerBase
 
     /// <summary>
     /// Find businesses near a location.
+    /// Implements TR-API-002: GET /api/marketing/nearby.
     /// </summary>
-    /// <param name="latitude">Latitude</param>
-    /// <param name="longitude">Longitude</param>
-    /// <param name="radiusMeters">Search radius in meters (default 1000)</param>
+    /// <param name="latitude">Latitude coordinate (-90 to 90)</param>
+    /// <param name="longitude">Longitude coordinate (-180 to 180)</param>
+    /// <param name="radiusMeters">Search radius in meters (default 1000, max 50000)</param>
+    /// <returns>List of businesses within the specified radius</returns>
+    /// <exception cref="BadRequestResult">Thrown when coordinates are invalid or radius is out of range</exception>
     [HttpGet("nearby")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

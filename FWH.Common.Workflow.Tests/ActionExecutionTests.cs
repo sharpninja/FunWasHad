@@ -19,6 +19,8 @@ using System.Collections.Generic;
 using System.Threading;
 using FWH.Common.Workflow.Extensions;
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Options;
+using FWH.Common.Workflow.Actions;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -40,7 +42,7 @@ public class ActionExecutionTests
         services.AddSingleton<IWorkflowStateCalculator, WorkflowStateCalculator>();
         services.AddSingleton<IWorkflowActionHandlerRegistry, WorkflowActionHandlerRegistry>();
         services.AddSingleton<WorkflowActionHandlerRegistrar>();
-        services.AddSingleton<IWorkflowActionExecutor, WorkflowActionExecutor>();
+        services.AddSingleton<IWorkflowActionExecutor>(sp => new WorkflowActionExecutor(sp, sp.GetRequiredService<IWorkflowActionHandlerRegistry>(), Options.Create(new WorkflowActionExecutorOptions { ExecuteHandlersInBackground = false })));
         services.AddSingleton<IWorkflowController, WorkflowController>();
         services.AddSingleton<IWorkflowService, WorkflowService>();
         services.AddTransient<IWorkflowView, WorkflowView>();
@@ -105,8 +107,6 @@ public class ActionExecutionTests
     [Fact]
     public async Task ParameterResolution_ReplacesMultipleTemplates()
     {
-        var spBuild = new ServiceCollection().BuildServiceProvider();
-        var executor = new WorkflowActionExecutor(spBuild, new WorkflowActionHandlerRegistry());
         var parameters = new System.Collections.Generic.Dictionary<string,string>
         {
             ["text"] = "Hi {{first}} {{last}}",

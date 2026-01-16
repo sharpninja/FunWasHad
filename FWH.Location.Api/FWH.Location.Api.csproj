@@ -6,6 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Disable OpenAPI source generators that are incompatible with .NET 9 -->
     <OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
+    <!-- Enable XML documentation generation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn> <!-- Suppress warnings for missing XML docs (will enable after full audit) -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +17,7 @@
     <!-- <PackageReference Include="Microsoft.AspNetCore.OpenApi" /> -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>

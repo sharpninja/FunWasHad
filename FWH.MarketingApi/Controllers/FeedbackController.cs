@@ -7,7 +7,14 @@ namespace FWH.MarketingApi.Controllers;
 
 /// <summary>
 /// API controller for submitting and managing user feedback to businesses.
+/// Implements TR-API-003: Feedback endpoints.
 /// </summary>
+/// <remarks>
+/// This controller provides all feedback-related endpoints as specified in TR-API-003:
+/// - Feedback submission (TR-API-003)
+/// - Image and video attachment uploads (TR-MEDIA-001, TR-MEDIA-002)
+/// - Feedback retrieval and statistics
+/// </remarks>
 [ApiController]
 [Route("api/[controller]")]
 public class FeedbackController : ControllerBase
@@ -26,8 +33,16 @@ public class FeedbackController : ControllerBase
 
     /// <summary>
     /// Submit text feedback to a business.
+    /// Implements TR-API-003: POST /api/feedback.
     /// </summary>
-    /// <param name="request">Feedback details</param>
+    /// <param name="request">Feedback details including business ID, user info, feedback type, and message</param>
+    /// <returns>Created feedback with ID</returns>
+    /// <exception cref="BadRequestResult">Thrown when request is invalid, feedback type is invalid, rating is out of range, or business is not subscribed</exception>
+    /// <exception cref="NotFoundResult">Thrown when business is not found</exception>
+    /// <remarks>
+    /// Validates feedback according to TR-API-004 (validation requirements).
+    /// Rating must be between 1 and 5 if provided.
+    /// </remarks>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -92,9 +107,18 @@ public class FeedbackController : ControllerBase
 
     /// <summary>
     /// Upload an image attachment for feedback.
+    /// Implements TR-API-003: POST /api/feedback/{feedbackId}/attachments/image.
+    /// Implements TR-MEDIA-001: Attachment upload handling and TR-MEDIA-002: Content type support.
     /// </summary>
-    /// <param name="feedbackId">Feedback ID</param>
-    /// <param name="file">Image file</param>
+    /// <param name="feedbackId">Feedback ID to attach the image to</param>
+    /// <param name="file">Image file (JPEG, PNG, GIF, or WebP, max 50MB)</param>
+    /// <returns>Created attachment with metadata</returns>
+    /// <exception cref="BadRequestResult">Thrown when file is missing, file size exceeds 50MB, or content type is not allowed</exception>
+    /// <exception cref="NotFoundResult">Thrown when feedback is not found</exception>
+    /// <remarks>
+    /// Validates file size (max 50MB) and content type according to TR-MEDIA-002.
+    /// Allowed image types: image/jpeg, image/png, image/gif, image/webp.
+    /// </remarks>
     [HttpPost("{feedbackId}/attachments/image")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -152,9 +176,18 @@ public class FeedbackController : ControllerBase
 
     /// <summary>
     /// Upload a video attachment for feedback.
+    /// Implements TR-API-003: POST /api/feedback/{feedbackId}/attachments/video.
+    /// Implements TR-MEDIA-001: Attachment upload handling and TR-MEDIA-002: Content type support.
     /// </summary>
-    /// <param name="feedbackId">Feedback ID</param>
-    /// <param name="file">Video file</param>
+    /// <param name="feedbackId">Feedback ID to attach the video to</param>
+    /// <param name="file">Video file (MP4, QuickTime, or AVI, max 50MB)</param>
+    /// <returns>Created attachment with metadata</returns>
+    /// <exception cref="BadRequestResult">Thrown when file is missing, file size exceeds 50MB, or content type is not allowed</exception>
+    /// <exception cref="NotFoundResult">Thrown when feedback is not found</exception>
+    /// <remarks>
+    /// Validates file size (max 50MB) and content type according to TR-MEDIA-002.
+    /// Allowed video types: video/mp4, video/quicktime, video/x-msvideo.
+    /// </remarks>
     [HttpPost("{feedbackId}/attachments/video")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -212,8 +245,11 @@ public class FeedbackController : ControllerBase
 
     /// <summary>
     /// Get feedback by ID.
+    /// Implements TR-API-003: GET /api/feedback/{id}.
     /// </summary>
     /// <param name="id">Feedback ID</param>
+    /// <returns>Feedback with business and attachments</returns>
+    /// <exception cref="NotFoundResult">Thrown when feedback is not found</exception>
     [HttpGet("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

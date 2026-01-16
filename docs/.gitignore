@@ -1,0 +1,17 @@
+# DocFX generated files
+_site/
+obj/
+bin/
+*.cache
+*.tmp
+*.html
+
+# DocFX metadata
+api/
+*.pdb.meta
+
+# Build artifacts
+*.dll
+*.pdb
+*.deps.json
+*.runtimeconfig.json

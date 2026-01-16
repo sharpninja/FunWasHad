@@ -1,7 +1,11 @@
+using Microsoft.Extensions.Logging;
+using FWH.Common.Workflow.Models;
+using FWH.Common.Workflow.Instance;
 using Microsoft.Extensions.DependencyInjection;
+using Orchestrix.Mediator.Remote.Extensions;
+using Orchestrix.Contracts.Mediator;
 using FWH.Common.Workflow.Actions;
 using FWH.Common.Workflow.Controllers;
-using FWH.Common.Workflow.Instance;
 using FWH.Common.Workflow.Mapping;
 using FWH.Common.Workflow.State;
 using FWH.Common.Workflow.Storage;
@@ -48,6 +52,9 @@ public static class WorkflowServiceCollectionExtensions
         
         // View (transient for multiple workflow instances)
         services.AddTransient<IWorkflowView, WorkflowView>();
+
+        services.AddRemoteMediatorHandlers();
+        services.AddTransient<IMediatorHandler<WorkflowActionRequest, WorkflowActionResponse>, WorkflowActionRequestHandler>();
 
         return services;
     }

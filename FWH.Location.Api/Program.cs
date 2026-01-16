@@ -14,6 +14,28 @@ builder.AddNpgsqlDbContext<LocationDbContext>("funwashad");
 
 builder.Services.AddControllers();
 
+// Add Swagger/OpenAPI for Debug builds only
+#if DEBUG
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new()
+    {
+        Title = "FunWasHad Location API",
+        Version = "v1",
+        Description = "REST API for location tracking and business discovery. Implements TR-API-005: Location API Endpoints."
+    });
+
+    // Include XML comments in Swagger documentation
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+});
+#endif
+
 var locationOptions = builder.Configuration.GetSection("LocationService").Get<LocationServiceOptions>() ?? new();
 
 // Register IPlatformService before adding location services
@@ -37,6 +59,17 @@ await ApplyDatabaseMigrationsAsync(app);
 // Map Aspire default endpoints (health checks, metrics)
 app.MapDefaultEndpoints();
 
+// Enable Swagger UI for Debug builds only
+#if DEBUG
+app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "FunWasHad Location API v1");
+    options.RoutePrefix = "swagger";
+    options.DisplayRequestDuration();
+});
+#endif
+
 // HTTPS redirection disabled for Android development
 // Android emulator connects via HTTP (http://10.0.2.2:4748)
 // Enable in production with proper SSL certificates
@@ -53,27 +86,27 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
 {
     using var scope = app.Services.CreateScope();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    
+
     try
     {
         logger.LogInformation("Checking for database migrations...");
-        
+
         // Get connection string from configuration
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         var connectionString = configuration.GetConnectionString("funwashad");
-        
+
         if (string.IsNullOrEmpty(connectionString))
         {
             logger.LogError("Database connection string 'funwashad' not found");
             throw new InvalidOperationException("Database connection string 'funwashad' is required");
         }
-        
+
         // Create and run migration service
         var migrationLogger = scope.ServiceProvider.GetRequiredService<ILogger<DatabaseMigrationService>>();
         var migrationService = new DatabaseMigrationService(connectionString, migrationLogger);
-        
+
         await migrationService.ApplyMigrationsAsync();
-        
+
         logger.LogInformation("Database migrations completed successfully");
     }
     catch (Exception ex)

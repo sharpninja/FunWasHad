@@ -18,6 +18,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System;
 using System.Collections.Generic;
+using FWH.Common.Workflow.Actions;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -36,16 +37,7 @@ public class ActionExecutorErrorHandlingTests
         services.AddDbContext<NotesDbContext>(options => options.UseSqlite(connection));
         services.AddScoped<IWorkflowRepository, EfWorkflowRepository>();
 
-        services.AddSingleton<IWorkflowDefinitionStore, InMemoryWorkflowDefinitionStore>();
-        services.AddSingleton<IWorkflowInstanceManager, InMemoryWorkflowInstanceManager>();
-        services.AddSingleton<IWorkflowModelMapper, WorkflowModelMapper>();
-        services.AddSingleton<IWorkflowStateCalculator, WorkflowStateCalculator>();
-        services.AddSingleton<IWorkflowActionHandlerRegistry, WorkflowActionHandlerRegistry>();
-        services.AddSingleton<WorkflowActionHandlerRegistrar>();
-        services.AddSingleton<IWorkflowActionExecutor, WorkflowActionExecutor>();
-        services.AddSingleton<IWorkflowController, WorkflowController>();
-        services.AddSingleton<IWorkflowService, WorkflowService>();
-        services.AddTransient<IWorkflowView, WorkflowView>();
+        services.AddWorkflowServices(new WorkflowActionExecutorOptions { ExecuteHandlersInBackground = false });
         services.AddLogging();
 
         configure?.Invoke(services);

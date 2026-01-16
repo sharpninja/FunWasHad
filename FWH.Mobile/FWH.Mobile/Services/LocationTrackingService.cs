@@ -1,5 +1,7 @@
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
+using Orchestrix.Contracts.Location;
+using Orchestrix.Contracts.Mediator;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -18,7 +20,7 @@ namespace FWH.Mobile.Services;
 public class LocationTrackingService : ILocationTrackingService
 {
     private readonly IGpsService _gpsService;
-    private readonly LocationApiClient _locationApiClient;
+    private readonly IMediatorSender _mediator;
     private readonly ILocationService _locationService;
     private readonly LocationWorkflowService? _locationWorkflowService;
     private readonly ILogger<LocationTrackingService> _logger;
@@ -45,13 +47,13 @@ public class LocationTrackingService : ILocationTrackingService
 
     public LocationTrackingService(
         IGpsService gpsService,
-        LocationApiClient locationApiClient,
+        IMediatorSender mediator,
         ILocationService locationService,
         ILogger<LocationTrackingService> logger,
         LocationWorkflowService? locationWorkflowService = null)
     {
         _gpsService = gpsService ?? throw new ArgumentNullException(nameof(gpsService));
-        _locationApiClient = locationApiClient ?? throw new ArgumentNullException(nameof(locationApiClient));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _locationService = locationService ?? throw new ArgumentNullException(nameof(locationService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _locationWorkflowService = locationWorkflowService;
@@ -526,24 +528,28 @@ public class LocationTrackingService : ILocationTrackingService
                 _currentMovementState,
                 CurrentSpeedMph ?? 0);
 
-            // Call the Location API to update device location
-            var success = await _locationApiClient.UpdateDeviceLocationAsync(
-                _deviceId,
-                location.Latitude,
-                location.Longitude,
-                location.AccuracyMeters,
-                location.Timestamp,
+            // Send location update through mediator
+            var response = await _mediator.SendAsync(
+                new UpdateDeviceLocationRequest
+                {
+                    DeviceId = _deviceId,
+                    Latitude = location.Latitude,
+                    Longitude = location.Longitude,
+                    Accuracy = location.AccuracyMeters,
+                    Speed = _currentSpeedMetersPerSecond,
+                    Timestamp = location.Timestamp
+                },
                 cancellationToken);
 
-            if (success)
+            if (response.Success)
             {
-                _logger.LogInformation("Location update successful");
+                _logger.LogInformation("Location update successful (ID: {LocationId})", response.LocationId);
                 _lastReportedLocation = location;
                 LocationUpdated?.Invoke(this, location);
             }
             else
             {
-                _logger.LogWarning("Location update failed");
+                _logger.LogWarning("Location update failed: {Error}", response.ErrorMessage);
             }
         }
         catch (Exception ex)

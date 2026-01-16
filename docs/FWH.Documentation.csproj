@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <DocFxConfigFile>$(MSBuildProjectDirectory)\docfx.json</DocFxConfigFile>
+    <DocFxOutputPath>$(MSBuildProjectDirectory)\_site</DocFxOutputPath>
+  </PropertyGroup>
+
+  <Target Name="BuildDocFx" BeforeTargets="Build">
+    <Message Text="Building DocFX documentation site..." Importance="high" />
+
+    <!-- Ensure DocFX tool is installed -->
+    <Exec Command="dotnet tool install -g docfx"
+          ContinueOnError="true"
+          Condition="!Exists('$(UserProfile)\.dotnet\tools\docfx.exe')" />
+
+    <!-- Generate DocFX site -->
+    <Message Text="Generating DocFX site..." Importance="high" />
+    <Exec Command="docfx build &quot;$(DocFxConfigFile)&quot;"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          ContinueOnError="false" />
+
+    <Message Text="DocFX documentation site generated at: $(DocFxOutputPath)" Importance="high" />
+  </Target>
+
+  <Target Name="CleanDocFx" BeforeTargets="Clean">
+    <Message Text="Cleaning DocFX output..." Importance="high" />
+    <RemoveDir Directories="$(DocFxOutputPath)" Condition="Exists('$(DocFxOutputPath)')" />
+    <RemoveDir Directories="$(MSBuildProjectDirectory)\api" Condition="Exists('$(MSBuildProjectDirectory)\api')" />
+    <RemoveDir Directories="$(MSBuildProjectDirectory)\obj" Condition="Exists('$(MSBuildProjectDirectory)\obj')" />
+  </Target>
+
+  <Target Name="RebuildDocFx" DependsOnTargets="CleanDocFx;BuildDocFx" />
+</Project>

@@ -78,7 +78,7 @@ public partial class ChatInputControl : UserControl
         _notificationService?.ShowError(message, "Camera Error");
     }
 
-    private async void OnImageCaptured(object? sender, byte[] imageBytes)
+    private void OnImageCaptured(object? sender, byte[] imageBytes)
     {
         try
         {
