@@ -7,7 +7,7 @@ on:
     branches: ["main"]
     paths:
       - 'docs/**'
-      - 'FWH.*/**'
+      - 'src/**'
       - 'Directory.Packages.props'
       - 'Directory.Build.props'
       - '.github/workflows/static.yml'
@@ -49,23 +49,23 @@ jobs:
 
       - name: Restore dependencies
         run: |
-          dotnet restore FWH.Location.Api/FWH.Location.Api.csproj
-          dotnet restore FWH.MarketingApi/FWH.MarketingApi.csproj
-          dotnet restore FWH.Common.Location/FWH.Common.Location.csproj
-          dotnet restore FWH.Common.Chat/FWH.Common.Chat.csproj
-          dotnet restore FWH.Common.Workflow/FWH.Common.Workflow.csproj
-          dotnet restore FWH.Common.Imaging/FWH.Common.Imaging.csproj
-          dotnet restore FWH.Mobile.Data/FWH.Mobile.Data.csproj
+          dotnet restore src/FWH.Location.Api/FWH.Location.Api.csproj
+          dotnet restore src/FWH.MarketingApi/FWH.MarketingApi.csproj
+          dotnet restore src/FWH.Common.Location/FWH.Common.Location.csproj
+          dotnet restore src/FWH.Common.Chat/FWH.Common.Chat.csproj
+          dotnet restore src/FWH.Common.Workflow/FWH.Common.Workflow.csproj
+          dotnet restore src/FWH.Common.Imaging/FWH.Common.Imaging.csproj
+          dotnet restore src/FWH.Mobile.Data/FWH.Mobile.Data.csproj
 
       - name: Build projects for documentation (generate XML documentation)
         run: |
-          dotnet build FWH.Location.Api/FWH.Location.Api.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
-          dotnet build FWH.MarketingApi/FWH.MarketingApi.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
-          dotnet build FWH.Common.Location/FWH.Common.Location.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
-          dotnet build FWH.Common.Chat/FWH.Common.Chat.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
-          dotnet build FWH.Common.Workflow/FWH.Common.Workflow.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
-          dotnet build FWH.Common.Imaging/FWH.Common.Imaging.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
-          dotnet build FWH.Mobile.Data/FWH.Mobile.Data.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build src/FWH.Location.Api/FWH.Location.Api.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build src/FWH.MarketingApi/FWH.MarketingApi.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build src/FWH.Common.Location/FWH.Common.Location.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build src/FWH.Common.Chat/FWH.Common.Chat.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build src/FWH.Common.Workflow/FWH.Common.Workflow.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build src/FWH.Common.Imaging/FWH.Common.Imaging.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build src/FWH.Mobile.Data/FWH.Mobile.Data.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
 
       - name: Install DocFX
         run: dotnet tool install -g docfx
