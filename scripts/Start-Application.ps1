@@ -56,7 +56,7 @@ Write-Host "  - PgAdmin:          http://localhost:5050" -ForegroundColor Gray
 Write-Host ""
 
 # Build command
-$buildArgs = @("run", "--project", "FWH.AppHost", "--configuration", $Configuration)
+$buildArgs = @("run", "--project", "src\FWH.AppHost", "--configuration", $Configuration)
 
 if ($NoBrowser) {
     $env:ASPNETCORE_URLS = "http://localhost:15888"

@@ -86,11 +86,11 @@ jobs:
 
       - name: Restore dependencies
         timeout-minutes: 10
-        run: dotnet restore FWH.Mobile\FWH.Mobile.Android\FWH.Mobile.Android.csproj
+        run: dotnet restore src\FWH.Mobile\FWH.Mobile.Android\FWH.Mobile.Android.csproj
 
       - name: Build Android app
         timeout-minutes: 20
-        run: dotnet build FWH.Mobile\FWH.Mobile.Android\FWH.Mobile.Android.csproj --no-restore --configuration Release
+        run: dotnet build src\FWH.Mobile\FWH.Mobile.Android\FWH.Mobile.Android.csproj --no-restore --configuration Release
 
   build_api:
     name: Build Location API
@@ -110,15 +110,15 @@ jobs:
 
       - name: Restore dependencies
         timeout-minutes: 10
-        run: dotnet restore FWH.Location.Api/FWH.Location.Api.csproj
+        run: dotnet restore src/FWH.Location.Api/FWH.Location.Api.csproj
 
       - name: Build API
         timeout-minutes: 10
-        run: dotnet build FWH.Location.Api/FWH.Location.Api.csproj --no-restore --configuration Release
+        run: dotnet build src/FWH.Location.Api/FWH.Location.Api.csproj --no-restore --configuration Release
 
       - name: Publish API
         timeout-minutes: 10
-        run: dotnet publish FWH.Location.Api/FWH.Location.Api.csproj --no-build --configuration Release --output ./publish
+        run: dotnet publish src/FWH.Location.Api/FWH.Location.Api.csproj --no-build --configuration Release --output ./publish
 
       - name: Upload publish artifact
         uses: actions/upload-artifact@v4

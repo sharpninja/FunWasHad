@@ -1,23 +1,23 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.1.11312.151
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile", "FWH.Mobile\FWH.Mobile\FWH.Mobile.csproj", "{0BED806C-F6A5-4F50-AF93-1E4404B6A6DE}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile", "src\FWH.Mobile\FWH.Mobile\FWH.Mobile.csproj", "{0BED806C-F6A5-4F50-AF93-1E4404B6A6DE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Android", "FWH.Mobile\FWH.Mobile.Android\FWH.Mobile.Android.csproj", "{F87F74B5-19E3-4CA8-AD3B-A7397941CF4C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Android", "src\FWH.Mobile\FWH.Mobile.Android\FWH.Mobile.Android.csproj", "{F87F74B5-19E3-4CA8-AD3B-A7397941CF4C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Desktop", "FWH.Mobile\FWH.Mobile.Desktop\FWH.Mobile.Desktop.csproj", "{80D679B3-AD78-44A7-A217-AF4E7DC1E5EF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Desktop", "src\FWH.Mobile\FWH.Mobile.Desktop\FWH.Mobile.Desktop.csproj", "{80D679B3-AD78-44A7-A217-AF4E7DC1E5EF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.iOS", "FWH.Mobile\FWH.Mobile.iOS\FWH.Mobile.iOS.csproj", "{749D3895-43C6-4843-B45C-D5584396947F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.iOS", "src\FWH.Mobile\FWH.Mobile.iOS\FWH.Mobile.iOS.csproj", "{749D3895-43C6-4843-B45C-D5584396947F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Browser", "FWH.Mobile\FWH.Mobile.Browser\FWH.Mobile.Browser.csproj", "{9148A9C3-36DA-4412-B620-BA9EF1053446}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Browser", "src\FWH.Mobile\FWH.Mobile.Browser\FWH.Mobile.Browser.csproj", "{9148A9C3-36DA-4412-B620-BA9EF1053446}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Workflow", "FWH.Common.Workflow\FWH.Common.Workflow.csproj", "{3FB2C163-B2E3-4D6B-BF7C-F974EE820D91}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Workflow", "src\FWH.Common.Workflow\FWH.Common.Workflow.csproj", "{3FB2C163-B2E3-4D6B-BF7C-F974EE820D91}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{60823260-0CD0-4E4B-A88A-3D4833FCDEC1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Workflow.Tests", "FWH.Common.Workflow.Tests\FWH.Common.Workflow.Tests.csproj", "{E425D1A7-5930-2AA4-855F-17A1C14ED578}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Workflow.Tests", "tests\FWH.Common.Workflow.Tests\FWH.Common.Workflow.Tests.csproj", "{E425D1A7-5930-2AA4-855F-17A1C14ED578}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Files", "Files", "{0DB01721-0B4D-4A42-B14D-D60C8E986277}"
 	ProjectSection(SolutionItems) = preProject
@@ -31,44 +31,44 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Files", "Files", "{0DB01721
 		workflow.puml = workflow.puml
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Data", "FWH.Mobile.Data\FWH.Mobile.Data.csproj", "{7C2469CA-7B27-4C5B-A519-6BD980E24D8D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Data", "src\FWH.Mobile.Data\FWH.Mobile.Data.csproj", "{7C2469CA-7B27-4C5B-A519-6BD980E24D8D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "UI", "UI", "{1B13B8A9-44CF-4362-A7A5-560A2167FBF7}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{63C74E0C-5DB8-4F91-BC40-105763C20BF5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Data.Tests", "FWH.Mobile.Data.Tests\FWH.Mobile.Data.Tests.csproj", "{AEADBD66-AEF7-B648-2AF2-B7341FDA9D5F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Data.Tests", "tests\FWH.Mobile.Data.Tests\FWH.Mobile.Data.Tests.csproj", "{AEADBD66-AEF7-B648-2AF2-B7341FDA9D5F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Chat", "FWH.Common.Chat\FWH.Common.Chat.csproj", "{4FB07922-DC29-ED8A-A634-86DD42E3D74A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Chat", "src\FWH.Common.Chat\FWH.Common.Chat.csproj", "{4FB07922-DC29-ED8A-A634-86DD42E3D74A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Chat.Tests", "FWH.Common.Chat.Tests\FWH.Common.Chat.Tests.csproj", "{1BA7A282-525A-B8B4-8C0F-51ABDF0B108C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Chat.Tests", "tests\FWH.Common.Chat.Tests\FWH.Common.Chat.Tests.csproj", "{1BA7A282-525A-B8B4-8C0F-51ABDF0B108C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Location", "FWH.Common.Location\FWH.Common.Location.csproj", "{A379641F-90AA-45BD-A616-3B424FA47B36}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Location", "src\FWH.Common.Location\FWH.Common.Location.csproj", "{A379641F-90AA-45BD-A616-3B424FA47B36}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Location.Tests", "FWH.Common.Location.Tests\FWH.Common.Location.Tests.csproj", "{C3322774-9547-4111-8FC6-E691D35ECB42}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Location.Tests", "tests\FWH.Common.Location.Tests\FWH.Common.Location.Tests.csproj", "{C3322774-9547-4111-8FC6-E691D35ECB42}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Imaging", "FWH.Common.Imaging\FWH.Common.Imaging.csproj", "{29DF57B8-0307-497A-8C7E-5F6E454BE097}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Imaging", "src\FWH.Common.Imaging\FWH.Common.Imaging.csproj", "{29DF57B8-0307-497A-8C7E-5F6E454BE097}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Imaging.Tests", "FWH.Common.Imaging.Tests\FWH.Common.Imaging.Tests.csproj", "{5133E664-4893-48F8-A59B-F106746AD773}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Common.Imaging.Tests", "tests\FWH.Common.Imaging.Tests\FWH.Common.Imaging.Tests.csproj", "{5133E664-4893-48F8-A59B-F106746AD773}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Location.Api", "FWH.Location.Api\FWH.Location.Api.csproj", "{5CB9DA78-6FA7-459A-8257-44F92F7F69ED}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Location.Api", "src\FWH.Location.Api\FWH.Location.Api.csproj", "{5CB9DA78-6FA7-459A-8257-44F92F7F69ED}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Actions", "Actions", "{558EBDB4-8E40-4FBD-9ECA-6CB3BB381FCA}"
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\ci.yml = .github\workflows\ci.yml
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.AppHost", "FWH.AppHost\FWH.AppHost.csproj", "{16307AAA-351D-4FBC-9353-E9D6573CAADA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.AppHost", "src\FWH.AppHost\FWH.AppHost.csproj", "{16307AAA-351D-4FBC-9353-E9D6573CAADA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.ServiceDefaults", "FWH.ServiceDefaults\FWH.ServiceDefaults.csproj", "{A8909DC4-BF05-4047-BB6D-19A21AF88FAA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.ServiceDefaults", "src\FWH.ServiceDefaults\FWH.ServiceDefaults.csproj", "{A8909DC4-BF05-4047-BB6D-19A21AF88FAA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.MarketingApi", "FWH.MarketingApi\FWH.MarketingApi.csproj", "{B5AE5979-7D43-468A-9170-7A98B52302D7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.MarketingApi", "src\FWH.MarketingApi\FWH.MarketingApi.csproj", "{B5AE5979-7D43-468A-9170-7A98B52302D7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Services.Tests", "FWH.Mobile.Services.Tests\FWH.Mobile.Services.Tests.csproj", "{C39AADDC-7C6C-4B72-90E8-44336C13A039}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Mobile.Services.Tests", "tests\FWH.Mobile.Services.Tests\FWH.Mobile.Services.Tests.csproj", "{C39AADDC-7C6C-4B72-90E8-44336C13A039}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orchestrix.Contracts", "Orchestrix.Contracts\Orchestrix.Contracts.csproj", "{C48905EA-42D2-4F39-B690-191931601764}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orchestrix.Contracts", "src\Orchestrix.Contracts\Orchestrix.Contracts.csproj", "{C48905EA-42D2-4F39-B690-191931601764}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orchestrix.Mediator.Remote", "Orchestrix.Mediator.Remote\Orchestrix.Mediator.Remote.csproj", "{9A02388E-A27D-4C1C-8E1F-A15F9D6D6E87}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orchestrix.Mediator.Remote", "src\Orchestrix.Mediator.Remote\Orchestrix.Mediator.Remote.csproj", "{9A02388E-A27D-4C1C-8E1F-A15F9D6D6E87}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{994F152A-4A7C-4BBA-B520-2A3F7C6FA021}"
 	ProjectSection(SolutionItems) = preProject
@@ -78,7 +78,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{994F152A-4
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Documentation", "docs\FWH.Documentation.csproj", "{BFD31F7B-1A4C-4DB7-B4D2-0A7D16A7A216}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.MarketingApi.Tests", "FWH.MarketingApi.Tests\FWH.MarketingApi.Tests.csproj", "{7703A36C-23BA-4200-8EAD-B2D5EB31A9A1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.MarketingApi.Tests", "tests\FWH.MarketingApi.Tests\FWH.MarketingApi.Tests.csproj", "{7703A36C-23BA-4200-8EAD-B2D5EB31A9A1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -283,7 +283,7 @@ function Initialize-Database {
     }
     
     # Check for migration scripts
-    $migrationPath = Join-Path $InstallPath "FWH.Location.Api\Migrations"
+    $migrationPath = Join-Path $InstallPath "src\FWH.Location.Api\Migrations"
     if (Test-Path $migrationPath) {
         $migrationFiles = Get-ChildItem $migrationPath -Filter "*.sql"
         Write-Info "Found $($migrationFiles.Count) migration script(s)"
@@ -326,9 +326,9 @@ function Test-Installation {
     
     # Check critical files exist
     $criticalFiles = @(
-        "FWH.AppHost\Program.cs",
-        "FWH.Location.Api\Program.cs",
-        "FWH.Mobile\FWH.Mobile\App.axaml.cs"
+        "src\FWH.AppHost\Program.cs",
+        "src\FWH.Location.Api\Program.cs",
+        "src\FWH.Mobile\FWH.Mobile\App.axaml.cs"
     )
     
     $missingFiles = @()
@@ -379,7 +379,7 @@ function Show-InstallationSummary {
     Write-Host "  Next Steps:" -ForegroundColor Cyan
     Write-Host "    1. Run the AppHost to start all services:" -ForegroundColor White
     Write-Host "       cd $InstallPath" -ForegroundColor Gray
-    Write-Host "       dotnet run --project FWH.AppHost" -ForegroundColor Gray
+    Write-Host "       dotnet run --project src\FWH.AppHost" -ForegroundColor Gray
     Write-Host ""
     Write-Host "    2. Access the application:" -ForegroundColor White
     Write-Host "       - Aspire Dashboard: http://localhost:15888" -ForegroundColor Gray
