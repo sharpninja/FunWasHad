@@ -23,6 +23,9 @@ public class DatabaseMigrationService
 
         try
         {
+            // Ensure database exists before attempting to connect to it
+            await EnsureDatabaseExistsAsync();
+
             // Ensure migrations table exists
             await EnsureMigrationsTableAsync();
 
@@ -73,6 +76,50 @@ public class DatabaseMigrationService
             _logger.LogError(ex, "Failed to apply database migrations");
             throw;
         }
+    }
+
+    private async Task EnsureDatabaseExistsAsync()
+    {
+        var builder = new NpgsqlConnectionStringBuilder(_connectionString);
+
+        // If the connection string doesn't set a database explicitly, nothing to create.
+        var targetDatabase = builder.Database;
+        if (string.IsNullOrWhiteSpace(targetDatabase))
+        {
+            _logger.LogDebug("No database specified in connection string; skipping database creation check.");
+            return;
+        }
+
+        // Connect to a known-existing maintenance DB to create/check the target DB.
+        // 'postgres' is present on typical Postgres installations.
+        builder.Database = "postgres";
+
+        await using var adminConnection = new NpgsqlConnection(builder.ConnectionString);
+        await adminConnection.OpenAsync();
+
+        const string existsSql = "SELECT 1 FROM pg_database WHERE datname = @db";
+        await using (var existsCommand = new NpgsqlCommand(existsSql, adminConnection))
+        {
+            existsCommand.Parameters.AddWithValue("db", targetDatabase);
+            var exists = await existsCommand.ExecuteScalarAsync() is not null;
+
+            if (exists)
+            {
+                _logger.LogInformation("Database '{Database}' already exists", targetDatabase);
+                return;
+            }
+        }
+
+        // CREATE DATABASE cannot be parameterized; quote identifier safely.
+        var quotedDbName = '"' + targetDatabase.Replace("\"", "\"\"") + '"';
+        var createSql = $"CREATE DATABASE {quotedDbName}";
+
+        await using (var createCommand = new NpgsqlCommand(createSql, adminConnection))
+        {
+            await createCommand.ExecuteNonQueryAsync();
+        }
+
+        _logger.LogInformation("Database '{Database}' created", targetDatabase);
     }
 
     private async Task EnsureMigrationsTableAsync()

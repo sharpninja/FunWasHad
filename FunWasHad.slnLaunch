@@ -1,0 +1,16 @@
+[
+  {
+    "Name": "Aspire + Android",
+    "Projects": [
+      {
+        "Name": "src/FWH.AppHost/FWH.AppHost.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Name": "src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

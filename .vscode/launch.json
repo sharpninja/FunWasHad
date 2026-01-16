@@ -18,9 +18,54 @@
             "stopAtEntry": false
         },
         {
+            "name": "Aspire AppHost",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/FWH.AppHost/bin/Debug/net9.0/FWH.AppHost.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/FWH.AppHost",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        {
+            "name": "Android (Build & Run)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "run-android",
+            // Note: Android apps deploy to device/emulator via the preLaunchTask
+            // This program path is a placeholder - the actual deployment happens in the task
+            "program": "dotnet",
+            "args": [
+                "--version"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "noDebug": true
+        },
+        {
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Aspire + Android",
+            "configurations": [
+                "Aspire AppHost",
+                "Android (Build & Run)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "",
+                "order": 1
+            }
         }
     ]
 }
