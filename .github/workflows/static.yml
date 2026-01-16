@@ -48,7 +48,14 @@ jobs:
         run: dotnet workload install android
 
       - name: Restore dependencies
-        run: dotnet restore FunWasHad.sln
+        run: |
+          dotnet restore FWH.Location.Api/FWH.Location.Api.csproj
+          dotnet restore FWH.MarketingApi/FWH.MarketingApi.csproj
+          dotnet restore FWH.Common.Location/FWH.Common.Location.csproj
+          dotnet restore FWH.Common.Chat/FWH.Common.Chat.csproj
+          dotnet restore FWH.Common.Workflow/FWH.Common.Workflow.csproj
+          dotnet restore FWH.Common.Imaging/FWH.Common.Imaging.csproj
+          dotnet restore FWH.Mobile.Data/FWH.Mobile.Data.csproj
 
       - name: Build projects for documentation (generate XML documentation)
         run: |
