@@ -50,8 +50,15 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore FunWasHad.sln
 
-      - name: Build solution (generate XML documentation)
-        run: dotnet build FunWasHad.sln --configuration Release --no-restore -p:GenerateDocumentationFile=true -p:EnableWindowsTargeting=true
+      - name: Build projects for documentation (generate XML documentation)
+        run: |
+          dotnet build FWH.Location.Api/FWH.Location.Api.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build FWH.MarketingApi/FWH.MarketingApi.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build FWH.Common.Location/FWH.Common.Location.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build FWH.Common.Chat/FWH.Common.Chat.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build FWH.Common.Workflow/FWH.Common.Workflow.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build FWH.Common.Imaging/FWH.Common.Imaging.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
+          dotnet build FWH.Mobile.Data/FWH.Mobile.Data.csproj --configuration Release --no-restore -p:GenerateDocumentationFile=true
 
       - name: Install DocFX
         run: dotnet tool install -g docfx
