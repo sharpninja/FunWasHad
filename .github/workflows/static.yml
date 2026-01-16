@@ -44,11 +44,14 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Install Android workload
+        run: dotnet workload install android
+
       - name: Restore dependencies
         run: dotnet restore FunWasHad.sln
 
       - name: Build solution (generate XML documentation)
-        run: dotnet build FunWasHad.sln --configuration Release --no-restore -p:GenerateDocumentationFile=true
+        run: dotnet build FunWasHad.sln --configuration Release --no-restore -p:GenerateDocumentationFile=true -p:EnableWindowsTargeting=true
 
       - name: Install DocFX
         run: dotnet tool install -g docfx
