@@ -39,15 +39,15 @@ jobs:
 
       - name: Restore dependencies
         timeout-minutes: 10
-        run: dotnet restore
+        run: dotnet restore FunWasHad.sln
 
       - name: Build solution
         timeout-minutes: 15
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build FunWasHad.sln --no-restore --configuration Release
 
       - name: Run tests
         timeout-minutes: 10
-        run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test FunWasHad.sln --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
       - name: Upload test results
         if: always()
@@ -86,11 +86,11 @@ jobs:
 
       - name: Restore dependencies
         timeout-minutes: 10
-        run: dotnet restore src\FWH.Mobile\FWH.Mobile.Android\FWH.Mobile.Android.csproj
+        run: dotnet restore src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj
 
       - name: Build Android app
         timeout-minutes: 20
-        run: dotnet build src\FWH.Mobile\FWH.Mobile.Android\FWH.Mobile.Android.csproj --no-restore --configuration Release
+        run: dotnet build src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj --no-restore --configuration Release
 
   build_api:
     name: Build Location API
@@ -142,10 +142,10 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore FunWasHad.sln
 
       - name: Check code format
-        run: dotnet format --verify-no-changes --verbosity diagnostic
+        run: dotnet format FunWasHad.sln --verify-no-changes --verbosity diagnostic
 
       - name: Run code analysis
-        run: dotnet build --no-restore --configuration Release /p:TreatWarningsAsErrors=true
+        run: dotnet build FunWasHad.sln --no-restore --configuration Release /p:TreatWarningsAsErrors=true
