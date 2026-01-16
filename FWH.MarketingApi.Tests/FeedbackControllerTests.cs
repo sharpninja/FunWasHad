@@ -29,7 +29,13 @@ public class FeedbackControllerTests : IClassFixture<CustomWebApplicationFactory
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
 
-        // Add test business
+        // Clear existing data to avoid conflicts with other test classes
+        db.Businesses.RemoveRange(db.Businesses);
+        db.Feedbacks.RemoveRange(db.Feedbacks);
+        db.FeedbackAttachments.RemoveRange(db.FeedbackAttachments);
+        db.SaveChanges();
+
+        // Add test business - MUST be subscribed for feedback submission
         var business = new Business
         {
             Id = 1,
@@ -37,7 +43,7 @@ public class FeedbackControllerTests : IClassFixture<CustomWebApplicationFactory
             Address = "123 Main St",
             Latitude = 37.7749,
             Longitude = -122.4194,
-            IsSubscribed = true,
+            IsSubscribed = true, // Required for feedback submission
             CreatedAt = DateTimeOffset.UtcNow
         };
 

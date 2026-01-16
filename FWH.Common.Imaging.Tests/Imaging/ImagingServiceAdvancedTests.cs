@@ -105,7 +105,7 @@ public class ImagingServiceAdvancedTests
     // Note: This test is commented out due to Svg.Skia library limitation with fill-opacity attribute
     // The library doesn't properly support fill-opacity - use rgba() instead
     //[Fact]
-    public void RenderSvgOverlay_VaryingOpacity_BlendsAccordingly()
+    private void RenderSvgOverlay_VaryingOpacity_BlendsAccordingly()
     {
         var services = new ServiceCollection();
         services.AddImagingServices();

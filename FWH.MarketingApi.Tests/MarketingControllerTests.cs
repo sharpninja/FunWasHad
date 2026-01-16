@@ -28,7 +28,17 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
 
-        // Add test business
+        // Clear existing data to avoid conflicts with other test classes
+        db.Businesses.RemoveRange(db.Businesses);
+        db.BusinessThemes.RemoveRange(db.BusinessThemes);
+        db.Coupons.RemoveRange(db.Coupons);
+        db.MenuItems.RemoveRange(db.MenuItems);
+        db.NewsItems.RemoveRange(db.NewsItems);
+        db.SaveChanges();
+
+        var now = DateTimeOffset.UtcNow;
+
+        // Add test business - MUST be subscribed for queries to work
         var business = new Business
         {
             Id = 1,
@@ -36,63 +46,76 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
             Address = "123 Main St",
             Latitude = 37.7749,
             Longitude = -122.4194,
-            IsSubscribed = true,
-            CreatedAt = DateTimeOffset.UtcNow
+            IsSubscribed = true, // Required for all queries
+            CreatedAt = now
         };
 
-        db.Businesses.Add(business);
-
-        // Add theme
+        // Add theme - MUST be active for GetTheme to work
         var theme = new BusinessTheme
         {
             Id = 1,
             BusinessId = 1,
+            Business = business, // Set navigation property
             ThemeName = "Test Theme",
             PrimaryColor = "#FF0000",
-            IsActive = true,
-            CreatedAt = DateTimeOffset.UtcNow
+            IsActive = true, // Required for GetTheme query
+            CreatedAt = now
         };
+        business.Theme = theme; // Set navigation property
         db.BusinessThemes.Add(theme);
 
-        // Add coupon
+        // Add coupon - MUST be active and within valid date range
         var coupon = new Coupon
         {
             Id = 1,
             BusinessId = 1,
+            Business = business, // Set navigation property
             Title = "Test Coupon",
             Description = "10% off",
-            IsActive = true,
-            ValidFrom = DateTimeOffset.UtcNow.AddDays(-1),
-            ValidUntil = DateTimeOffset.UtcNow.AddDays(30),
-            CreatedAt = DateTimeOffset.UtcNow
+            IsActive = true, // Required
+            ValidFrom = now.AddDays(-1), // Must be in the past
+            ValidUntil = now.AddDays(30), // Must be in the future
+            CurrentRedemptions = 0,
+            MaxRedemptions = null, // No limit
+            CreatedAt = now
         };
+        business.Coupons.Add(coupon); // Add to collection
         db.Coupons.Add(coupon);
 
-        // Add menu item
+        // Add menu item - MUST be available
         var menuItem = new MenuItem
         {
             Id = 1,
             BusinessId = 1,
+            Business = business, // Set navigation property
             Name = "Test Item",
             Category = "Drinks",
             Price = 5.99m,
-            IsAvailable = true,
-            CreatedAt = DateTimeOffset.UtcNow
+            IsAvailable = true, // Required
+            SortOrder = 0,
+            CreatedAt = now
         };
+        business.MenuItems.Add(menuItem); // Add to collection
         db.MenuItems.Add(menuItem);
 
-        // Add news item
+        // Add news item - MUST be published and PublishedAt in the past, no ExpiresAt
         var newsItem = new NewsItem
         {
             Id = 1,
             BusinessId = 1,
+            Business = business, // Set navigation property
             Title = "Test News",
             Content = "Test content",
-            IsPublished = true,
-            PublishedAt = DateTimeOffset.UtcNow.AddDays(-1),
-            CreatedAt = DateTimeOffset.UtcNow
+            IsPublished = true, // Required
+            PublishedAt = now.AddDays(-1), // Must be in the past
+            ExpiresAt = null, // No expiration
+            IsFeatured = false,
+            CreatedAt = now
         };
+        business.NewsItems.Add(newsItem); // Add to collection
         db.NewsItems.Add(newsItem);
+
+        db.Businesses.Add(business);
 
         db.SaveChanges();
     }
