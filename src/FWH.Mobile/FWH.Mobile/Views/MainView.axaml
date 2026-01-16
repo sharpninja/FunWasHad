@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:mobile="using:FWH.Mobile"
+             xmlns:views="using:FWH.Mobile.Views"
              xmlns:vm="clr-namespace:FWH.Common.Chat.ViewModels;assembly=FWH.Common.Chat"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="FWH.Mobile.Views.MainView"
@@ -14,6 +15,7 @@
     </Design.DataContext>
 
     <DockPanel>
+        <views:LogViewerControl DockPanel.Dock="Bottom" Height="200" Name="LogViewer" />
         <mobile:ChatInputControl DockPanel.Dock="Bottom" />
         <mobile:ChatListControl />
     </DockPanel>

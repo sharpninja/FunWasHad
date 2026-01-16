@@ -11,6 +11,7 @@ using FWH.Common.Chat.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FWH.Mobile.Android;
+
 [Activity(
     Label = "FWH.Mobile.Android",
     Theme = "@style/MyTheme.NoActionBar",
@@ -24,16 +25,21 @@ public class MainActivity : AvaloniaMainActivity<App>
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
+        savedInstanceState ??= new(0);
+
+        // Prevents issues with Avalonia restoring state
+        savedInstanceState.Remove("Avalonia");
         base.OnCreate(savedInstanceState);
-        
+
         // Set current activity for camera service
         Platform.CurrentActivity = this;
-        
+
         // Get camera service instance (if registered in DI)
         _cameraService = App.ServiceProvider.GetService<ICameraService>() as AndroidCameraService;
-        
+
         // Request all required permissions on startup
         RequestRequiredPermissions();
+
     }
 
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
@@ -45,7 +51,7 @@ public class MainActivity : AvaloniaMainActivity<App>
     protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
     {
         base.OnActivityResult(requestCode, resultCode, data);
-        
+
         // Forward result to camera service
         _cameraService?.OnActivityResult(requestCode, resultCode, data);
     }
@@ -84,14 +90,14 @@ public class MainActivity : AvaloniaMainActivity<App>
     public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Permission[] grantResults)
     {
         base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
-        
+
         if (requestCode == PermissionsRequestCode)
         {
             for (int i = 0; i < permissions.Length; i++)
             {
                 var permission = permissions[i];
                 var result = grantResults[i];
-                
+
                 if (result == Permission.Granted)
                 {
                     System.Diagnostics.Debug.WriteLine($"Permission granted: {permission}");

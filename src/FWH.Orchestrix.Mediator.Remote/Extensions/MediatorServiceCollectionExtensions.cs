@@ -3,6 +3,10 @@ using FWH.Orchestrix.Contracts.Mediator;
 using FWH.Orchestrix.Mediator.Remote.Location;
 using FWH.Orchestrix.Mediator.Remote.Marketing;
 using FWH.Orchestrix.Mediator.Remote.Mediator;
+using System.Net.Http;
+using Polly;
+using Polly.CircuitBreaker;
+using Polly.Fallback;
 
 namespace FWH.Orchestrix.Mediator.Remote.Extensions;
 
@@ -44,18 +48,120 @@ public static class MediatorServiceCollectionExtensions
         var options = new ApiClientOptions();
         configure(options);
 
-        // Register Location API client
+        // Register Location API client with resilience
         services.AddHttpClient("LocationApi", client =>
         {
             client.BaseAddress = new Uri(options.LocationApiBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(30);
+        })
+        .AddResilienceHandler("location-api-pipeline", (ResiliencePipelineBuilder<HttpResponseMessage> builder) =>
+        {
+            // 1. Fallback (outer layer - executed last if all else fails)
+            //builder.AddFallback(new FallbackStrategyOptions<HttpResponseMessage>
+            //{
+            //    ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+            //        .Handle<HttpRequestException>()
+            //        .Handle<TimeoutException>()
+            //        .Handle<BrokenCircuitException>()
+            //        .HandleResult(response => !response.IsSuccessStatusCode),
+            //    FallbackAction = args =>
+            //    {
+            //        // Return an empty response depending on the endpoint
+            //        var fallbackResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            //        {
+            //            Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json")
+            //        };
+                    
+            //        return Outcome.FromResultAsValueTask(fallbackResponse);
+            //    }
+            //});
+            
+            // 2. Circuit breaker (prevents cascading failures)
+            builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage>
+            {
+                SamplingDuration = TimeSpan.FromSeconds(30),
+                FailureRatio = 0.5,
+                MinimumThroughput = 3,
+                BreakDuration = TimeSpan.FromSeconds(15),
+                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                    .Handle<HttpRequestException>()
+                    .Handle<TimeoutException>()
+                    .HandleResult(response => !response.IsSuccessStatusCode)
+            });
+            
+            // 3. Retry with exponential backoff
+            builder.AddRetry(new Polly.Retry.RetryStrategyOptions<HttpResponseMessage>
+            {
+                MaxRetryAttempts = 3,
+                BackoffType = Polly.DelayBackoffType.Exponential,
+                UseJitter = true,
+                Delay = TimeSpan.FromSeconds(1),
+                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                    .Handle<HttpRequestException>()
+                    .Handle<TimeoutException>()
+                    .HandleResult(response => !response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NotFound)
+            });
+            
+            // 4. Timeout per attempt (inner layer - wraps each individual request)
+            builder.AddTimeout(TimeSpan.FromSeconds(30));
         });
 
-        // Register Marketing API client
+        // Register Marketing API client with resilience
         services.AddHttpClient("MarketingApi", client =>
         {
             client.BaseAddress = new Uri(options.MarketingApiBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(30);
+        })
+        .AddResilienceHandler("marketing-api-pipeline", (ResiliencePipelineBuilder<HttpResponseMessage> builder) =>
+        {
+            // 1. Fallback (outer layer - executed last if all else fails)
+            //builder.AddFallback(new FallbackStrategyOptions<HttpResponseMessage>
+            //{
+            //    ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+            //        .Handle<HttpRequestException>()
+            //        .Handle<TimeoutException>()
+            //        .Handle<BrokenCircuitException>()
+            //        .HandleResult(response => !response.IsSuccessStatusCode),
+            //    FallbackAction = args =>
+            //    {
+            //        // Return an empty response
+            //        var fallbackResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            //        {
+            //            Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json")
+            //        };
+                    
+            //        return Outcome.FromResultAsValueTask(fallbackResponse);
+            //    }
+            //});
+            
+            // 2. Circuit breaker (prevents cascading failures)
+            builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage>
+            {
+                SamplingDuration = TimeSpan.FromSeconds(30),
+                FailureRatio = 0.5,
+                MinimumThroughput = 3,
+                BreakDuration = TimeSpan.FromSeconds(15),
+                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                    .Handle<HttpRequestException>()
+                    .Handle<TimeoutException>()
+                    .HandleResult(response => !response.IsSuccessStatusCode)
+            });
+            
+            // 3. Retry with exponential backoff
+            builder.AddRetry(new Polly.Retry.RetryStrategyOptions<HttpResponseMessage>
+            {
+                MaxRetryAttempts = 3,
+                BackoffType = Polly.DelayBackoffType.Exponential,
+                UseJitter = true,
+                Delay = TimeSpan.FromSeconds(1),
+                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                    .Handle<HttpRequestException>()
+                    .Handle<TimeoutException>()
+                    .HandleResult(response => !response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NotFound)
+            });
+            
+            // 4. Timeout per attempt (inner layer - wraps each individual request)
+            builder.AddTimeout(TimeSpan.FromSeconds(10));
         });
 
         return services;

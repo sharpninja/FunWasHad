@@ -20,6 +20,8 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
   </ItemGroup>
 
@@ -37,7 +39,119 @@
     </Content>
   </ItemGroup>
 
+  <!-- Configuration files - available on all platforms -->
+  <ItemGroup>
+    <!-- For Desktop/iOS: Copy to output directory -->
+    <Content Include="appsettings.json" Condition="'$(TargetPlatformIdentifier)' != 'android'">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="appsettings.Development.json" Condition="'$(TargetPlatformIdentifier)' != 'android'">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    
+    <!-- For Android: Include as AndroidAsset -->
+    <AndroidAsset Include="appsettings.json" Condition="'$(TargetPlatformIdentifier)' == 'android'">
+      <Link>Assets\appsettings.json</Link>
+    </AndroidAsset>
+    <AndroidAsset Include="appsettings.Development.json" Condition="'$(TargetPlatformIdentifier)' == 'android'">
+      <Link>Assets\appsettings.Development.json</Link>
+    </AndroidAsset>
+  </ItemGroup>
+
   <ItemGroup>
     <Folder Include="Controls\" />
   </ItemGroup>
+
+  <!-- Detect host IP address at build time for Android DEBUG builds -->
+  <Target Name="DetectHostIpAddress" BeforeTargets="BeforeBuild" Condition="'$(Configuration)' == 'Debug' and '$(TargetPlatformIdentifier)' == 'android'">
+    <PropertyGroup>
+      <PowerShellScript>
+        <![CDATA[
+# Detect the host machine's IP address
+try {
+    # Method 1: Get network adapters with valid IP addresses
+    $hostIp = Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp, Manual |
+        Where-Object { 
+            $_.IPAddress -notlike '127.*' -and 
+            $_.IPAddress -notlike '169.254.*' -and
+            $_.IPAddress -match '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+        } |
+        Sort-Object -Property PrefixOrigin -Descending |
+        Select-Object -First 1 -ExpandProperty IPAddress
+    
+    # Fallback: Try DNS method
+    if ([string]::IsNullOrEmpty($hostIp)) {
+        $hostName = [System.Net.Dns]::GetHostName()
+        $hostIp = [System.Net.Dns]::GetHostEntry($hostName).AddressList |
+            Where-Object { 
+                $_.AddressFamily -eq 'InterNetwork' -and
+                $_.ToString() -notlike '127.*' -and
+                $_.ToString() -notlike '169.254.*'
+            } |
+            Select-Object -First 1 -ExpandProperty IPAddressToString
+    }
+}
+catch {
+    Write-Warning "IP detection failed: $_"
+}
+
+# Final fallback to Android emulator alias
+if ([string]::IsNullOrEmpty($hostIp)) {
+    $hostIp = '10.0.2.2'
+    Write-Host "Using Android emulator default: $hostIp" -ForegroundColor Yellow
+}
+else {
+    Write-Host "Detected Host IP: $hostIp" -ForegroundColor Green
+}
+
+# Update appsettings.Development.json with detected IP
+$appsettingsPath = Join-Path '$(ProjectDir)' 'appsettings.Development.json'
+$objPath = Join-Path '$(ProjectDir)' 'obj'
+$processedPath = Join-Path $objPath 'appsettings.Development.processed.json'
+
+if (Test-Path $appsettingsPath) {
+    try {
+        # Create obj directory if it doesn't exist
+        if (-not (Test-Path $objPath)) {
+            New-Item -ItemType Directory -Path $objPath -Force | Out-Null
+        }
+        
+        # Read and update the JSON
+        $content = Get-Content $appsettingsPath -Raw
+        $updatedContent = $content -replace '"HOST_IP_PLACEHOLDER"', "\"$hostIp\""
+        
+        # Save to obj folder (temporary location)
+        Set-Content -Path $processedPath -Value $updatedContent -NoNewline -Force
+        
+        Write-Host "Generated processed config at: $processedPath" -ForegroundColor Green
+        Write-Host "HostIpAddress set to: $hostIp" -ForegroundColor Cyan
+    }
+    catch {
+        Write-Error "Failed to process appsettings.Development.json: $_"
+        exit 1
+    }
+}
+else {
+    Write-Warning "appsettings.Development.json not found at: $appsettingsPath"
+}
+        ]]>
+      </PowerShellScript>
+    </PropertyGroup>
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$(PowerShellScript)&quot;" 
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="false" />
+  </Target>
+  
+  <!-- Use the processed config file for Android assets -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug' and '$(TargetPlatformIdentifier)' == 'android'">
+    <AndroidAsset Remove="appsettings.Development.json" />
+    <AndroidAsset Include="obj\appsettings.Development.processed.json" Condition="Exists('obj\appsettings.Development.processed.json')">
+      <Link>Assets\appsettings.Development.json</Link>
+    </AndroidAsset>
+  </ItemGroup>
+
+  <!-- Clean up processed config files -->
+  <Target Name="CleanProcessedConfigs" AfterTargets="Clean">
+    <Delete Files="$(ProjectDir)obj\appsettings.Development.processed.json" ContinueOnError="true" />
+  </Target>
 </Project>

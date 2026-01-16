@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Repositories;
+using FWH.Mobile.Data.Services;
 
 namespace FWH.Mobile.Data.Extensions;
 
@@ -29,6 +30,10 @@ public static class DataServiceCollectionExtensions
         // Register repositories
         services.AddScoped<INoteRepository, EfNoteRepository>();
         services.AddScoped<IWorkflowRepository, EfWorkflowRepository>();
+        services.AddScoped<IConfigurationRepository, EfConfigurationRepository>();
+
+        // Register migration service
+        services.AddScoped<MobileDatabaseMigrationService>();
 
         return services;
     }
@@ -75,6 +80,7 @@ public static class DataServiceCollectionExtensions
     {
         services.AddNotesDbContext(optionsAction);
         services.AddRepositories();
+        services.AddScoped<MobileDatabaseMigrationService>();
         
         return services;
     }

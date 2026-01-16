@@ -5,7 +5,7 @@
       {
         "Path": "src\\FWH.Mobile\\FWH.Mobile.Android\\FWH.Mobile.Android.csproj",
         "Action": "Start",
-        "DebugTarget": "7.6  Fold-in with outer display API 33 (Android 13.0 - API 33)"
+        "DebugTarget": "Motorola edge 2024 (Android 15.0 - API 35)"
       },
       {
         "Path": "src\\FWH.AppHost\\FWH.AppHost.csproj",

@@ -4,6 +4,23 @@ using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Kestrel to listen on all interfaces (0.0.0.0) in Development
+// This allows Android devices and emulators to connect via host IP
+if (builder.Environment.IsDevelopment())
+{
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        // Listen on all interfaces for HTTP (port configured by Aspire: 4750)
+        options.ListenAnyIP(4750);
+        
+        // Listen on all interfaces for HTTPS (port configured by Aspire: 4749)
+        options.ListenAnyIP(4749, listenOptions =>
+        {
+            listenOptions.UseHttps();
+        });
+    });
+}
+
 // Add Aspire service defaults (telemetry, health checks, resilience)
 builder.AddServiceDefaults();
 

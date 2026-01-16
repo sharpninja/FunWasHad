@@ -15,6 +15,12 @@ public class NotesDbContext : DbContext
 
     public DbSet<ConfigurationSetting> ConfigurationSettings { get; set; } = null!;
 
+    /// <summary>
+    /// Device location history - tracked locally, never sent to API
+    /// TR-MOBILE-001: Local-only device location tracking
+    /// </summary>
+    public DbSet<DeviceLocationEntity> DeviceLocationHistory { get; set; } = null!;
+
     public NotesDbContext(DbContextOptions<NotesDbContext> options) : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -66,6 +72,23 @@ public class NotesDbContext : DbContext
             b.Property(c => c.Description).HasMaxLength(500);
             b.Property(c => c.UpdatedAt).IsRequired();
             b.HasIndex(c => c.Category);
+        });
+
+        modelBuilder.Entity<DeviceLocationEntity>(b =>
+        {
+            b.HasKey(l => l.Id);
+            b.Property(l => l.DeviceId).IsRequired().HasMaxLength(100);
+            b.Property(l => l.Latitude).IsRequired();
+            b.Property(l => l.Longitude).IsRequired();
+            b.Property(l => l.MovementState).IsRequired().HasMaxLength(20);
+            b.Property(l => l.Timestamp).IsRequired();
+            b.Property(l => l.CreatedAt).IsRequired();
+            b.Property(l => l.Address).HasMaxLength(500);
+            
+            // Indexes for efficient querying
+            b.HasIndex(l => l.DeviceId);
+            b.HasIndex(l => l.Timestamp);
+            b.HasIndex(l => new { l.DeviceId, l.Timestamp });
         });
     }
 }

@@ -7,6 +7,13 @@ namespace FWH.Orchestrix.Mediator.Remote.Location;
 
 /// <summary>
 /// Remote handler for updating device location via HTTP API.
+/// 
+/// ⚠️ WARNING: This handler should NOT be used in the mobile app.
+/// TR-MOBILE-001: Device location is tracked in the local SQLite database only.
+/// Device location should NEVER be sent to the API for privacy and performance reasons.
+/// 
+/// This handler exists for potential future server-to-server scenarios only.
+/// The mobile app uses LocationTrackingService with NotesDbContext for local storage.
 /// </summary>
 public class UpdateDeviceLocationHandler : IMediatorHandler<UpdateDeviceLocationRequest, UpdateDeviceLocationResponse>
 {

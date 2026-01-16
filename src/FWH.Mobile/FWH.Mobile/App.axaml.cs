@@ -10,9 +10,11 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
+using FWH.Mobile.Configuration;
 using FWH.Mobile.ViewModels;
 using FWH.Mobile.Views;
 using FWH.Common.Chat.Services;
@@ -38,7 +40,17 @@ public partial class App : Application
 
     static App()
     {
+        // Build configuration
+        var configuration = BuildConfiguration();
+        
         var services = new ServiceCollection();
+
+        // Register configuration
+        services.AddSingleton<IConfiguration>(configuration);
+        
+        // Register API settings
+        var apiSettings = configuration.GetSection("ApiSettings").Get<ApiSettings>() ?? new ApiSettings();
+        services.AddSingleton(apiSettings);
 
         // Register log store and configure logging to use Avalonia logger
         var logStore = new FWH.Mobile.Logging.AvaloniaLogStore(maxEntries: 1000);
@@ -46,6 +58,7 @@ public partial class App : Application
 
         services.AddLogging(builder =>
         {
+            builder.AddConfiguration(configuration.GetSection("Logging"));
             builder.AddProvider(new FWH.Mobile.Logging.AvaloniaLoggerProvider(logStore));
         });
 
@@ -71,22 +84,31 @@ public partial class App : Application
         // Register MediatR handlers for remote API calls
         services.AddRemoteMediatorHandlers();
 
-        // Configure API HTTP clients with platform-specific URLs
+        // Get API base addresses from configuration
         string locationApiBaseAddress;
         string marketingApiBaseAddress;
 
-        // Detect platform at runtime instead of compile-time
-        if (OperatingSystem.IsAndroid())
+        // Check for environment variable overrides first
+        var locationEnvVar = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL");
+        var marketingEnvVar = Environment.GetEnvironmentVariable("MARKETING_API_BASE_URL");
+
+        if (!string.IsNullOrEmpty(locationEnvVar) && !string.IsNullOrEmpty(marketingEnvVar))
         {
-            // Android emulator: 10.0.2.2 is special alias for host machine's localhost
-            locationApiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "http://10.0.2.2:4748/";
-            marketingApiBaseAddress = Environment.GetEnvironmentVariable("MARKETING_API_BASE_URL") ?? "http://10.0.2.2:4749/";
+            // Use environment variables if set
+            locationApiBaseAddress = locationEnvVar;
+            marketingApiBaseAddress = marketingEnvVar;
+        }
+        else if (OperatingSystem.IsAndroid())
+        {
+            // On Android, use configured IP address from appsettings
+            locationApiBaseAddress = apiSettings.GetLocationApiBaseUrl();
+            marketingApiBaseAddress = apiSettings.GetMarketingApiBaseUrl();
         }
         else
         {
-            // Desktop/iOS: Use HTTPS with the ports where APIs are actually running
-            locationApiBaseAddress = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") ?? "https://localhost:4747/";
-            marketingApiBaseAddress = Environment.GetEnvironmentVariable("MARKETING_API_BASE_URL") ?? "https://localhost:4749/";
+            // Desktop/iOS: Use HTTPS with localhost
+            locationApiBaseAddress = "https://localhost:4747/";
+            marketingApiBaseAddress = "https://localhost:4749/";
         }
 
         services.AddApiHttpClients(options =>
@@ -149,6 +171,7 @@ public partial class App : Application
         services.AddSingleton<LogViewerViewModel>();
 
         ServiceProvider = services.BuildServiceProvider();
+        ServiceProvider.InitializeWorkflowActionHandlers();
 
         // Database initialization deferred to OnFrameworkInitializationCompleted
         // to avoid blocking the UI thread during app startup
@@ -156,6 +179,97 @@ public partial class App : Application
     }
 
     public static IServiceProvider ServiceProvider { get; }
+
+    /// <summary>
+    /// Builds the application configuration from appsettings.json files
+    /// </summary>
+    private static IConfiguration BuildConfiguration()
+    {
+        var builder = new ConfigurationBuilder();
+
+        if (OperatingSystem.IsAndroid())
+        {
+            // On Android, read from assets
+            var appSettingsStream = LoadAndroidAsset("appsettings.json");
+            if (appSettingsStream != null)
+            {
+                builder.AddJsonStream(appSettingsStream);
+            }
+            
+            var devSettingsStream = LoadAndroidAsset("appsettings.Development.json");
+            if (devSettingsStream != null)
+            {
+                builder.AddJsonStream(devSettingsStream);
+            }
+        }
+        else
+        {
+            // On Desktop/iOS, read from file system
+            builder
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true);
+        }
+
+        builder.AddEnvironmentVariables();
+
+        return builder.Build();
+    }
+
+    /// <summary>
+    /// Loads a file from Android assets.
+    /// </summary>
+    /// <param name="fileName">The name of the asset file</param>
+    /// <returns>Stream containing the asset content, or null if not found</returns>
+    private static Stream? LoadAndroidAsset(string fileName)
+    {
+        if (!OperatingSystem.IsAndroid())
+            return null;
+
+        try
+        {
+            // Use reflection to access Android assets to avoid compile-time dependency
+            var contextType = Type.GetType("Android.App.Application, Mono.Android");
+            var contextProperty = contextType?.GetProperty("Context");
+            var context = contextProperty?.GetValue(null);
+
+            var assetsProperty = context?.GetType().GetProperty("Assets");
+            var assets = assetsProperty?.GetValue(context);
+
+            var openMethod = assets?.GetType().GetMethod("Open", new[] { typeof(string) });
+            var stream = openMethod?.Invoke(assets, new object[] { fileName }) as Stream;
+
+            if (stream != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"Loaded Android asset: {fileName}");
+                return stream;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load Android asset '{fileName}': {ex.Message}");
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the host machine's IP address from configuration.
+    /// The IP address is populated at build time by the MSBuild target in FWH.Mobile.csproj.
+    /// </summary>
+    /// <param name="configuration">The configuration instance</param>
+    /// <returns>The host IP address from configuration, or null if not set</returns>
+    private static string? GetHostIpAddress(IConfiguration configuration)
+    {
+        var hostIp = configuration["ApiSettings:HostIpAddress"];
+        
+        if (string.IsNullOrEmpty(hostIp) || hostIp == "HOST_IP_PLACEHOLDER")
+        {
+            return null;
+        }
+
+        return hostIp;
+    }
 
     /// <summary>
     /// Attempts to register platform-specific camera and GPS services using reflection
@@ -233,7 +347,9 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Ensures the database is initialized. Safe to call multiple times.
+    /// Ensures the database is initialized with all migrations applied.
+    /// Safe to call multiple times.
+    /// TR-MOBILE-001: Includes DeviceLocationHistory table for local tracking.
     /// </summary>
     private static async Task EnsureDatabaseInitializedAsync()
     {
@@ -247,10 +363,10 @@ public partial class App : Application
                 return;
 
             using var scope = ServiceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<FWH.Mobile.Data.Data.NotesDbContext>();
+            var migrationService = scope.ServiceProvider.GetRequiredService<FWH.Mobile.Data.Services.MobileDatabaseMigrationService>();
 
-            // Create database if it doesn't exist
-            await dbContext.Database.EnsureCreatedAsync();
+            // Ensure database exists and apply any pending migrations
+            await migrationService.EnsureDatabaseAsync();
 
             _isDatabaseInitialized = true;
         }

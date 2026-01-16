@@ -12,7 +12,7 @@ note left of get_nearby_businesses
 {
   "action": "get_nearby_businesses",
   "params": {
-    "radius": "100"
+    "radius": "1000"
   }
 }
 end note

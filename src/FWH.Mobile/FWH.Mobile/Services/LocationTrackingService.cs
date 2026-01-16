@@ -1,7 +1,7 @@
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
-using FWH.Orchestrix.Contracts.Location;
-using FWH.Orchestrix.Contracts.Mediator;
+using FWH.Mobile.Data.Data;
+using FWH.Mobile.Data.Entities;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -13,14 +13,15 @@ namespace FWH.Mobile.Services;
 
 /// <summary>
 /// Implementation of location tracking service that monitors device location
-/// and sends updates to the backend API when movement exceeds threshold.
+/// and stores updates in local SQLite database (NOT sent to API).
 /// Also tracks movement state transitions (stationary ↔ walking ↔ riding).
 /// Monitors for address changes when device remains stationary.
+/// TR-MOBILE-001: Device location is tracked locally only, never sent to API.
 /// </summary>
 public class LocationTrackingService : ILocationTrackingService
 {
     private readonly IGpsService _gpsService;
-    private readonly IMediatorSender _mediator;
+    private readonly NotesDbContext _dbContext;
     private readonly ILocationService _locationService;
     private readonly LocationWorkflowService? _locationWorkflowService;
     private readonly ILogger<LocationTrackingService> _logger;
@@ -47,13 +48,13 @@ public class LocationTrackingService : ILocationTrackingService
 
     public LocationTrackingService(
         IGpsService gpsService,
-        IMediatorSender mediator,
+        NotesDbContext dbContext,
         ILocationService locationService,
         ILogger<LocationTrackingService> logger,
         LocationWorkflowService? locationWorkflowService = null)
     {
         _gpsService = gpsService ?? throw new ArgumentNullException(nameof(gpsService));
-        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _locationService = locationService ?? throw new ArgumentNullException(nameof(locationService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _locationWorkflowService = locationWorkflowService;
@@ -522,39 +523,37 @@ public class LocationTrackingService : ILocationTrackingService
         try
         {
             _logger.LogInformation(
-                "Sending location update: ({Lat:F6}, {Lon:F6}) - State: {State}, Speed: {Speed:F1} mph",
+                "Storing location locally: ({Lat:F6}, {Lon:F6}) - State: {State}, Speed: {Speed:F1} mph",
                 location.Latitude,
                 location.Longitude,
                 _currentMovementState,
                 CurrentSpeedMph ?? 0);
 
-            // Send location update through mediator
-            var response = await _mediator.SendAsync(
-                new UpdateDeviceLocationRequest
-                {
-                    DeviceId = _deviceId,
-                    Latitude = location.Latitude,
-                    Longitude = location.Longitude,
-                    Accuracy = location.AccuracyMeters,
-                    Speed = _currentSpeedMetersPerSecond,
-                    Timestamp = location.Timestamp
-                },
-                cancellationToken);
+            // Store location in local SQLite database (never sent to API)
+            var locationEntity = new DeviceLocationEntity
+            {
+                DeviceId = _deviceId,
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                AccuracyMeters = location.AccuracyMeters,
+                AltitudeMeters = location.AltitudeMeters,
+                SpeedMetersPerSecond = _currentSpeedMetersPerSecond,
+                HeadingDegrees = null, // Heading not available in GpsCoordinates
+                MovementState = _currentMovementState.ToString(),
+                Timestamp = location.Timestamp,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
 
-            if (response.Success)
-            {
-                _logger.LogInformation("Location update successful (ID: {LocationId})", response.LocationId);
-                _lastReportedLocation = location;
-                LocationUpdated?.Invoke(this, location);
-            }
-            else
-            {
-                _logger.LogWarning("Location update failed: {Error}", response.ErrorMessage);
-            }
+            await _dbContext.DeviceLocationHistory.AddAsync(locationEntity, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Location stored locally (ID: {LocationId})", locationEntity.Id);
+            _lastReportedLocation = location;
+            LocationUpdated?.Invoke(this, location);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send location update");
+            _logger.LogError(ex, "Failed to store location locally");
             LocationUpdateFailed?.Invoke(this, ex);
         }
     }

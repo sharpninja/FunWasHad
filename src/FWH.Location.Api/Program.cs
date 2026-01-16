@@ -6,6 +6,23 @@ using FWH.Common.Chat.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Kestrel to listen on all interfaces (0.0.0.0) in Development
+// This allows Android devices and emulators to connect via host IP
+if (builder.Environment.IsDevelopment())
+{
+    builder.WebHost.ConfigureKestrel(options =>
+    {
+        // Listen on all interfaces for HTTP (port configured by Aspire: 4748)
+        options.ListenAnyIP(4748);
+        
+        // Listen on all interfaces for HTTPS (port configured by Aspire: 4747)
+        options.ListenAnyIP(4747, listenOptions =>
+        {
+            listenOptions.UseHttps();
+        });
+    });
+}
+
 // Add Aspire service defaults (telemetry, health checks, resilience)
 builder.AddServiceDefaults();
 

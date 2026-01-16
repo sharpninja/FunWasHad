@@ -136,15 +136,17 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                     _logger.LogInformation("Action {ActionName} handled by mediator in {ElapsedMs}ms", actionName, sw.ElapsedMilliseconds);
                 }
 
-                if (response.Success && response.VariableUpdates != null && rootInstanceManager != null)
+                var successfull = response.Success && response.VariableUpdates != null && rootInstanceManager != null && !response.VariableUpdates["status"].Equals("error", StringComparison.InvariantCultureIgnoreCase);
+
+                if (successfull)
                 {
-                    foreach (var update in response.VariableUpdates)
+                    foreach (var update in response.VariableUpdates!)
                     {
-                        rootInstanceManager.SetVariable(workflowId, update.Key, update.Value);
+                        rootInstanceManager!.SetVariable(workflowId, update.Key, update.Value);
                     }
                 }
 
-                return response.Success;
+                return successfull;
             }
             catch (OperationCanceledException)
             {

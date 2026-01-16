@@ -32,6 +32,39 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AndroidAsset Include="..\FWH.Mobile\appsettings.json" Link="appsettings.json" />
+  </ItemGroup>
+
+  <!-- MSBuild target to detect host IP and process config for DEBUG builds -->
+  <Target Name="DetectHostIpAddress" BeforeTargets="BeforeBuild" Condition="'$(Configuration)' == 'Debug'">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DetectHostIp.ps1&quot; &quot;$(ProjectDir)&quot;" 
+          ConsoleToMSBuild="true"
+          IgnoreExitCode="false" />
+  </Target>
+  
+  <!-- Use the processed config file for Android assets in DEBUG builds -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug' and Exists('obj\appsettings.Development.processed.json')">
+    <AndroidAsset Include="obj\appsettings.Development.processed.json">
+      <Link>appsettings.Development.json</Link>
+    </AndroidAsset>
+  </ItemGroup>
+  
+  <!-- Fallback to original file if processed doesn't exist -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug' and !Exists('obj\appsettings.Development.processed.json')">
+    <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />
+  </ItemGroup>
+  
+  <!-- In Release, always use original (with placeholder/default) -->
+  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+    <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />
+  </ItemGroup>
+
+  <!-- Clean up processed config files -->
+  <Target Name="CleanProcessedConfigs" AfterTargets="Clean">
+    <Delete Files="$(ProjectDir)obj\appsettings.Development.processed.json" ContinueOnError="true" />
+  </Target>
+
+  <ItemGroup>
     <PackageReference Include="Avalonia.Android" />
     <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
   </ItemGroup>

@@ -56,15 +56,22 @@ public class OverpassLocationService : ILocationService
                 latitude, longitude, validatedRadius);
 
             var content = new StringContent(query);
-            var response = await _httpClient.PostAsync(_overpassApiUrl, content, cancellationToken);
+            
+            // The HttpClient is configured with resilience policies (retry, circuit breaker, timeout)
+            // in LocationServiceCollectionExtensions, so transient failures will be automatically retried
+            var response = await _httpClient.PostAsync(_overpassApiUrl, content, cancellationToken)
+                .ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Overpass API returned status code: {StatusCode}", response.StatusCode);
+                _logger.LogWarning(
+                    "Overpass API returned status code: {StatusCode} after resilience policies applied",
+                    response.StatusCode);
                 return Enumerable.Empty<BusinessLocation>();
             }
 
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken)
+                .ConfigureAwait(false);
             var result = JsonSerializer.Deserialize<OverpassResponse>(json);
 
             if (result?.Elements == null)

@@ -1,17 +1,18 @@
-using Microsoft.Extensions.Logging;
-using FWH.Common.Workflow.Models;
-using FWH.Common.Workflow.Instance;
-using Microsoft.Extensions.DependencyInjection;
-using FWH.Orchestrix.Mediator.Remote.Extensions;
-using FWH.Orchestrix.Contracts.Mediator;
+using System;
+using System.Collections.Generic;
 using FWH.Common.Workflow.Actions;
 using FWH.Common.Workflow.Controllers;
+using FWH.Common.Workflow.Instance;
+using FWH.Common.Workflow.Logging;
 using FWH.Common.Workflow.Mapping;
+using FWH.Common.Workflow.Models;
 using FWH.Common.Workflow.State;
 using FWH.Common.Workflow.Storage;
 using FWH.Common.Workflow.Views;
-using FWH.Common.Workflow.Logging;
-using System.Collections.Generic;
+using FWH.Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Mediator.Remote.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace FWH.Common.Workflow.Extensions;
@@ -122,4 +123,21 @@ public static class WorkflowServiceCollectionExtensions
         services.AddSingleton<IWorkflowInstanceManager, TManager>();
         return services;
     }
+
+    /// <summary>
+    /// Initializes the workflow action handler registry by resolving the registrar.
+    /// This must be called after the service provider is built to ensure handlers are registered.
+    /// </summary>
+    /// <param name="serviceProvider">The built service provider.</param>
+    /// <returns>The service provider for chaining.</returns>
+    public static IServiceProvider InitializeWorkflowActionHandlers(this IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+        
+        // Resolving the registrar triggers its constructor, which discovers and registers all handlers
+        _ = serviceProvider.GetRequiredService<WorkflowActionHandlerRegistrar>();
+        
+        return serviceProvider;
+    }
 }
+
