@@ -17,6 +17,8 @@ using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using FWH.Common.Workflow.Actions;
+using FWH.Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Mediator.Remote.Mediator;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -70,12 +72,15 @@ public class WorkflowExecutorOptionsTests
         services.AddSingleton<IWorkflowActionHandlerRegistry, WorkflowActionHandlerRegistry>();
         services.AddSingleton<WorkflowActionHandlerRegistrar>();
 
-        // Mediation no longer uses MediatR; registry/handler registrar covers action dispatch in these tests.
-        
+        // Register mediator sender and handler (handler uses registry, so tests work with registry path)
+        services.AddLogging();
+        services.AddSingleton<IMediatorSender, ServiceProviderMediatorSender>();
+        services.AddTransient<IMediatorHandler<WorkflowActionRequest, WorkflowActionResponse>, WorkflowActionRequestHandler>();
+
         logger = new TestLogger<WorkflowActionExecutor>();
         services.AddSingleton<ILogger<WorkflowActionExecutor>>(logger);
 
-        services.AddSingleton<IWorkflowActionExecutor>(sp => new WorkflowActionExecutor(sp, sp.GetRequiredService<IWorkflowActionHandlerRegistry>(), Microsoft.Extensions.Options.Options.Create(options), sp.GetRequiredService<ILogger<WorkflowActionExecutor>>()));
+        services.AddSingleton<IWorkflowActionExecutor>(sp => new WorkflowActionExecutor(sp, sp.GetRequiredService<IMediatorSender>(), Microsoft.Extensions.Options.Options.Create(options), sp.GetRequiredService<ILogger<WorkflowActionExecutor>>()));
         services.AddSingleton<IWorkflowController, WorkflowController>();
         services.AddSingleton<IWorkflowService, WorkflowService>();
         services.AddTransient<IWorkflowView, WorkflowView>();

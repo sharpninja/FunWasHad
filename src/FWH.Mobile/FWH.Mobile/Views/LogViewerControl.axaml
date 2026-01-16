@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:FWH.Mobile.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="250"
+             x:Class="FWH.Mobile.Views.LogViewerControl"
+             x:DataType="vm:LogViewerViewModel">
+
+    <DockPanel>
+        <Button DockPanel.Dock="Top"
+                Content="Clear"
+                Command="{Binding ClearCommand}"
+                HorizontalAlignment="Left"
+                Margin="0,0,0,6" />
+
+        <Border BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="4" Padding="6">
+            <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding Entries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock FontFamily="Consolas" FontSize="12" TextWrapping="Wrap">
+                                <Run Text="{Binding TimestampUtc}" />
+                                <Run Text=" " />
+                                <Run Text="{Binding LevelShort}" />
+                                <Run Text=" " />
+                                <Run Text="{Binding Category}" />
+                                <Run Text=": " />
+                                <Run Text="{Binding Message}" />
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+    </DockPanel>
+</UserControl>
+

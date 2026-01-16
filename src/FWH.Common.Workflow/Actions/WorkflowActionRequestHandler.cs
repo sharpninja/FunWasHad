@@ -42,22 +42,58 @@ public sealed class WorkflowActionRequestHandler : IMediatorHandler<WorkflowActi
 
         try
         {
-            using var scope = _serviceProvider.CreateScope();
-            var handler = factory(scope.ServiceProvider);
-            if (handler is null)
+            IDictionary<string, string>? updates;
+            System.Diagnostics.Stopwatch? sw = null;
+
+            if (request.LogExecutionTime)
             {
-                _logger.LogWarning("Handler factory returned null for action {ActionName}", request.ActionName);
-                return new WorkflowActionResponse { Success = false, ErrorMessage = $"Handler factory returned null for {request.ActionName}" };
+                sw = System.Diagnostics.Stopwatch.StartNew();
             }
 
-            var instanceManager = scope.ServiceProvider.GetService<IWorkflowInstanceManager>();
-            if (instanceManager is null)
+            if (request.CreateScopeForHandlers)
             {
-                throw new InvalidOperationException("InstanceManager required in workflow action scope.");
+                using var scope = _serviceProvider.CreateScope();
+                var handler = factory(scope.ServiceProvider);
+                if (handler is null)
+                {
+                    _logger.LogWarning("Handler factory returned null for action {ActionName}", request.ActionName);
+                    return new WorkflowActionResponse { Success = false, ErrorMessage = $"Handler factory returned null for {request.ActionName}" };
+                }
+
+                var instanceManager = scope.ServiceProvider.GetService<IWorkflowInstanceManager>();
+                if (instanceManager is null)
+                {
+                    throw new InvalidOperationException("InstanceManager required in workflow action scope.");
+                }
+
+                var ctx = new ActionHandlerContext(request.WorkflowId, request.Node, request.Definition, instanceManager);
+                updates = await handler.HandleAsync(ctx, request.Parameters, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                // Use root service provider without creating a scope
+                var handler = factory(_serviceProvider);
+                if (handler is null)
+                {
+                    _logger.LogWarning("Handler factory returned null for action {ActionName}", request.ActionName);
+                    return new WorkflowActionResponse { Success = false, ErrorMessage = $"Handler factory returned null for {request.ActionName}" };
+                }
+
+                var instanceManager = _serviceProvider.GetService<IWorkflowInstanceManager>();
+                if (instanceManager is null)
+                {
+                    throw new InvalidOperationException("InstanceManager required in workflow action scope.");
+                }
+
+                var ctx = new ActionHandlerContext(request.WorkflowId, request.Node, request.Definition, instanceManager);
+                updates = await handler.HandleAsync(ctx, request.Parameters, cancellationToken).ConfigureAwait(false);
             }
 
-            var ctx = new ActionHandlerContext(request.WorkflowId, request.Node, request.Definition, instanceManager);
-            var updates = await handler.HandleAsync(ctx, request.Parameters, cancellationToken).ConfigureAwait(false);
+            if (sw != null)
+            {
+                sw.Stop();
+                _logger.LogInformation("Action {ActionName} handled by handler in {ElapsedMs}ms", request.ActionName, sw.ElapsedMilliseconds);
+            }
 
             return new WorkflowActionResponse
             {
@@ -65,10 +101,16 @@ public sealed class WorkflowActionRequestHandler : IMediatorHandler<WorkflowActi
                 VariableUpdates = updates
             };
         }
-        catch (InvalidOperationException ex)
+        catch (OperationCanceledException)
         {
-            _logger.LogError(ex, "Invalid operation executing action {ActionName}", request.ActionName);
-            return new WorkflowActionResponse { Success = false, ErrorMessage = ex.Message };
+            _logger.LogInformation("Action {ActionName} execution cancelled", request.ActionName);
+            return new WorkflowActionResponse { Success = false, ErrorMessage = "Action execution was cancelled" };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Action handler for {ActionName} threw an exception", request.ActionName);
+            // Return success=true even on exception - allows workflow to continue (matches direct handler path behavior)
+            return new WorkflowActionResponse { Success = true, VariableUpdates = null };
         }
     }
 }

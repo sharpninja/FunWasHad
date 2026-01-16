@@ -42,6 +42,8 @@ public class WorkflowServiceTests
         // Register action executor and handler registry so controller DI can resolve dependencies in tests
         sc.AddSingleton<FWH.Common.Workflow.Actions.IWorkflowActionHandlerRegistry, FWH.Common.Workflow.Actions.WorkflowActionHandlerRegistry>();
         sc.AddSingleton<FWH.Common.Workflow.Actions.WorkflowActionHandlerRegistrar>();
+        sc.AddSingleton<FWH.Orchestrix.Contracts.Mediator.IMediatorSender, FWH.Orchestrix.Mediator.Remote.Mediator.ServiceProviderMediatorSender>();
+        sc.AddTransient<FWH.Orchestrix.Contracts.Mediator.IMediatorHandler<FWH.Common.Workflow.Actions.WorkflowActionRequest, FWH.Common.Workflow.Actions.WorkflowActionResponse>, FWH.Common.Workflow.Actions.WorkflowActionRequestHandler>();
         sc.AddSingleton<FWH.Common.Workflow.Actions.IWorkflowActionExecutor, FWH.Common.Workflow.Actions.WorkflowActionExecutor>();
 
         var sp = sc.BuildServiceProvider();
@@ -101,6 +103,8 @@ endif
         // Register action executor and handler registry so controller DI can resolve dependencies in tests
         services.AddSingleton<FWH.Common.Workflow.Actions.IWorkflowActionHandlerRegistry, FWH.Common.Workflow.Actions.WorkflowActionHandlerRegistry>();
         services.AddSingleton<FWH.Common.Workflow.Actions.WorkflowActionHandlerRegistrar>();
+        services.AddSingleton<FWH.Orchestrix.Contracts.Mediator.IMediatorSender, FWH.Orchestrix.Mediator.Remote.Mediator.ServiceProviderMediatorSender>();
+        services.AddTransient<FWH.Orchestrix.Contracts.Mediator.IMediatorHandler<FWH.Common.Workflow.Actions.WorkflowActionRequest, FWH.Common.Workflow.Actions.WorkflowActionResponse>, FWH.Common.Workflow.Actions.WorkflowActionRequestHandler>();
         services.AddSingleton<FWH.Common.Workflow.Actions.IWorkflowActionExecutor, FWH.Common.Workflow.Actions.WorkflowActionExecutor>();
 
         // Build provider and ensure DB created

@@ -39,7 +39,15 @@ public partial class App : Application
     static App()
     {
         var services = new ServiceCollection();
-        services.AddLogging();
+
+        // Register log store and configure logging to use Avalonia logger
+        var logStore = new FWH.Mobile.Logging.AvaloniaLogStore(maxEntries: 1000);
+        services.AddSingleton(logStore);
+
+        services.AddLogging(builder =>
+        {
+            builder.AddProvider(new FWH.Mobile.Logging.AvaloniaLoggerProvider(logStore));
+        });
 
         // Note: Service discovery is available when Microsoft.Extensions.ServiceDiscovery package is added
         // For now, using direct URL configuration for mobile app
@@ -58,6 +66,7 @@ public partial class App : Application
         // Register location services (includes GPS service factory)
         // Requires IPlatformService from AddChatServices() to be registered first
         services.AddLocationServices();
+
 
         // Register MediatR handlers for remote API calls
         services.AddRemoteMediatorHandlers();
@@ -136,10 +145,14 @@ public partial class App : Application
         // Register camera capture ViewModel
         services.AddSingleton<CameraCaptureViewModel>();
 
+        // Register log viewer ViewModel
+        services.AddSingleton<LogViewerViewModel>();
+
         ServiceProvider = services.BuildServiceProvider();
 
         // Database initialization deferred to OnFrameworkInitializationCompleted
         // to avoid blocking the UI thread during app startup
+
     }
 
     public static IServiceProvider ServiceProvider { get; }
@@ -266,10 +279,12 @@ public partial class App : Application
             await InitializeWorkflowAsync();
 
             var chatViewModel = ServiceProvider.GetRequiredService<ChatViewModel>();
+            var logViewerViewModel = ServiceProvider.GetRequiredService<LogViewerViewModel>();
 
             var mainWindow = new MainWindow
             {
                 DataContext = chatViewModel,
+                Tag = logViewerViewModel, // Pass log viewer ViewModel via Tag
                 Width = 800,
                 Height = 600,
                 Title = "Fun Was Had"
@@ -280,6 +295,7 @@ public partial class App : Application
 
             // Start location tracking on desktop
             await StartLocationTrackingAsync();
+
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {

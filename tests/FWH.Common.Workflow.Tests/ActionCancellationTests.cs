@@ -5,6 +5,8 @@ using Xunit;
 using FWH.Common.Workflow.Actions;
 using FWH.Common.Workflow.Instance;
 using System.Collections.Generic;
+using FWH.Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Mediator.Remote.Mediator;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -26,6 +28,9 @@ public class ActionCancellationTests
 
         services.AddSingleton<IWorkflowActionHandler>(handler);
         services.AddSingleton<WorkflowActionHandlerRegistrar>();
+        services.AddLogging();
+        services.AddSingleton<IMediatorSender, ServiceProviderMediatorSender>();
+        services.AddTransient<IMediatorHandler<WorkflowActionRequest, WorkflowActionResponse>, WorkflowActionRequestHandler>();
         services.AddSingleton<IWorkflowActionExecutor, WorkflowActionExecutor>();
 
         var sp = services.BuildServiceProvider();

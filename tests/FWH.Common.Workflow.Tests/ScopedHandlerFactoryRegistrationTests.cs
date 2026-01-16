@@ -17,6 +17,8 @@ using System.Collections.Generic;
 using System.Threading;
 using FWH.Common.Workflow.Extensions;
 using System.Collections.Concurrent;
+using FWH.Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Mediator.Remote.Mediator;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -57,6 +59,9 @@ public class ScopedHandlerFactoryRegistrationTests
         services.AddSingleton<IWorkflowStateCalculator, WorkflowStateCalculator>();
         services.AddSingleton<IWorkflowActionHandlerRegistry, WorkflowActionHandlerRegistry>();
         services.AddSingleton<WorkflowActionHandlerRegistrar>();
+        services.AddLogging();
+        services.AddSingleton<IMediatorSender, ServiceProviderMediatorSender>();
+        services.AddTransient<IMediatorHandler<WorkflowActionRequest, WorkflowActionResponse>, WorkflowActionRequestHandler>();
         services.AddSingleton<IWorkflowActionExecutor, WorkflowActionExecutor>();
         services.AddSingleton<IWorkflowController, WorkflowController>();
         services.AddSingleton<IWorkflowService, WorkflowService>();

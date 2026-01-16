@@ -19,6 +19,7 @@
     <ProjectReference Include="..\..\src\FWH.Common.Workflow\FWH.Common.Workflow.csproj" />
     <ProjectReference Include="..\..\src\FWH.Mobile.Data\FWH.Mobile.Data.csproj" />
     <ProjectReference Include="..\..\src\FWH.Orchestrix.Contracts\FWH.Orchestrix.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\FWH.Orchestrix.Mediator.Remote\FWH.Orchestrix.Mediator.Remote.csproj" />
   </ItemGroup>
 
 </Project>

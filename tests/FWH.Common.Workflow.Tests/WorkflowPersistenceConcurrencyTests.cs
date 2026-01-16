@@ -17,6 +17,8 @@ using FWH.Common.Workflow.Actions;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Repositories;
 using System;
+using FWH.Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Mediator.Remote.Mediator;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -41,6 +43,9 @@ public class WorkflowPersistenceConcurrencyTests
         services.AddSingleton<IWorkflowStateCalculator, WorkflowStateCalculator>();
         services.AddSingleton<IWorkflowActionHandlerRegistry, WorkflowActionHandlerRegistry>();
         services.AddSingleton<WorkflowActionHandlerRegistrar>();
+        services.AddLogging();
+        services.AddSingleton<IMediatorSender, ServiceProviderMediatorSender>();
+        services.AddTransient<IMediatorHandler<WorkflowActionRequest, WorkflowActionResponse>, WorkflowActionRequestHandler>();
         services.AddSingleton<IWorkflowActionExecutor, WorkflowActionExecutor>();
         services.AddSingleton<IWorkflowController, WorkflowController>();
         services.AddSingleton<IWorkflowService, WorkflowService>();
@@ -112,11 +117,11 @@ public class WorkflowPersistenceConcurrencyTests
 
         // Assert - Should complete without errors
         Assert.Equal(100, updateCount);
-        
+
         var variables = manager.GetVariables(workflowId);
         Assert.NotNull(variables);
         Assert.True(variables.ContainsKey("counter"));
-        
+
         // One of the values should have won (can't predict which in concurrent scenario)
         var finalValue = int.Parse(variables["counter"]);
         Assert.True(finalValue >= 0 && finalValue < 100);
@@ -234,7 +239,7 @@ A --> C
 @enduml";
 
         var workflow = await service1.ImportWorkflowAsync(plant, "restore-test", "Restore Test");
-        
+
         // Advance to a specific state
         var state = await controller1.GetCurrentStatePayloadAsync(workflow.Id);
         if (state.IsChoice && state.Choices.Any())
@@ -249,7 +254,7 @@ A --> C
         var sp2 = BuildServices();
         var service2 = sp2.GetRequiredService<IWorkflowService>();
         var controller2 = sp2.GetRequiredService<IWorkflowController>();
-        
+
         // Import the same workflow (should restore from persistence)
         var restored = await service2.ImportWorkflowAsync(plant, "restore-test", "Restore Test");
         var restoredNodeId = controller2.GetCurrentNodeId(restored.Id);

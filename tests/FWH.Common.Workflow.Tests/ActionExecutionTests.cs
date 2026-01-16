@@ -21,6 +21,8 @@ using FWH.Common.Workflow.Extensions;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
 using FWH.Common.Workflow.Actions;
+using FWH.Orchestrix.Contracts.Mediator;
+using FWH.Orchestrix.Mediator.Remote.Mediator;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -42,7 +44,12 @@ public class ActionExecutionTests
         services.AddSingleton<IWorkflowStateCalculator, WorkflowStateCalculator>();
         services.AddSingleton<IWorkflowActionHandlerRegistry, WorkflowActionHandlerRegistry>();
         services.AddSingleton<WorkflowActionHandlerRegistrar>();
-        services.AddSingleton<IWorkflowActionExecutor>(sp => new WorkflowActionExecutor(sp, sp.GetRequiredService<IWorkflowActionHandlerRegistry>(), Options.Create(new WorkflowActionExecutorOptions { ExecuteHandlersInBackground = false })));
+
+        // Register mediator sender and handler (handler uses registry, so tests work with registry path)
+        services.AddSingleton<IMediatorSender, ServiceProviderMediatorSender>();
+        services.AddTransient<IMediatorHandler<WorkflowActionRequest, WorkflowActionResponse>, WorkflowActionRequestHandler>();
+
+        services.AddSingleton<IWorkflowActionExecutor>(sp => new WorkflowActionExecutor(sp, sp.GetRequiredService<IMediatorSender>(), Options.Create(new WorkflowActionExecutorOptions { ExecuteHandlersInBackground = false })));
         services.AddSingleton<IWorkflowController, WorkflowController>();
         services.AddSingleton<IWorkflowService, WorkflowService>();
         services.AddTransient<IWorkflowView, WorkflowView>();

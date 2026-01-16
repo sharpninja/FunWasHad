@@ -10,6 +10,8 @@ public sealed class WorkflowActionRequest : IMediatorRequest<WorkflowActionRespo
     public WorkflowDefinition Definition { get; set; } = null!;
     public string ActionName { get; set; } = string.Empty;
     public IDictionary<string, string> Parameters { get; set; } = new Dictionary<string, string>();
+    public bool CreateScopeForHandlers { get; set; } = true;
+    public bool LogExecutionTime { get; set; } = false;
 }
 
 public sealed class WorkflowActionResponse

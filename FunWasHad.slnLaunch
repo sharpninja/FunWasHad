@@ -3,13 +3,14 @@
     "Name": "Aspire + Android",
     "Projects": [
       {
-        "Name": "src/FWH.AppHost/FWH.AppHost.csproj",
+        "Path": "src\\FWH.Mobile\\FWH.Mobile.Android\\FWH.Mobile.Android.csproj",
         "Action": "Start",
-        "DebugTarget": "http"
+        "DebugTarget": "7.6  Fold-in with outer display API 33 (Android 13.0 - API 33)"
       },
       {
-        "Name": "src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj",
-        "Action": "Start"
+        "Path": "src\\FWH.AppHost\\FWH.AppHost.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
       }
     ]
   }

@@ -8,5 +8,10 @@
         x:Class="FWH.Mobile.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
         Title="FWH.Mobile">
+    <DockPanel>
+        <views:LogViewerControl DockPanel.Dock="Bottom" Height="200" Name="LogViewer" />
         <views:MainView />
+    </DockPanel>
+
 </Window>
+

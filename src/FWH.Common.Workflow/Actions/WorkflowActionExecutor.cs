@@ -31,20 +31,23 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
     private readonly IMediatorSender? _mediator;
     private readonly WorkflowActionExecutorOptions _options;
 
-    public WorkflowActionExecutor(IServiceProvider serviceProvider, IWorkflowActionHandlerRegistry registry, IOptions<WorkflowActionExecutorOptions>? options = null, ILogger<WorkflowActionExecutor>? logger = null)
-    {
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-        _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-        _mediator = null;
-        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<WorkflowActionExecutor>.Instance;
-        _options = options?.Value ?? new WorkflowActionExecutorOptions();
+    //public WorkflowActionExecutor(IServiceProvider serviceProvider, IWorkflowActionHandlerRegistry registry, IOptions<WorkflowActionExecutorOptions>? options = null, ILogger<WorkflowActionExecutor>? logger = null)
+    //{
+    //    _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+    //    _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+    //    _mediator = null;
+    //    _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<WorkflowActionExecutor>.Instance;
+    //    _options = options?.Value ?? new WorkflowActionExecutorOptions();
 
-        // Eagerly trigger registrar if available so handlers registered as singletons get wired when DI builds
-        var registrar = _serviceProvider.GetService<WorkflowActionHandlerRegistrar>();
-        // registrar's constructor performs registration
-    }
+    //    // Eagerly trigger registrar if available so handlers registered as singletons get wired when DI builds
+    //    var registrar = _serviceProvider.GetService<WorkflowActionHandlerRegistrar>();
+    //    // registrar's constructor performs registration
+    //}
 
-    public WorkflowActionExecutor(IServiceProvider serviceProvider, IMediatorSender mediator, IOptions<WorkflowActionExecutorOptions>? options = null, ILogger<WorkflowActionExecutor>? logger = null)
+    public WorkflowActionExecutor(IServiceProvider serviceProvider,
+                                  IMediatorSender mediator,
+                                  IOptions<WorkflowActionExecutorOptions>? options = null,
+                                  ILogger<WorkflowActionExecutor>? logger = null)
     {
         _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
@@ -115,14 +118,23 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
         {
             try
             {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
                 var response = await _mediator.SendAsync(new WorkflowActionRequest
                 {
                     WorkflowId = workflowId,
                     Node = node,
                     Definition = definition,
                     ActionName = actionName,
-                    Parameters = resolved
+                    Parameters = resolved,
+                    CreateScopeForHandlers = _options.CreateScopeForHandlers,
+                    LogExecutionTime = _options.LogExecutionTime
                 }, cancellationToken).ConfigureAwait(false);
+
+                sw.Stop();
+                if (_options.LogExecutionTime)
+                {
+                    _logger.LogInformation("Action {ActionName} handled by mediator in {ElapsedMs}ms", actionName, sw.ElapsedMilliseconds);
+                }
 
                 if (response.Success && response.VariableUpdates != null && rootInstanceManager != null)
                 {
@@ -136,6 +148,12 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
             }
             catch (OperationCanceledException)
             {
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Action {ActionName} execution failed via mediator", actionName);
+                // Return false but don't throw - allows workflow to continue
                 return false;
             }
         }

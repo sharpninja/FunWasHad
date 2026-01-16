@@ -44,7 +44,10 @@ public static class WorkflowServiceCollectionExtensions
         services.AddSingleton<WorkflowActionHandlerRegistrar>();
 
         var opts = executorOptions ?? new WorkflowActionExecutorOptions();
-        services.AddSingleton<IWorkflowActionExecutor>(sp => new WorkflowActionExecutor(sp, sp.GetRequiredService<IWorkflowActionHandlerRegistry>(), Options.Create(opts), sp.GetService<Microsoft.Extensions.Logging.ILogger<WorkflowActionExecutor>>()));
+        services.AddSingleton<IWorkflowActionExecutor>(sp => new WorkflowActionExecutor(sp,
+                                                                                        sp.GetRequiredService<IMediatorSender>(),
+                                                                                        Options.Create(opts),
+                                                                                        sp.GetService<Microsoft.Extensions.Logging.ILogger<WorkflowActionExecutor>>()));
 
         // Controller and service
         services.AddSingleton<IWorkflowController, WorkflowController>();
