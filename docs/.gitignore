@@ -6,8 +6,9 @@ bin/
 *.tmp
 *.html
 
-# DocFX metadata
-api/
+# DocFX metadata (keep api/index.md, ignore generated YAML)
+api/*.yml
+api/*.yml.meta
 *.pdb.meta
 
 # Build artifacts

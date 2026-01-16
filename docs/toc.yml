@@ -1,6 +1,8 @@
 ### Home
 - name: Home
   href: index.md
+- name: Documentation Index
+  href: README.md
 
 ### Requirements
 - name: Technical Requirements
@@ -16,9 +18,7 @@
     - name: Marketing API
       href: summaries/Marketing_API_Implementation_Summary.md
     - name: Location API Integration
-      href: api/Mobile_Location_API_Integration_Summary.md
-    - name: API Verification Guide
-      href: api/Mobile_Location_API_Verification_Guide.md
+      href: summaries/Mobile_Location_API_Integration_Summary.md
 
 ### Implementation Summaries
 - name: Location & Movement
@@ -55,6 +55,18 @@
       href: summaries/PowerShell_Scripts_Implementation_Summary.md
     - name: Production Enhancements
       href: summaries/ProductionEnhancements_Summary.md
+    - name: Health Checks & Rate Limiting
+      href: summaries/HealthChecks_RateLimiting_Complete.md
+    - name: Notification System
+      href: summaries/Notification_System_Implementation_Summary.md
+    - name: Platform Service Registration
+      href: summaries/PlatformServiceRegistration_QuickReference.md
+    - name: Thread Safety Fixes
+      href: summaries/ThreadSafetyFixes_Complete.md
+    - name: Technical Requirements Completion
+      href: summaries/Technical_Requirements_Completion_Summary.md
+    - name: Orchestrix Mediator Refactoring
+      href: summaries/Orchestrix_Mediator_Refactoring_Completion_Report.md
 
 ### Architecture
 - name: Architecture & Design
@@ -101,17 +113,31 @@
       href: testing/Integration_Tests_Update_Summary.md
     - name: Imaging Tests
       href: testing/FWH_Common_Imaging_Tests_Analysis.md
+    - name: GitHub Actions CI Fix
+      href: testing/GitHub_Actions_CI_Fix_Summary.md
 
 ### Code Reviews
 - name: Code Reviews
   items:
-    - name: Code Review Report
+    - name: Latest Code Review (2025-01-09)
+      href: reviews/Code-Review-Report-2025-01-09.md
+    - name: Code Review Report (2025-01-08)
       href: reviews/Code-Review-Report-2025-01-08.md
     - name: Recommendations Implementation
       href: reviews/Code-Review-Recommendations-Implementation-Summary.md
+    - name: Documentation Cleanup
+      href: reviews/Documentation-Cleanup-2025-01-08.md
+    - name: DocFX Build Configuration
+      href: reviews/DocFX-Build-Configuration-Summary.md
+    - name: Swagger Configuration
+      href: reviews/Swagger-Configuration-Summary.md
 
 ### References
 - name: Quick References
   items:
     - name: Next Steps
       href: references/Quick_Reference_Next_Steps.md
+    - name: DocFX Quick Start
+      href: references/DocFX-Quick-Start.md
+    - name: DocFX Documentation
+      href: references/README-DocFX.md

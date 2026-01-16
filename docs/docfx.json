@@ -4,12 +4,132 @@
       "src": [
         {
           "files": [
-            "../FWH.Location.Api/FWH.Location.Api.csproj",
-            "../FWH.MarketingApi/FWH.MarketingApi.csproj",
-            "../FWH.Common.Location/FWH.Common.Location.csproj",
-            "../FWH.Common.Chat/FWH.Common.Chat.csproj",
-            "../FWH.Common.Workflow/FWH.Common.Workflow.csproj",
-            "../FWH.Common.Imaging/FWH.Common.Imaging.csproj",
+            "../FWH.Location.Api/FWH.Location.Api.csproj"
+          ],
+          "exclude": [
+            "**/bin/**",
+            "**/obj/**",
+            "**/*Tests.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "includePrivateMembers": false,
+      "disableDefaultFilter": false,
+      "noRestore": false,
+      "namespaceLayout": "flattened",
+      "memberLayout": "samePage",
+      "allowCompilationErrors": false
+    },
+    {
+      "src": [
+        {
+          "files": [
+            "../FWH.MarketingApi/FWH.MarketingApi.csproj"
+          ],
+          "exclude": [
+            "**/bin/**",
+            "**/obj/**",
+            "**/*Tests.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "includePrivateMembers": false,
+      "disableDefaultFilter": false,
+      "noRestore": false,
+      "namespaceLayout": "flattened",
+      "memberLayout": "samePage",
+      "allowCompilationErrors": false
+    },
+    {
+      "src": [
+        {
+          "files": [
+            "../FWH.Common.Location/FWH.Common.Location.csproj"
+          ],
+          "exclude": [
+            "**/bin/**",
+            "**/obj/**",
+            "**/*Tests.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "includePrivateMembers": false,
+      "disableDefaultFilter": false,
+      "noRestore": false,
+      "namespaceLayout": "flattened",
+      "memberLayout": "samePage",
+      "allowCompilationErrors": false
+    },
+    {
+      "src": [
+        {
+          "files": [
+            "../FWH.Common.Chat/FWH.Common.Chat.csproj"
+          ],
+          "exclude": [
+            "**/bin/**",
+            "**/obj/**",
+            "**/*Tests.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "includePrivateMembers": false,
+      "disableDefaultFilter": false,
+      "noRestore": false,
+      "namespaceLayout": "flattened",
+      "memberLayout": "samePage",
+      "allowCompilationErrors": false
+    },
+    {
+      "src": [
+        {
+          "files": [
+            "../FWH.Common.Workflow/FWH.Common.Workflow.csproj"
+          ],
+          "exclude": [
+            "**/bin/**",
+            "**/obj/**",
+            "**/*Tests.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "includePrivateMembers": false,
+      "disableDefaultFilter": false,
+      "noRestore": false,
+      "namespaceLayout": "flattened",
+      "memberLayout": "samePage",
+      "allowCompilationErrors": false
+    },
+    {
+      "src": [
+        {
+          "files": [
+            "../FWH.Common.Imaging/FWH.Common.Imaging.csproj"
+          ],
+          "exclude": [
+            "**/bin/**",
+            "**/obj/**",
+            "**/*Tests.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "includePrivateMembers": false,
+      "disableDefaultFilter": false,
+      "noRestore": false,
+      "namespaceLayout": "flattened",
+      "memberLayout": "samePage",
+      "allowCompilationErrors": false
+    },
+    {
+      "src": [
+        {
+          "files": [
             "../FWH.Mobile.Data/FWH.Mobile.Data.csproj"
           ],
           "exclude": [
@@ -82,11 +202,21 @@
     "output": "_site",
     "globalMetadataFiles": [],
     "fileMetadataFiles": [],
+    "globalMetadata": {
+      "_enableSearch": "true",
+      "_enableNewTab": "true",
+      "_disableNavbar": "false",
+      "_disableBreadcrumb": "false",
+      "_disableToc": "false"
+    },
     "template": [
       "default",
-      "modern"
+      "modern",
+      "templates/material"
     ],
-    "postProcessors": [],
+    "postProcessors": [
+      "ExtractSearchIndex"
+    ],
     "markdownEngineName": "markdig",
     "noLangKeyword": false,
     "keepFileLink": false,
