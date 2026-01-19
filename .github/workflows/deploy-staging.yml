@@ -176,23 +176,3 @@ jobs:
             BUILD_CONFIGURATION=Release
           platforms: linux/amd64
         continue-on-error: false
-        with:
-          images: ${{ env.MARKETING_API_IMAGE }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix=staging-
-            type=raw,value=staging-latest
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./src/FWH.MarketingApi/Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            BUILD_CONFIGURATION=Release
