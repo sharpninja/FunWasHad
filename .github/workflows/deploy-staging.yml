@@ -45,7 +45,7 @@ jobs:
 
       - name: Run tests
         run: |
-          dotnet test tests/FWH.Location.Api.Tests/FWH.Location.Api.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/FWH.Common.Location.Tests/FWH.Common.Location.Tests.csproj --configuration Release --verbosity normal
           dotnet test tests/FWH.MarketingApi.Tests/FWH.MarketingApi.Tests.csproj --configuration Release --verbosity normal
         continue-on-error: true
 
@@ -94,6 +94,8 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             BUILD_CONFIGURATION=Release
+          platforms: linux/amd64
+        continue-on-error: false
 
   docker_marketing_api_staging:
     name: Build Marketing API Docker Image (Staging)
