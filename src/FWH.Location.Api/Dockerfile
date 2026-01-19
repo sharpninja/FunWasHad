@@ -6,6 +6,7 @@ WORKDIR /src
 # Copy global configuration files
 COPY ["Directory.Packages.props", "."]
 COPY ["global.json", "."]
+COPY ["NuGet.config", "."]
 
 # Copy ALL project files first (this ensures complete dependency graph)
 COPY ["src/FWH.Location.Api/FWH.Location.Api.csproj", "src/FWH.Location.Api/"]
@@ -18,8 +19,10 @@ COPY ["src/FWH.Mobile.Data/FWH.Mobile.Data.csproj", "src/FWH.Mobile.Data/"]
 COPY ["src/FWH.Orchestrix.Contracts/FWH.Orchestrix.Contracts.csproj", "src/FWH.Orchestrix.Contracts/"]
 COPY ["src/FWH.Orchestrix.Mediator.Remote/FWH.Orchestrix.Mediator.Remote.csproj", "src/FWH.Orchestrix.Mediator.Remote/"]
 
-# Restore dependencies (simple, no retry - let Docker handle it)
-RUN dotnet restore "src/FWH.Location.Api/FWH.Location.Api.csproj" --verbosity normal
+# Restore dependencies with explicit timeout
+RUN dotnet restore "src/FWH.Location.Api/FWH.Location.Api.csproj" \
+    --configfile NuGet.config \
+    --verbosity normal
 
 # Copy all source code
 COPY src/ src/

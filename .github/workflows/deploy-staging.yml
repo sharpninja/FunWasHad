@@ -92,12 +92,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           build-args: |
             BUILD_CONFIGURATION=Release
           platforms: linux/amd64
-          no-cache: false
+          no-cache: true
         continue-on-error: false
 
   docker_marketing_api_staging:
