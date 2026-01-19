@@ -17,33 +17,33 @@ env:
   MARKETING_API_IMAGE: ghcr.io/${{ github.repository_owner }}/fwh-marketing-api
 
 jobs:
-  build_and_test:
-    name: Build and Test
-    runs-on: ubuntu-latest
+build_and_test:
+  name: Build and Test
+  runs-on: windows-2022
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-      - name: Setup .NET 9
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Restore dependencies
-        run: dotnet restore FunWasHad.sln
+    - name: Restore dependencies
+      run: dotnet restore FunWasHad.sln
 
-      - name: Build solution
-        run: dotnet build FunWasHad.sln --no-restore --configuration Release
+    - name: Build solution
+      run: dotnet build FunWasHad.sln --no-restore --configuration Release
 
-      - name: Run tests
-        run: dotnet test FunWasHad.sln --no-build --configuration Release --verbosity normal
+    - name: Run tests
+      run: dotnet test FunWasHad.sln --no-build --configuration Release --verbosity normal
 
-  docker_location_api_staging:
-    name: Build Location API Docker Image (Staging)
-    runs-on: ubuntu-latest
+docker_location_api_staging:
+  name: Build Location API Docker Image (Staging)
+  runs-on: windows-2022
     needs: build_and_test
     permissions:
       contents: read
@@ -89,7 +89,7 @@ jobs:
 
   docker_marketing_api_staging:
     name: Build Marketing API Docker Image (Staging)
-    runs-on: ubuntu-latest
+    runs-on: windows-2022
     needs: build_and_test
     permissions:
       contents: read
