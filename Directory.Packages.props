@@ -53,5 +53,7 @@
     <!-- DocFX documentation generation -->
     <PackageVersion Include="Microsoft.DocAsCode.Build" Version="2.78.0" />
     <PackageVersion Include="Microsoft.DocAsCode.Dotnet" Version="2.78.0" />
+    <!-- Security fix: Override KubernetesClient to fix NU1902 vulnerability (CVE-2025-9708) -->
+    <PackageVersion Include="KubernetesClient" Version="17.0.14" />
   </ItemGroup>
 </Project>

@@ -16,7 +16,6 @@ using FWH.Mobile.Data.Repositories;
 using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using FWH.Common.Workflow.Actions;
 using FWH.Orchestrix.Contracts.Mediator;
 using FWH.Orchestrix.Mediator.Remote.Mediator;
 
@@ -45,7 +44,7 @@ public class WorkflowExecutorOptionsTests
     class TestLogger<T> : ILogger<T>
     {
         public readonly List<string> Messages = new List<string>();
-        public IDisposable BeginScope<TState>(TState state) => null!;
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
         public bool IsEnabled(LogLevel logLevel) => true;
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, System.Exception? exception, System.Func<TState, System.Exception?, string> formatter)
         {

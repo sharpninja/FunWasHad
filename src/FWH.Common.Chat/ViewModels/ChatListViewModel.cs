@@ -5,7 +5,9 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace FWH.Common.Chat.ViewModels;
 
-public partial class ChatListViewModel(IServiceProvider? serviceProvider = null) : ViewModelBase
+#pragma warning disable CS9113 // Parameter is unread
+public partial class ChatListViewModel(IServiceProvider? _ = null) : ViewModelBase
+#pragma warning restore CS9113
 {
     private ObservableCollection<IChatEntry<IPayload>> entries = new ObservableCollection<IChatEntry<IPayload>>();
 

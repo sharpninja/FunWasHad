@@ -13,6 +13,8 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <!-- Security fix: Explicitly reference KubernetesClient 17.0.14+ to fix NU1902 vulnerability (CVE-2025-9708) -->
+    <PackageReference Include="KubernetesClient" />
   </ItemGroup>
 
   <ItemGroup>

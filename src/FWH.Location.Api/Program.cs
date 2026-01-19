@@ -94,11 +94,6 @@ app.UseSwaggerUI(options =>
 
 app.MapControllers();
 
-app.Run();
-
-/// <summary>
-/// Applies database migrations on application startup.
-/// </summary>
 static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
 {
     using var scope = app.Services.CreateScope();
@@ -132,5 +127,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
         throw;
     }
 }
+
+app.Run();
 
 public partial class Program { }

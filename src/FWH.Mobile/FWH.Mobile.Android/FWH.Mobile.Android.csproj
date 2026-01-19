@@ -9,6 +9,12 @@
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    
+    <!-- Java SDK Directory Configuration -->
+    <!-- Priority: 1. Explicitly set JavaSdkDirectory, 2. JAVA_HOME env var, 3. Common JDK locations -->
+    <JavaSdkDirectory Condition="'$(JavaSdkDirectory)' == '' and '$(JAVA_HOME)' != ''">$(JAVA_HOME)</JavaSdkDirectory>
+    <JavaSdkDirectory Condition="'$(JavaSdkDirectory)' == '' and Exists('C:\Program Files\Microsoft\jdk-11.0.29.7-hotspot')">C:\Program Files\Microsoft\jdk-11.0.29.7-hotspot</JavaSdkDirectory>
+    <JavaSdkDirectory Condition="'$(JavaSdkDirectory)' == '' and Exists('C:\Program Files\Eclipse Adoptium\jdk-11.0.29.7-hotspot')">C:\Program Files\Eclipse Adoptium\jdk-11.0.29.7-hotspot</JavaSdkDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>$(DefineConstants);ANDROID</DefineConstants>

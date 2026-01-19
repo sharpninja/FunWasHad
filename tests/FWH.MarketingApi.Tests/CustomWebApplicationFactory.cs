@@ -2,7 +2,6 @@ using FWH.MarketingApi.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -35,11 +34,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         builder.ConfigureServices(services =>
         {
-            // Remove DbContext pool registrations (singleton) that conflict with scoped DbContext
-            services.RemoveAll(typeof(IDbContextPool<MarketingDbContext>));
-            services.RemoveAll(typeof(IScopedDbContextLease<MarketingDbContext>));
-            
             // Replace database with PostgreSQL test container
+            // Remove existing DbContext registrations (this will also remove any pool registrations)
             services.RemoveAll<DbContextOptions<MarketingDbContext>>();
             services.RemoveAll<MarketingDbContext>();
             

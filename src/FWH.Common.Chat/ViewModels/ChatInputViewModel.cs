@@ -71,14 +71,14 @@ public partial class ChatInputViewModel : ViewModelBase
     {
         Text = string.Empty;
         Choices = null;
-        this.currentImage = null;
+        CurrentImage = null;
         InputMode = ChatInputModes.Text;
     }
 
     public void SetChoices(ChoicePayload choicePayload)
     {
         Choices = choicePayload;
-        this.currentImage = null;
+        CurrentImage = null;
         InputMode = ChatInputModes.Choice;
 
         foreach (var choice in choicePayload.Choices)
@@ -95,7 +95,7 @@ public partial class ChatInputViewModel : ViewModelBase
 
     public void SetImageMode(ImagePayload imagePayload)
     {
-        this.currentImage = imagePayload;
+        CurrentImage = imagePayload;
         Choices = null;
         Text = string.Empty;
         InputMode = ChatInputModes.Image;

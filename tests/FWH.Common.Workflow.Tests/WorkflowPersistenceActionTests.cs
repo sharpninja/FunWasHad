@@ -51,7 +51,7 @@ public class WorkflowPersistenceActionTests
         services.AddWorkflowActionHandler("SendMessage", (ctx, p, ct) =>
         {
             // Simple no-op handler
-            return Task.FromResult<IDictionary<string, string>>(new Dictionary<string, string>());
+            return Task.FromResult<IDictionary<string, string>?>(new Dictionary<string, string>());
         });
 
         services.AddSingleton<IWorkflowActionExecutor, WorkflowActionExecutor>();
@@ -83,6 +83,7 @@ public class WorkflowPersistenceActionTests
 
         // After import and StartInstance, the controller should have executed action and auto-advanced
         var persisted = await repo.GetByIdAsync(def.Id);
-        Assert.Equal("B", persisted.CurrentNodeId);
+        Assert.NotNull(persisted);
+        Assert.Equal("B", persisted!.CurrentNodeId);
     }
 }
