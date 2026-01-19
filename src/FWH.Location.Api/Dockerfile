@@ -7,7 +7,7 @@ WORKDIR /src
 COPY ["Directory.Packages.props", "."]
 COPY ["global.json", "."]
 
-# Copy all project files for restore
+# Copy all project files for restore (include ALL dependencies)
 COPY ["src/FWH.Location.Api/FWH.Location.Api.csproj", "src/FWH.Location.Api/"]
 COPY ["src/FWH.ServiceDefaults/FWH.ServiceDefaults.csproj", "src/FWH.ServiceDefaults/"]
 COPY ["src/FWH.Common.Location/FWH.Common.Location.csproj", "src/FWH.Common.Location/"]
@@ -15,9 +15,12 @@ COPY ["src/FWH.Common.Chat/FWH.Common.Chat.csproj", "src/FWH.Common.Chat/"]
 COPY ["src/FWH.Common.Workflow/FWH.Common.Workflow.csproj", "src/FWH.Common.Workflow/"]
 COPY ["src/FWH.Common.Imaging/FWH.Common.Imaging.csproj", "src/FWH.Common.Imaging/"]
 COPY ["src/FWH.Mobile.Data/FWH.Mobile.Data.csproj", "src/FWH.Mobile.Data/"]
+COPY ["src/FWH.Orchestrix.Contracts/FWH.Orchestrix.Contracts.csproj", "src/FWH.Orchestrix.Contracts/"]
+COPY ["src/FWH.Orchestrix.Mediator.Remote/FWH.Orchestrix.Mediator.Remote.csproj", "src/FWH.Orchestrix.Mediator.Remote/"]
 
-# Restore dependencies
-RUN dotnet restore "src/FWH.Location.Api/FWH.Location.Api.csproj"
+# Restore dependencies with retry logic
+RUN dotnet restore "src/FWH.Location.Api/FWH.Location.Api.csproj" --disable-parallel || \
+    dotnet restore "src/FWH.Location.Api/FWH.Location.Api.csproj" --disable-parallel
 
 # Copy all source code
 COPY src/ src/
