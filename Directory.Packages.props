@@ -32,7 +32,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.12" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
-    <PackageVersion Include="NSubstitute" Version="5.1.0" />
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <!-- Imaging packages -->
     <PackageVersion Include="SkiaSharp" Version="3.119.1" />
     <PackageVersion Include="Svg.Skia" Version="3.4.1" />
