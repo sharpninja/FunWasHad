@@ -43,7 +43,7 @@ jobs:
 
   docker_location_api_staging:
     name: Build Location API Docker Image (Staging)
-    runs-on: windows-2022
+    runs-on: ubuntu-latest
     needs: build_and_test
     permissions:
       contents: read
@@ -89,7 +89,7 @@ jobs:
 
   docker_marketing_api_staging:
     name: Build Marketing API Docker Image (Staging)
-    runs-on: windows-2022
+    runs-on: ubuntu-latest
     needs: build_and_test
     permissions:
       contents: read
