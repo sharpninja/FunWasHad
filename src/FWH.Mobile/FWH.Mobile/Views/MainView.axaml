@@ -17,6 +17,7 @@
     <DockPanel>
         <views:LogViewerControl DockPanel.Dock="Bottom" Height="200" Name="LogViewer" />
         <mobile:ChatInputControl DockPanel.Dock="Bottom" />
+        <views:MovementStateControl DockPanel.Dock="Top" Margin="8" Name="MovementState" />
         <mobile:ChatListControl />
     </DockPanel>
 </UserControl>

@@ -145,7 +145,7 @@ Services can still run standalone:
 dotnet run --project FWH.Location.Api
 
 # Mobile Desktop app (manual mode)
-dotnet run --project FWH.Mobile\FWH.Mobile.Desktop
+dotnet run --project FWH.Mobile/FWH.Mobile.Desktop
 ```
 
 When running without Aspire:

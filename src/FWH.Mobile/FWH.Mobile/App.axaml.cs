@@ -149,6 +149,9 @@ public partial class App : Application
         // Register movement state logger (for demonstration)
         services.AddSingleton<MovementStateLogger>();
 
+        // Register movement state ViewModel
+        services.AddSingleton<MovementStateViewModel>();
+
         // Register imaging services
         services.AddImagingServices();
 
