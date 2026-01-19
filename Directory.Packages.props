@@ -40,7 +40,7 @@
     <!-- Windows SDK for Desktop GPS support -->
     <PackageVersion Include="Microsoft.Windows.SDK.Contracts" Version="10.0.22621.38" />
     <!-- .NET Aspire packages -->
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.0.0" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.1.0" />
     <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="9.0.0" />
     <PackageVersion Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="13.1.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.2.0" />
