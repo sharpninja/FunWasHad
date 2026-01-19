@@ -1,0 +1,121 @@
+# .NET build artifacts
+**/bin/
+**/obj/
+**/out/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+
+# Visual Studio cache/options
+.vs/
+.vscode/
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.idea/
+
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+
+# NuGet packages
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# User secrets
+**/appsettings.Development.json
+**/appsettings.*.json
+!**/appsettings.json
+
+# Docker files (ignore other Dockerfiles when building)
+**/.dockerignore
+**/docker-compose*
+**/Dockerfile*
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.azurepipelines/
+*.yml
+*.yaml
+
+# Documentation
+**/README.md
+**/LICENSE
+**/*.md
+!**/src/**/*.md
+
+# Node modules (if any frontend dependencies)
+**/node_modules/
+**/npm-debug.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Android/iOS build artifacts
+**/Resources/
+**/Assets/Icon.png
+*.apk
+*.aab
+*.ipa
+
+# Mobile specific
+**/FWH.Mobile.Android/
+**/FWH.Mobile.iOS/
+**/FWH.Mobile.Desktop/
+
+# Test projects
+**/tests/
+**/*.Tests/
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+*.log
+*.bak
+*.swp
+*~
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Environment files
+.env
+.env.*

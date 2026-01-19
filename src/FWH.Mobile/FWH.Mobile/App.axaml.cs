@@ -66,8 +66,16 @@ public partial class App : Application
         // For now, using direct URL configuration for mobile app
         // services.AddServiceDiscovery();
 
-        // Register data services (includes configuration repository)
-        services.AddDataServices();
+        // Register platform service first (needed for database path)
+        services.AddSingleton<IPlatformService, PlatformService>();
+
+        // Get the platform-specific database path
+        var platformService = new PlatformService();
+        var databasePath = platformService.GetDatabasePath("fwh_mobile.db");
+        var connectionString = $"DataSource={databasePath}";
+
+        // Register data services with persistent database
+        services.AddDataServices(connectionString);
 
         // Register workflow services using extension method
         services.AddWorkflowServices();
@@ -367,11 +375,25 @@ public partial class App : Application
 
             using var scope = ServiceProvider.CreateScope();
             var migrationService = scope.ServiceProvider.GetRequiredService<FWH.Mobile.Data.Services.MobileDatabaseMigrationService>();
+            var logger = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<App>>();
+
+            // Log database connection info for debugging
+            var connectionInfo = migrationService.GetConnectionInfo();
+            logger.LogInformation("Initializing database at: {ConnectionInfo}", connectionInfo);
 
             // Ensure database exists and apply any pending migrations
             await migrationService.EnsureDatabaseAsync();
 
+            logger.LogInformation("Database initialization completed successfully");
+
             _isDatabaseInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            using var scope = ServiceProvider.CreateScope();
+            var logger = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<App>>();
+            logger.LogError(ex, "Failed to initialize database: {Message}", ex.Message);
+            throw;
         }
         finally
         {
