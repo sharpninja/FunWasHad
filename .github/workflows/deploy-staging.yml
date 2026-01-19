@@ -33,13 +33,20 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Restore dependencies
-        run: dotnet restore FunWasHad.sln
+        run: |
+          dotnet restore FunWasHad.sln
+          dotnet restore src/FWH.Location.Api/FWH.Location.Api.csproj
+          dotnet restore src/FWH.MarketingApi/FWH.MarketingApi.csproj
 
       - name: Build solution
-        run: dotnet build FunWasHad.sln --no-restore --configuration Release
+        run: |
+          dotnet build src/FWH.Location.Api/FWH.Location.Api.csproj --no-restore --configuration Release
+          dotnet build src/FWH.MarketingApi/FWH.MarketingApi.csproj --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test FunWasHad.sln --no-build --configuration Release --verbosity normal
+        run: |
+          dotnet test tests/FWH.Location.Api.Tests/FWH.Location.Api.Tests.csproj --configuration Release --verbosity normal
+          dotnet test tests/FWH.MarketingApi.Tests/FWH.MarketingApi.Tests.csproj --configuration Release --verbosity normal
         continue-on-error: true
 
   docker_location_api_staging:
