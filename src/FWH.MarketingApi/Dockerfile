@@ -11,9 +11,8 @@ COPY ["global.json", "."]
 COPY ["src/FWH.MarketingApi/FWH.MarketingApi.csproj", "src/FWH.MarketingApi/"]
 COPY ["src/FWH.ServiceDefaults/FWH.ServiceDefaults.csproj", "src/FWH.ServiceDefaults/"]
 
-# Restore dependencies with retry logic
-RUN dotnet restore "src/FWH.MarketingApi/FWH.MarketingApi.csproj" --disable-parallel || \
-    dotnet restore "src/FWH.MarketingApi/FWH.MarketingApi.csproj" --disable-parallel
+# Restore dependencies (simple, no retry)
+RUN dotnet restore "src/FWH.MarketingApi/FWH.MarketingApi.csproj" --verbosity normal
 
 # Copy all source code
 COPY src/ src/

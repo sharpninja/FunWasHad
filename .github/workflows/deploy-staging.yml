@@ -52,6 +52,7 @@ jobs:
   docker_location_api_staging:
     name: Build Location API Docker Image (Staging)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: build_and_test
     permissions:
       contents: read
@@ -84,6 +85,7 @@ jobs:
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
+        timeout-minutes: 20
         with:
           context: .
           file: ./src/FWH.Location.Api/Dockerfile
@@ -95,6 +97,7 @@ jobs:
           build-args: |
             BUILD_CONFIGURATION=Release
           platforms: linux/amd64
+          no-cache: false
         continue-on-error: false
 
   docker_marketing_api_staging:
