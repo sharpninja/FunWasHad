@@ -41,9 +41,9 @@ build_and_test:
     - name: Run tests
       run: dotnet test FunWasHad.sln --no-build --configuration Release --verbosity normal
 
-docker_location_api_staging:
-  name: Build Location API Docker Image (Staging)
-  runs-on: windows-2022
+  docker_location_api_staging:
+    name: Build Location API Docker Image (Staging)
+    runs-on: windows-2022
     needs: build_and_test
     permissions:
       contents: read
