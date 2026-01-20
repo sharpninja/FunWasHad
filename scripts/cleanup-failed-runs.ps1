@@ -161,50 +161,52 @@ foreach ($item in $toDelete)
     Write-Host ''
 }
 
-if ($WhatIf)
+if (-not $WhatIf)
 {
-    Write-Host 'WhatIf specified — no deletions will be performed.'
-    exit 0
-}
-
-if (-not $Force)
-{
-    $ans = Read-Host "Proceed to delete these $($toDelete.Count) runs? Type 'yes' to confirm"
-    if ($ans.Trim().ToLower() -ne 'yes')
+    if (-not $Force)
     {
-        Write-Host 'Aborted by user.'
-        exit 0
-    }
-}
-
-# Perform deletions
-$errors = @()
-foreach ($item in $toDelete)
-{
-    Write-Host "Deleting run ID $($item.id) ..."
-    try
-    {
-        gh api -X DELETE "repos/$repoFullName/actions/runs/$($item.id)" 2>$null
-        if ($LASTEXITCODE -ne 0)
+        $ans = Read-Host "Proceed to delete these $($toDelete.Count) runs? Type 'yes' to confirm"
+        if ($ans.Trim().ToLower() -ne 'yes')
         {
-            throw "gh returned exit code $LASTEXITCODE"
+            Write-Host 'Aborted by user.'
+            exit 0
         }
-        Write-Host '  Deleted.'
     }
-    catch
+
+    # Perform deletions
+    $errors = @()
+    foreach ($item in $toDelete)
     {
-        Write-Warning "  Failed to delete run $($item.id): $_"
-        $errors += $item
+        Write-Host "Deleting run ID $($item.id) ..."
+        try
+        {
+            gh api -X DELETE "repos/$repoFullName/actions/runs/$($item.id)" 2>$null
+            if ($LASTEXITCODE -ne 0)
+            {
+                throw "gh returned exit code $LASTEXITCODE"
+            }
+            Write-Host '  Deleted.'
+        }
+        catch
+        {
+            Write-Warning "  Failed to delete run $($item.id): $_"
+            $errors += $item
+        }
     }
-}
 
-if ($errors.Count -gt 0)
+    if ($errors.Count -gt 0)
+    {
+        Write-Warning "$($errors.Count) run(s) failed to delete. See warnings above."
+        exit 2
+    }
+
+    Write-Host "Done. Deleted $($toDelete.Count) run(s)."
+}
+else
 {
-    Write-Warning "$($errors.Count) run(s) failed to delete. See warnings above."
-    exit 2
+    Write-Host 'WhatIf specified — no workflow run deletions will be performed.'
 }
 
-Write-Host "Done. Deleted $($toDelete.Count) run(s)."
 Write-Host ""
 
 # Cleanup Docker images from GHCR if requested
