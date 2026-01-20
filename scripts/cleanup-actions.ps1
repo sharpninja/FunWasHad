@@ -28,7 +28,7 @@
   When specified, also deletes successful runs beyond the first three most recent per workflow.
 
 .PARAMETER KeepLatest
-  When specified, keeps only the most recent successful run per existing workflow and deletes all other runs (including failed, cancelled, etc.). Also deletes ALL runs for workflows that no longer exist. This is a more aggressive cleanup mode.
+  When specified, keeps only the most recent successful run per existing workflow and deletes all other runs (including failed, cancelled, etc.). Also deletes ALL runs for workflows that no longer exist. This is a more aggressive cleanup mode. Automatically includes Docker image cleanup (equivalent to -CleanupDockerImages).
 
 .EXAMPLE
   # Simulate cleanup for owner/FunWasHad
@@ -68,6 +68,9 @@ param(
     [switch]$KeepOnlyThree,
     [switch]$KeepLatest
 )
+
+# KeepLatest automatically includes CleanupDockerImages
+$shouldCleanupDockerImages = $CleanupDockerImages -or $KeepLatest
 
 function Get-RepoFullName
 {
@@ -118,7 +121,7 @@ if (-not $base64Lines)
 {
     Write-Host 'No workflow runs found.'
     # Continue to Docker cleanup if requested, even if no workflow runs
-    if (-not $CleanupDockerImages)
+    if (-not $shouldCleanupDockerImages)
     {
         exit 0
     }
@@ -202,7 +205,7 @@ if (-not $hasRunsToProcess)
     }
     Write-Host $message
     # Continue to Docker cleanup if requested, even if no runs to process
-    if (-not $CleanupDockerImages)
+    if (-not $shouldCleanupDockerImages)
     {
         exit 0
     }
@@ -468,7 +471,7 @@ if (-not $toDelete -or $toDelete.Count -eq 0)
     }
     Write-Host $message
     # Continue to Docker cleanup if requested, even if no runs to delete
-    if (-not $CleanupDockerImages)
+    if (-not $shouldCleanupDockerImages)
     {
         exit 0
     }
@@ -551,7 +554,7 @@ if (-not $WhatIf)
         {
             Write-Host 'Workflow run deletion aborted by user.'
             # Continue to Docker cleanup if requested, even if user aborted workflow cleanup
-            if (-not $CleanupDockerImages)
+            if (-not $shouldCleanupDockerImages)
             {
                 exit 0
             }
@@ -597,7 +600,7 @@ else
 Write-Host ""
 
 # Cleanup Docker images from GHCR if requested
-if ($CleanupDockerImages)
+if ($shouldCleanupDockerImages)
 {
     Write-Host "══════════════════════════════════════════════════════════════" -ForegroundColor Yellow
     Write-Host "Cleaning up Docker images from GHCR" -ForegroundColor Yellow
