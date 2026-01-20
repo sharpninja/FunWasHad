@@ -212,6 +212,8 @@ jobs:
   release_android_staging:
     name: Create Android Release
     needs: [detect_changes, build_mobile_android_staging, deploy_railway_staging]
+    permissions:
+      contents: write
     uses: ./.github/workflows/staging-release-android.yml
     with:
       mobile_changed: ${{ needs.detect_changes.outputs.mobile_changed }}
