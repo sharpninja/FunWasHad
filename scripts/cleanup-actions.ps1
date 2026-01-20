@@ -456,7 +456,9 @@ if ($LastThree -and $successfulRuns -and $successfulRuns.Count -gt 0)
             }
         }
     }
+    Write-Host ""
 }
+}  # End of else block for normal processing (when KeepLatest is not specified)
 
 if (-not $toDelete -or $toDelete.Count -eq 0)
 {
