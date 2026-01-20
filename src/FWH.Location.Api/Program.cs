@@ -14,7 +14,7 @@ if (builder.Environment.IsDevelopment())
     {
         // Listen on all interfaces for HTTP (port configured by Aspire: 4748)
         options.ListenAnyIP(4748);
-        
+
         // Listen on all interfaces for HTTPS (port configured by Aspire: 4747)
         options.ListenAnyIP(4747, listenOptions =>
         {
@@ -107,11 +107,43 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         var connectionString = configuration.GetConnectionString("funwashad");
 
+        // Log connection string status (without exposing sensitive data)
         if (string.IsNullOrEmpty(connectionString))
         {
-            logger.LogError("Database connection string 'funwashad' not found");
-            throw new InvalidOperationException("Database connection string 'funwashad' is required");
+            logger.LogError("Database connection string 'funwashad' is null or empty");
+
+            // Try to get raw value to help diagnose
+            var rawValue = configuration["ConnectionStrings:funwashad"];
+            if (string.IsNullOrEmpty(rawValue))
+            {
+                logger.LogError("ConnectionStrings:funwashad configuration key is not set");
+                logger.LogWarning("Available connection string keys: {Keys}",
+                    string.Join(", ", configuration.GetSection("ConnectionStrings").GetChildren().Select(c => c.Key)));
+            }
+            else
+            {
+                logger.LogWarning("Connection string value appears to be: {Value} (may be unresolved Railway template)",
+                    rawValue.Length > 50 ? rawValue.Substring(0, 50) + "..." : rawValue);
+            }
+
+            throw new InvalidOperationException(
+                "Database connection string 'funwashad' is required. " +
+                "In Railway, ensure ConnectionStrings__funwashad is set to ${{Postgres.DATABASE_URL}} " +
+                "where 'Postgres' matches your PostgreSQL service name.");
         }
+
+        // Validate connection string format
+        if (connectionString.StartsWith("${{") || connectionString.Contains("{{"))
+        {
+            logger.LogError("Connection string appears to be an unresolved Railway template: {Value}",
+                connectionString.Substring(0, Math.Min(100, connectionString.Length)));
+            throw new InvalidOperationException(
+                "Connection string is an unresolved Railway template. " +
+                "Ensure the PostgreSQL service name in Railway matches the reference in ConnectionStrings__funwashad. " +
+                "Example: ConnectionStrings__funwashad=${{Postgres.DATABASE_URL}}");
+        }
+
+        logger.LogInformation("Connection string found (length: {Length} characters)", connectionString.Length);
 
         // Create and run migration service
         var migrationLogger = scope.ServiceProvider.GetRequiredService<ILogger<DatabaseMigrationService>>();
