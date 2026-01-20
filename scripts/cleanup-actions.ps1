@@ -8,7 +8,7 @@
   - Failed runs: Keeps the most recent failed run per workflow (grouped by workflow_id), deletes all others.
   - Cancelled runs: Deletes ALL cancelled runs (none are kept).
   - No-build runs: Deletes ALL runs tagged with "no-build" check run (none are kept).
-  - Successful runs (when -KeepOnlyThree is specified): Keeps only the first 3 most recent successful runs per workflow, deletes all others.
+  - Successful runs (when -LastThree is specified): Keeps only the first 3 most recent successful runs per workflow, deletes all others.
   - KeepLatest mode (when -KeepLatest is specified): Keeps only the most recent successful run per existing workflow, deletes all other runs (including failed, cancelled, etc.). Also deletes ALL runs for workflows that no longer exist.
   By default the script prompts before performing deletions. Use -Force to skip the prompt, or -WhatIf to simulate.
 
@@ -24,7 +24,7 @@
 .PARAMETER CleanupDockerImages
   When specified, also clean up old Docker images from GHCR, keeping the most recent image for each API.
 
-.PARAMETER KeepOnlyThree
+.PARAMETER LastThree
   When specified, also deletes successful runs beyond the first three most recent per workflow.
 
 .PARAMETER KeepLatest
@@ -48,7 +48,7 @@
 
 .EXAMPLE
   # Keep only the first 3 successful runs per workflow, delete the rest
-  .\cleanup-actions.ps1 -Repo "owner/FunWasHad" -KeepOnlyThree
+  .\cleanup-actions.ps1 -Repo "owner/FunWasHad" -LastThree
 
 .EXAMPLE
   # Keep only the most recent successful run per workflow, delete everything else
@@ -65,7 +65,7 @@ param(
     [switch]$Force,
     [switch]$WhatIf,
     [switch]$CleanupDockerImages,
-    [switch]$KeepOnlyThree,
+    [switch]$LastThree,
     [switch]$KeepLatest
 )
 
@@ -150,7 +150,7 @@ foreach ($line in $base64Lines)
 $completedRuns = $runs | Where-Object { $_.status -eq 'completed' }
 $failedRuns = $completedRuns | Where-Object { $_.conclusion -eq 'failure' }
 $cancelledRuns = $completedRuns | Where-Object { $_.conclusion -eq 'cancelled' }
-$successfulRuns = if ($KeepOnlyThree -or $KeepLatest) { $completedRuns | Where-Object { $_.conclusion -eq 'success' } } else { @() }
+$successfulRuns = if ($LastThree -or $KeepLatest) { $completedRuns | Where-Object { $_.conclusion -eq 'success' } } else { @() }
 
 Write-Host "Found $($runs.Count) total workflow run(s)" -ForegroundColor Cyan
 Write-Host "  - Completed runs: $($completedRuns.Count)" -ForegroundColor Cyan
@@ -195,7 +195,7 @@ $hasRunsToProcess = ($failedRuns -and $failedRuns.Count -gt 0) -or ($cancelledRu
 if (-not $hasRunsToProcess)
 {
     $message = 'No failed, cancelled, or no-build tagged workflow runs to process.'
-    if ($KeepOnlyThree)
+    if ($LastThree)
     {
         $message += ' No successful runs to process.'
     }
@@ -431,8 +431,8 @@ if ($noBuildRuns -and $noBuildRuns.Count -gt 0)
     }
 }
 
-# For successful runs: keep first 3 per workflow, delete the rest (only if KeepOnlyThree is specified)
-if ($KeepOnlyThree -and $successfulRuns -and $successfulRuns.Count -gt 0)
+# For successful runs: keep first 3 per workflow, delete the rest (only if LastThree is specified)
+if ($LastThree -and $successfulRuns -and $successfulRuns.Count -gt 0)
 {
     Write-Host "Processing successful runs (keeping only first 3 per workflow)..." -ForegroundColor Green
     $grouped = $successfulRuns | Group-Object -Property workflow_id
@@ -461,7 +461,7 @@ if ($KeepOnlyThree -and $successfulRuns -and $successfulRuns.Count -gt 0)
 if (-not $toDelete -or $toDelete.Count -eq 0)
 {
     $message = "Nothing to delete — most recent failed run per workflow is preserved, and no cancelled or no-build runs found."
-    if ($KeepOnlyThree)
+    if ($LastThree)
     {
         $message += " No excess successful runs found (all workflows have 3 or fewer successful runs)."
     }
