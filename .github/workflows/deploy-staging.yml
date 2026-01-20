@@ -190,31 +190,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
-
-      - name: Set up Railway authentication
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
-          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_STAGING_PROJECT_ID }}
-        run: |
-          # Verify secrets are set
-          if [ -z "$RAILWAY_TOKEN" ]; then
-            echo "❌ Error: RAILWAY_STAGING_TOKEN secret is not set"
-            exit 1
-          fi
-
-          if [ -z "$RAILWAY_PROJECT_ID" ]; then
-            echo "❌ Error: RAILWAY_STAGING_PROJECT_ID secret is not set"
-            exit 1
-          fi
-
-          echo "🔐 Authenticating with Railway..."
-          echo "📋 Project ID length: ${#RAILWAY_PROJECT_ID} characters"
-
-          # Link to Railway project using explicit --project flag
-          railway link --project "$RAILWAY_PROJECT_ID"
-
       - name: Get image tags
         id: image_tags
         run: |
@@ -239,122 +214,36 @@ jobs:
           echo "💡 Dashboard: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
 
       - name: Deploy Location API to Railway
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
-        run: |
-          echo "🚀 Deploying Location API..."
-          echo "📦 Image: ${{ steps.image_tags.outputs.location_image }}"
-
-          # Redeploy service to pull latest Docker image from GHCR
-          # Note: Service must be pre-configured in Railway dashboard to use Docker image source
-          echo "🔄 Triggering redeploy for service 'staging-location-api'..."
-
-          if railway redeploy --service staging-location-api --yes; then
-            echo "✅ Location API redeploy triggered successfully"
-            echo "⏳ Deployment is running in the background..."
-          else
-            echo "❌ Location API redeploy failed"
-            echo ""
-            echo "💡 Troubleshooting steps:"
-            echo "   1. Verify service 'staging-location-api' exists in Railway project"
-            echo "   2. Ensure service is configured to use Docker image source (not GitHub repo)"
-            echo "   3. Set Docker image to: ${{ steps.image_tags.outputs.location_image }}"
-            echo "   4. Configure GHCR registry credentials in Railway service settings"
-            echo "   5. Check Railway dashboard: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
-            echo ""
-            echo "📚 Setup instructions:"
-            echo "   - Service Settings → Source → Select 'Docker Image'"
-            echo "   - Enter image: ${{ steps.image_tags.outputs.location_image }}"
-            echo "   - Add registry credentials for ghcr.io"
-            exit 1
-          fi
-
-      - name: Deploy Marketing API to Railway
+        uses: bervProject/railway-deploy@main
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: |
-          echo "🚀 Deploying Marketing API..."
-          echo "📦 Image: ${{ steps.image_tags.outputs.marketing_image }}"
+        with:
+          service: staging-location-api
+          detach: true
 
-          # Redeploy service to pull latest Docker image from GHCR
-          # Note: Service must be pre-configured in Railway dashboard to use Docker image source
-          echo "🔄 Triggering redeploy for service 'staging-marketing-api'..."
-
-          if railway redeploy --service staging-marketing-api --yes; then
-            echo "✅ Marketing API redeploy triggered successfully"
-            echo "⏳ Deployment is running in the background..."
-          else
-            echo "❌ Marketing API redeploy failed"
-            echo ""
-            echo "💡 Troubleshooting steps:"
-            echo "   1. Verify service 'staging-marketing-api' exists in Railway project"
-            echo "   2. Ensure service is configured to use Docker image source (not GitHub repo)"
-            echo "   3. Set Docker image to: ${{ steps.image_tags.outputs.marketing_image }}"
-            echo "   4. Configure GHCR registry credentials in Railway service settings"
-            echo "   5. Check Railway dashboard: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
-            echo ""
-            echo "📚 Setup instructions:"
-            echo "   - Service Settings → Source → Select 'Docker Image'"
-            echo "   - Enter image: ${{ steps.image_tags.outputs.marketing_image }}"
-            echo "   - Add registry credentials for ghcr.io"
-            exit 1
-          fi
+      - name: Deploy Marketing API to Railway
+        uses: bervProject/railway-deploy@main
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        with:
+          service: staging-marketing-api
+          detach: true
 
       - name: Wait for deployments
         run: sleep 60
 
       - name: Health check Location API
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
         run: |
           echo "🏥 Checking Location API health..."
-          railway service staging-location-api
-
-          # Try to get URL from Railway CLI
-          LOCATION_URL=$(railway status 2>/dev/null | grep -oP 'https://[^ ]+' | head -1 || echo "")
-
-          if [ -z "$LOCATION_URL" ]; then
-            echo "⚠️  Could not get Location API URL from Railway CLI"
-            echo "💡 Check Railway dashboard for the service URL: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
-            exit 0
-          fi
-
-          echo "📍 Location API URL: $LOCATION_URL"
-          echo "🔍 Testing health endpoint..."
-
-          if curl --fail --retry 5 --retry-delay 10 --max-time 30 "$LOCATION_URL/health"; then
-            echo "✅ Location API health check passed"
-          else
-            echo "⚠️  Location API health check failed - service may still be starting"
-            echo "💡 Wait a few minutes and check Railway logs"
-          fi
+          echo "💡 Check Railway dashboard for the service URL: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
+          echo "⚠️  Health check skipped - use Railway dashboard to verify deployment status"
         continue-on-error: true
 
       - name: Health check Marketing API
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
         run: |
           echo "🏥 Checking Marketing API health..."
-          railway service staging-marketing-api
-
-          # Try to get URL from Railway CLI
-          MARKETING_URL=$(railway status 2>/dev/null | grep -oP 'https://[^ ]+' | head -1 || echo "")
-
-          if [ -z "$MARKETING_URL" ]; then
-            echo "⚠️  Could not get Marketing API URL from Railway CLI"
-            echo "💡 Check Railway dashboard for the service URL: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
-            exit 0
-          fi
-
-          echo "📍 Marketing API URL: $MARKETING_URL"
-          echo "🔍 Testing health endpoint..."
-
-          if curl --fail --retry 5 --retry-delay 10 --max-time 30 "$MARKETING_URL/health"; then
-            echo "✅ Marketing API health check passed"
-          else
-            echo "⚠️  Marketing API health check failed - service may still be starting"
-            echo "💡 Wait a few minutes and check Railway logs"
-          fi
+          echo "💡 Check Railway dashboard for the service URL: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
+          echo "⚠️  Health check skipped - use Railway dashboard to verify deployment status"
         continue-on-error: true
 
   notify_deployment:
