@@ -211,7 +211,7 @@ if ($failedRuns -and $failedRuns.Count -gt 0)
         $mostRecent = $sorted[0]
         Write-Host "  Workflow: $($mostRecent.name) (ID: $($grp.Name)) - $($sorted.Count) failed run(s)" -ForegroundColor Gray
         Write-Host "    Keeping: Run ID $($mostRecent.id) (created: $($mostRecent.created_at))" -ForegroundColor Green
-        
+
         # Keep the first (most recent failed run), delete the rest
         $candidates = $sorted | Select-Object -Skip 1
         if ($candidates.Count -gt 0)
@@ -242,20 +242,29 @@ if ($failedRuns -and $failedRuns.Count -gt 0)
 # For cancelled runs: delete ALL of them (don't keep any)
 if ($cancelledRuns -and $cancelledRuns.Count -gt 0)
 {
-    foreach ($r in $cancelledRuns)
+    Write-Host "Processing cancelled runs (deleting ALL cancelled runs)..." -ForegroundColor Cyan
+    $groupedCancelled = $cancelledRuns | Group-Object -Property workflow_id
+    foreach ($grp in $groupedCancelled)
     {
-        $toDelete += [PSCustomObject]@{
-            id          = $r.id
-            workflow_id = $r.workflow_id
-            name        = $r.name
-            head_branch = $r.head_branch
-            event       = $r.event
-            conclusion  = $r.conclusion
-            created_at  = $r.created_at
-            url         = $r.html_url
-            tag         = 'cancelled'
+        $workflowName = ($grp.Group | Select-Object -First 1).name
+        Write-Host "  Workflow: $workflowName (ID: $($grp.Name)) - $($grp.Count) cancelled run(s) to delete" -ForegroundColor Gray
+        foreach ($r in $grp.Group)
+        {
+            Write-Host "    Deleting: Run ID $($r.id) (created: $($r.created_at), branch: $($r.head_branch))" -ForegroundColor Yellow
+            $toDelete += [PSCustomObject]@{
+                id          = $r.id
+                workflow_id = $r.workflow_id
+                name        = $r.name
+                head_branch = $r.head_branch
+                event       = $r.event
+                conclusion  = $r.conclusion
+                created_at  = $r.created_at
+                url         = $r.html_url
+                tag         = 'cancelled'
+            }
         }
     }
+    Write-Host ""
 }
 
 # For no-build runs: delete ALL of them (don't keep any)
