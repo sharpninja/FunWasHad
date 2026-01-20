@@ -340,22 +340,21 @@ jobs:
           name: Release ${{ steps.tag.outputs.TAG_NAME }}
           body: |
             ## Android APK Release
-            
+
             **Version:** ${{ steps.tag.outputs.TAG_NAME }}
             **Build Date:** ${{ github.event.head_commit.timestamp }}
             **Commit:** ${{ github.sha }}
-            
+
             ### Downloads
             - **APK:** ${{ steps.find_apk.outputs.APK_NAME }}
-            
+
             ### Installation
             1. Download the APK file
             2. Enable "Install from Unknown Sources" on your Android device
             3. Install the APK file
-            
+
             ### Changes
             See the [commit history](https://github.com/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}) for details.
           files: ${{ steps.find_apk.outputs.APK_PATH }}
           draft: false
           prerelease: ${{ contains(steps.tag.outputs.TAG_NAME, '-') || contains(steps.tag.outputs.TAG_NAME, 'alpha') || contains(steps.tag.outputs.TAG_NAME, 'beta') || contains(steps.tag.outputs.TAG_NAME, 'rc') }}
-

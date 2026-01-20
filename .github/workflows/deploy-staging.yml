@@ -17,9 +17,89 @@ env:
   MARKETING_API_IMAGE: ghcr.io/${{ github.repository_owner }}/fwh-marketing-api
 
 jobs:
+  detect_changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      location_api_changed: ${{ steps.changes.outputs.location_api }}
+      marketing_api_changed: ${{ steps.changes.outputs.marketing_api }}
+      mobile_changed: ${{ steps.changes.outputs.mobile }}
+      any_changes: ${{ steps.changes.outputs.location_api || steps.changes.outputs.marketing_api || steps.changes.outputs.mobile }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect file changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            # For push events, compare with previous commit
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          fi
+
+          # If BASE_SHA is empty or same as HEAD_SHA, check all files
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" == "$HEAD_SHA" ] || [ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]; then
+            echo "⚠️  Cannot determine base commit, assuming all files changed"
+            echo "location_api=true" >> $GITHUB_OUTPUT
+            echo "marketing_api=true" >> $GITHUB_OUTPUT
+            echo "mobile=true" >> $GITHUB_OUTPUT
+            echo "any_changes=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          LOCATION_CHANGED="false"
+          MARKETING_CHANGED="false"
+          MOBILE_CHANGED="false"
+
+          # Check for Location API changes
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Location\.Api/|^src/FWH\.Common\.Location/|^src/FWH\.ServiceDefaults/|^src/FWH\.Common\.(Chat|Imaging|Workflow)/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/deploy-staging\.yml|^src/FWH\.Location\.Api/.*Dockerfile"; then
+            echo "✅ Location API files changed"
+            LOCATION_CHANGED="true"
+            echo "location_api=true" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️  Location API files unchanged"
+            echo "location_api=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for Marketing API changes
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.MarketingApi/|^src/FWH\.ServiceDefaults/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/deploy-staging\.yml|^src/FWH\.MarketingApi/.*Dockerfile"; then
+            echo "✅ Marketing API files changed"
+            MARKETING_CHANGED="true"
+            echo "marketing_api=true" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️  Marketing API files unchanged"
+            echo "marketing_api=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for Mobile app changes
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Mobile/|^src/FWH\.Mobile\.Data/|^src/FWH\.Common\.(Location|Chat|Imaging|Workflow)/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/deploy-staging\.yml"; then
+            echo "✅ Mobile app files changed"
+            MOBILE_CHANGED="true"
+            echo "mobile=true" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️  Mobile app files unchanged"
+            echo "mobile=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Determine if any changes were detected
+          if [ "$LOCATION_CHANGED" == "true" ] || [ "$MARKETING_CHANGED" == "true" ] || [ "$MOBILE_CHANGED" == "true" ]; then
+            echo "any_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "any_changes=false" >> $GITHUB_OUTPUT
+          fi
+
   build_and_test:
     name: Build and Test
     runs-on: windows-2022
+    needs: detect_changes
+    if: needs.detect_changes.outputs.any_changes == 'true'
 
     steps:
       - name: Checkout repository
@@ -73,7 +153,8 @@ jobs:
     name: Build Location API Docker Image (Staging)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: build_and_test
+    needs: [detect_changes, build_and_test]
+    if: needs.detect_changes.outputs.location_api_changed == 'true'
     permissions:
       contents: read
       packages: write
@@ -83,6 +164,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Location API artifacts
+        if: needs.detect_changes.outputs.location_api_changed == 'true'
         uses: actions/download-artifact@v4
         with:
           name: location-api
@@ -127,7 +209,8 @@ jobs:
     name: Build Marketing API Docker Image (Staging)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: build_and_test
+    needs: [detect_changes, build_and_test]
+    if: needs.detect_changes.outputs.marketing_api_changed == 'true'
     permissions:
       contents: read
       packages: write
@@ -137,6 +220,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Marketing API artifacts
+        if: needs.detect_changes.outputs.marketing_api_changed == 'true'
         uses: actions/download-artifact@v4
         with:
           name: marketing-api
@@ -181,8 +265,11 @@ jobs:
     name: Deploy to Railway Staging
     runs-on: ubuntu-latest
     container: ghcr.io/railwayapp/cli:latest
-    needs: [docker_location_api_staging, docker_marketing_api_staging]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging')
+    needs: [detect_changes, docker_location_api_staging, docker_marketing_api_staging]
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging') &&
+      (needs.detect_changes.outputs.location_api_changed == 'true' || needs.detect_changes.outputs.marketing_api_changed == 'true')
     environment:
       name: staging
       url: https://staging.up.railway.app
@@ -217,9 +304,11 @@ jobs:
           echo "💡 Dashboard: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
 
       - name: Deploy Location API to Railway
+        if: needs.detect_changes.outputs.location_api_changed == 'true'
         run: railway redeploy -s staging-location-api -y
 
       - name: Deploy Marketing API to Railway
+        if: needs.detect_changes.outputs.marketing_api_changed == 'true'
         run: railway redeploy -s staging-marketing-api -y
 
       - name: Wait for deployments
@@ -239,21 +328,220 @@ jobs:
       #     echo "⚠️  Health check skipped - use Railway dashboard to verify deployment status"
       #   continue-on-error: true
 
+  build_mobile_android_staging:
+    name: Build Mobile Android (Staging)
+    runs-on: windows-2022
+    needs: [detect_changes, build_and_test]
+    if: needs.detect_changes.outputs.mobile_changed == 'true'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'microsoft'
+          java-version: '17'
+
+      - name: Install .NET MAUI Android workload
+        timeout-minutes: 15
+        run: |
+          dotnet workload install android --source https://api.nuget.org/v3/index.json
+          dotnet workload list
+
+      - name: Restore dependencies
+        timeout-minutes: 10
+        run: dotnet restore src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj
+
+      - name: Build Android app (Staging)
+        timeout-minutes: 20
+        run: dotnet build src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj --no-restore --configuration Staging
+
+      - name: Publish Android APK (Staging)
+        timeout-minutes: 30
+        run: dotnet publish src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj --no-build --configuration Staging -f net9.0-android -p:AndroidPackageFormat=apk
+
+      - name: Find APK file
+        id: find_apk
+        shell: pwsh
+        run: |
+          $searchPaths = @(
+            "src\FWH.Mobile\FWH.Mobile.Android\bin\Staging\net9.0-android",
+            "src\FWH.Mobile\FWH.Mobile.Android\bin\Staging\net9.0-android\publish"
+          )
+          $apkPath = $null
+          foreach ($path in $searchPaths) {
+            if (Test-Path $path) {
+              $found = Get-ChildItem -Path $path -Filter "*.apk" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($found) {
+                $apkPath = $found
+                break
+              }
+            }
+          }
+          if ($apkPath) {
+            Write-Host "Found APK: $($apkPath.FullName)"
+            Write-Host "APK_PATH=$($apkPath.FullName)" >> $env:GITHUB_OUTPUT
+            Write-Host "APK_NAME=$($apkPath.Name)" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Error "APK file not found in any of the expected locations"
+            Write-Host "Searched paths:"
+            foreach ($path in $searchPaths) {
+              Write-Host "  - $path"
+            }
+            exit 1
+          }
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-staging
+          path: ${{ steps.find_apk.outputs.APK_PATH }}
+          retention-days: 30
+
+  release_android_staging:
+    name: Create Android Release Candidate
+    runs-on: ubuntu-latest
+    needs: [detect_changes, build_mobile_android_staging, deploy_railway_staging]
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging') &&
+      needs.detect_changes.outputs.mobile_changed == 'true'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk-staging
+          path: ./artifacts
+
+      - name: Generate release candidate tag
+        id: tag
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          BRANCH_NAME=$(echo "${{ github.ref }}" | sed 's/refs\/heads\///')
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          TAG_NAME="staging-rc-${BRANCH_NAME}-${TIMESTAMP}-${SHORT_SHA}"
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "Generated release candidate tag: ${TAG_NAME}"
+
+      - name: Find APK file
+        id: find_apk
+        run: |
+          APK_FILE=$(find ./artifacts -name "*.apk" -type f | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            echo "APK file not found"
+            exit 1
+          fi
+          echo "APK_PATH=$APK_FILE" >> $GITHUB_OUTPUT
+          echo "APK_NAME=$(basename $APK_FILE)" >> $GITHUB_OUTPUT
+          echo "Found APK: $APK_FILE"
+
+      - name: Create GitHub Release Candidate
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+          name: Staging Release Candidate - ${{ steps.tag.outputs.TAG_NAME }}
+          body: |
+            ## Android APK Release Candidate (Staging)
+
+            **Version:** ${{ steps.tag.outputs.TAG_NAME }}
+            **Branch:** ${{ github.ref_name }}
+            **Build Date:** ${{ github.event.head_commit.timestamp }}
+            **Commit:** ${{ github.sha }}
+            **Commit Message:** ${{ github.event.head_commit.message }}
+
+            ### Downloads
+            - **APK:** ${{ steps.find_apk.outputs.APK_NAME }}
+
+            ### Installation
+            1. Download the APK file
+            2. Enable "Install from Unknown Sources" on your Android device
+            3. Install the APK file
+
+            ### Staging Environment
+            This release candidate is built against the **Staging** environment:
+            - **Location API:** https://staging-location-api-production.up.railway.app
+            - **Marketing API:** https://staging-marketing-api-production.up.railway.app
+
+            ### Changes
+            See the [commit history](https://github.com/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}) for details.
+
+            ⚠️ **Note:** This is a release candidate for testing purposes only.
+          files: ${{ steps.find_apk.outputs.APK_PATH }}
+          draft: false
+          prerelease: true
+
   notify_deployment:
     name: Notify Deployment Status
     runs-on: ubuntu-latest
-    needs: [deploy_railway_staging]
+    needs: [detect_changes, deploy_railway_staging, release_android_staging]
     if: always()
 
     steps:
+      - name: Check for skipped deployments
+        id: skipped
+        run: |
+          SKIPPED_APIS=""
+          if [ "${{ needs.detect_changes.outputs.location_api_changed }}" == "false" ]; then
+            SKIPPED_APIS="${SKIPPED_APIS}Location API "
+          fi
+          if [ "${{ needs.detect_changes.outputs.marketing_api_changed }}" == "false" ]; then
+            SKIPPED_APIS="${SKIPPED_APIS}Marketing API "
+          fi
+          if [ "${{ needs.detect_changes.outputs.mobile_changed }}" == "false" ]; then
+            SKIPPED_APIS="${SKIPPED_APIS}Mobile "
+          fi
+          if [ -n "$SKIPPED_APIS" ]; then
+            echo "⏭️  Skipped (no changes): $SKIPPED_APIS"
+            echo "skipped=true" >> $GITHUB_OUTPUT
+          else
+            echo "skipped=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Deployment Success
-        if: needs.deploy_railway_staging.result == 'success'
+        if: |
+          steps.skipped.outputs.skipped == 'false' &&
+          (needs.deploy_railway_staging.result == 'success' || needs.deploy_railway_staging.result == 'skipped') &&
+          (needs.release_android_staging.result == 'success' || needs.release_android_staging.result == 'skipped')
         run: |
           echo "✅ Staging deployment successful!"
-          echo "🚂 Railway Project: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
+          if [ "${{ needs.detect_changes.outputs.location_api_changed }}" == "true" ] || [ "${{ needs.detect_changes.outputs.marketing_api_changed }}" == "true" ]; then
+            echo "🚂 Railway Project: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
+          fi
+          if [ "${{ needs.detect_changes.outputs.mobile_changed }}" == "true" ]; then
+            echo "📱 Android Release Candidate created successfully!"
+          fi
+
+      - name: Deployment Skipped
+        if: steps.skipped.outputs.skipped == 'true'
+        run: |
+          echo "⏭️  Deployment skipped - no relevant files changed"
+          echo "✅ All checks passed, but no deployment needed"
 
       - name: Deployment Failed
-        if: needs.deploy_railway_staging.result == 'failure'
+        if: |
+          steps.skipped.outputs.skipped == 'false' &&
+          (needs.deploy_railway_staging.result == 'failure' || needs.release_android_staging.result == 'failure')
         run: |
           echo "❌ Staging deployment failed!"
+          if [ "${{ needs.deploy_railway_staging.result }}" == "failure" ]; then
+            echo "  - Railway deployment failed"
+          fi
+          if [ "${{ needs.release_android_staging.result }}" == "failure" ]; then
+            echo "  - Android release candidate creation failed"
+          fi
           exit 1

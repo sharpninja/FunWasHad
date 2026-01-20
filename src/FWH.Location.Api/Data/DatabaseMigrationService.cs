@@ -47,8 +47,8 @@ public class DatabaseMigrationService
                     Port = uri.Port > 0 ? uri.Port : 5432,
                     Database = uri.AbsolutePath.TrimStart('/'),
                     Username = uri.UserInfo.Split(':')[0],
-                    Password = uri.UserInfo.Contains(':') 
-                        ? Uri.UnescapeDataString(uri.UserInfo.Split(':', 2)[1]) 
+                    Password = uri.UserInfo.Contains(':')
+                        ? Uri.UnescapeDataString(uri.UserInfo.Split(':', 2)[1])
                         : string.Empty
                 };
 
