@@ -35,8 +35,8 @@
     <TieredCompilation>true</TieredCompilation>
     <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
     
-    <!-- Enable ready-to-run for better startup performance -->
-    <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
+    <!-- Enable ready-to-run for better startup performance (only for non-mobile platforms) -->
+    <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != '' AND !$(TargetFramework.Contains('-android')) AND !$(TargetFramework.Contains('-ios'))">true</PublishReadyToRun>
     
     <!-- Trim unused code (optional, can be disabled per-project if needed) -->
     <PublishTrimmed>false</PublishTrimmed>

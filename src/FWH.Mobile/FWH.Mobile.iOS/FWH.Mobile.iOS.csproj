@@ -5,6 +5,16 @@
     <SupportedOSPlatformVersion>13.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <!-- Staging configuration -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Staging'">
+    <DefineConstants>$(DefineConstants);STAGING</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <!-- Disable ReadyToRun for mobile platforms -->
+    <PublishReadyToRun>false</PublishReadyToRun>
+  </PropertyGroup>
   <ItemGroup>
     <Content Include="..\..\..\workflow.puml" Link="workflow.puml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

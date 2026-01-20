@@ -12,6 +12,14 @@
     <NoWarn>$(NoWarn);1591</NoWarn> <!-- Suppress warnings for missing XML docs (will enable after full audit) -->
   </PropertyGroup>
 
+  <!-- Staging configuration -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Staging'">
+    <DefineConstants>$(DefineConstants);STAGING</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
   <ItemGroup>
     <!-- Temporarily removed OpenAPI packages due to .NET 9 compatibility issues -->
     <!-- <PackageReference Include="Microsoft.AspNetCore.OpenApi" /> -->

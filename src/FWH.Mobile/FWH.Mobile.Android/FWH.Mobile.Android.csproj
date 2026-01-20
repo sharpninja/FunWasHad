@@ -25,6 +25,17 @@
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>link</TrimMode>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Staging|AnyCPU'">
+    <DefineConstants>$(DefineConstants);ANDROID;STAGING</DefineConstants>
+    <!-- Staging uses Release-like optimization -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <!-- Enable debug symbols for better diagnostics -->
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <!-- Disable ReadyToRun for mobile platforms -->
+    <PublishReadyToRun>false</PublishReadyToRun>
+  </PropertyGroup>
 
   <!-- Skip Windows-specific assemblies during Android linking -->
   <PropertyGroup>
@@ -78,9 +89,14 @@
     <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />
   </ItemGroup>
 
-  <!-- In Release, always use original (with placeholder/default) -->
-  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+  <!-- In Release and Staging, use appropriate config files -->
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
     <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="'$(Configuration)' == 'Staging'">
+    <AndroidAsset Include="..\FWH.Mobile\appsettings.Staging.json" Link="appsettings.Staging.json" Condition="Exists('..\FWH.Mobile\appsettings.Staging.json')" />
+    <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" Condition="!Exists('..\FWH.Mobile\appsettings.Staging.json')" />
   </ItemGroup>
 
   <!-- Clean up processed config files -->
