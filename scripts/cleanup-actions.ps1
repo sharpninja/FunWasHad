@@ -9,6 +9,7 @@
   - Cancelled runs: Deletes ALL cancelled runs (none are kept).
   - No-build runs: Deletes ALL runs tagged with "no-build" check run (none are kept).
   - Successful runs (when -KeepOnlyThree is specified): Keeps only the first 3 most recent successful runs per workflow, deletes all others.
+  - KeepLatest mode (when -KeepLatest is specified): Keeps only the most recent successful run per existing workflow, deletes all other runs (including failed, cancelled, etc.). Also deletes ALL runs for workflows that no longer exist.
   By default the script prompts before performing deletions. Use -Force to skip the prompt, or -WhatIf to simulate.
 
 .PARAMETER Repo
@@ -25,6 +26,9 @@
 
 .PARAMETER KeepOnlyThree
   When specified, also deletes successful runs beyond the first three most recent per workflow.
+
+.PARAMETER KeepLatest
+  When specified, keeps only the most recent successful run per existing workflow and deletes all other runs (including failed, cancelled, etc.). Also deletes ALL runs for workflows that no longer exist. This is a more aggressive cleanup mode.
 
 .EXAMPLE
   # Simulate cleanup for owner/FunWasHad
@@ -46,6 +50,10 @@
   # Keep only the first 3 successful runs per workflow, delete the rest
   .\cleanup-actions.ps1 -Repo "owner/FunWasHad" -KeepOnlyThree
 
+.EXAMPLE
+  # Keep only the most recent successful run per workflow, delete everything else
+  .\cleanup-actions.ps1 -Repo "owner/FunWasHad" -KeepLatest
+
 .NOTES
   - Requires `gh` CLI installed and authenticated with a token that has repo/actions and packages permissions.
   - For Docker image cleanup, token needs `read:packages` and `delete:packages` scopes.
@@ -57,7 +65,8 @@ param(
     [switch]$Force,
     [switch]$WhatIf,
     [switch]$CleanupDockerImages,
-    [switch]$KeepOnlyThree
+    [switch]$KeepOnlyThree,
+    [switch]$KeepLatest
 )
 
 function Get-RepoFullName
@@ -138,7 +147,7 @@ foreach ($line in $base64Lines)
 $completedRuns = $runs | Where-Object { $_.status -eq 'completed' }
 $failedRuns = $completedRuns | Where-Object { $_.conclusion -eq 'failure' }
 $cancelledRuns = $completedRuns | Where-Object { $_.conclusion -eq 'cancelled' }
-$successfulRuns = if ($KeepOnlyThree) { $completedRuns | Where-Object { $_.conclusion -eq 'success' } } else { @() }
+$successfulRuns = if ($KeepOnlyThree -or $KeepLatest) { $completedRuns | Where-Object { $_.conclusion -eq 'success' } } else { @() }
 
 Write-Host "Found $($runs.Count) total workflow run(s)" -ForegroundColor Cyan
 Write-Host "  - Completed runs: $($completedRuns.Count)" -ForegroundColor Cyan
@@ -178,7 +187,7 @@ foreach ($run in $runs)
     }
 }
 
-$hasRunsToProcess = ($failedRuns -and $failedRuns.Count -gt 0) -or ($cancelledRuns -and $cancelledRuns.Count -gt 0) -or ($noBuildRuns -and $noBuildRuns.Count -gt 0) -or ($successfulRuns -and $successfulRuns.Count -gt 0)
+$hasRunsToProcess = ($failedRuns -and $failedRuns.Count -gt 0) -or ($cancelledRuns -and $cancelledRuns.Count -gt 0) -or ($noBuildRuns -and $noBuildRuns.Count -gt 0) -or ($successfulRuns -and $successfulRuns.Count -gt 0) -or ($KeepLatest -and $runs.Count -gt 0)
 
 if (-not $hasRunsToProcess)
 {
@@ -186,6 +195,10 @@ if (-not $hasRunsToProcess)
     if ($KeepOnlyThree)
     {
         $message += ' No successful runs to process.'
+    }
+    if ($KeepLatest)
+    {
+        $message += ' No runs to process.'
     }
     Write-Host $message
     # Continue to Docker cleanup if requested, even if no runs to process
@@ -199,6 +212,134 @@ if (-not $hasRunsToProcess)
 
 # Prepare deletion list
 $toDelete = @()
+
+# KeepLatest mode: Keep only most recent successful run per existing workflow, delete all others
+# Also delete all runs for workflows that no longer exist
+if ($KeepLatest)
+{
+    Write-Host "══════════════════════════════════════════════════════════════" -ForegroundColor Magenta
+    Write-Host "KeepLatest Mode: Aggressive cleanup" -ForegroundColor Magenta
+    Write-Host "══════════════════════════════════════════════════════════════" -ForegroundColor Magenta
+    Write-Host ""
+
+    # Get list of existing workflows
+    Write-Host "Fetching list of existing workflows..." -ForegroundColor Cyan
+    try
+    {
+        $workflowsJson = gh api --paginate "repos/$repoFullName/actions/workflows" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $workflowsJson)
+        {
+            $workflows = $workflowsJson | ConvertFrom-Json
+            $existingWorkflowIds = $workflows.workflows | ForEach-Object { $_.id.ToString() }
+            Write-Host "Found $($existingWorkflowIds.Count) existing workflow(s)" -ForegroundColor Green
+        }
+        else
+        {
+            Write-Warning "Could not fetch existing workflows. Assuming all workflows exist."
+            $existingWorkflowIds = $runs | ForEach-Object { $_.workflow_id.ToString() } | Select-Object -Unique
+        }
+    }
+    catch
+    {
+        Write-Warning "Error fetching workflows: $_. Assuming all workflows exist."
+        $existingWorkflowIds = $runs | ForEach-Object { $_.workflow_id.ToString() } | Select-Object -Unique
+    }
+
+    # Group all runs by workflow_id
+    $allRunsGrouped = $runs | Group-Object -Property workflow_id
+
+    Write-Host ""
+    Write-Host "Processing workflows..." -ForegroundColor Cyan
+
+    foreach ($workflowGroup in $allRunsGrouped)
+    {
+        $workflowId = $workflowGroup.Name
+        $workflowRuns = $workflowGroup.Group
+        $workflowName = ($workflowRuns | Select-Object -First 1).name
+        $isExisting = $existingWorkflowIds -contains $workflowId
+
+        if (-not $isExisting)
+        {
+            # Workflow no longer exists - delete ALL runs
+            Write-Host "  Workflow: $workflowName (ID: $workflowId) - DELETED WORKFLOW" -ForegroundColor Red
+            Write-Host "    Deleting ALL $($workflowRuns.Count) run(s) for deleted workflow" -ForegroundColor Yellow
+            foreach ($r in $workflowRuns)
+            {
+                $toDelete += [PSCustomObject]@{
+                    id          = $r.id
+                    workflow_id = $r.workflow_id
+                    name        = $r.name
+                    head_branch = $r.head_branch
+                    event       = $r.event
+                    conclusion  = $r.conclusion
+                    created_at  = $r.created_at
+                    url         = $r.html_url
+                    tag         = 'deleted-workflow'
+                }
+            }
+        }
+        else
+        {
+            # Workflow exists - keep only most recent successful run
+            $successfulRunsForWorkflow = $workflowRuns | Where-Object { $_.status -eq 'completed' -and $_.conclusion -eq 'success' } | Sort-Object { [DateTime]$_.created_at } -Descending
+
+            if ($successfulRunsForWorkflow.Count -gt 0)
+            {
+                $mostRecentSuccessful = $successfulRunsForWorkflow[0]
+                Write-Host "  Workflow: $workflowName (ID: $workflowId) - $($workflowRuns.Count) total run(s)" -ForegroundColor Gray
+                Write-Host "    Keeping: Run ID $($mostRecentSuccessful.id) (successful, created: $($mostRecentSuccessful.created_at))" -ForegroundColor Green
+
+                # Delete all other runs (including other successful runs, failed, cancelled, etc.)
+                $runsToDeleteForWorkflow = $workflowRuns | Where-Object { $_.id -ne $mostRecentSuccessful.id }
+                if ($runsToDeleteForWorkflow.Count -gt 0)
+                {
+                    Write-Host "    Deleting: $($runsToDeleteForWorkflow.Count) other run(s)" -ForegroundColor Yellow
+                    foreach ($r in $runsToDeleteForWorkflow)
+                    {
+                        $toDelete += [PSCustomObject]@{
+                            id          = $r.id
+                            workflow_id = $r.workflow_id
+                            name        = $r.name
+                            head_branch = $r.head_branch
+                            event       = $r.event
+                            conclusion  = $r.conclusion
+                            created_at  = $r.created_at
+                            url         = $r.html_url
+                            tag         = 'keep-latest'
+                        }
+                    }
+                }
+            }
+            else
+            {
+                # No successful runs - delete ALL runs for this workflow
+                Write-Host "  Workflow: $workflowName (ID: $workflowId) - NO SUCCESSFUL RUNS" -ForegroundColor Yellow
+                Write-Host "    Deleting ALL $($workflowRuns.Count) run(s) (no successful runs to keep)" -ForegroundColor Yellow
+                foreach ($r in $workflowRuns)
+                {
+                    $toDelete += [PSCustomObject]@{
+                        id          = $r.id
+                        workflow_id = $r.workflow_id
+                        name        = $r.name
+                        head_branch = $r.head_branch
+                        event       = $r.event
+                        conclusion  = $r.conclusion
+                        created_at  = $r.created_at
+                        url         = $r.html_url
+                        tag         = 'no-successful-runs'
+                    }
+                }
+            }
+        }
+    }
+
+    Write-Host ""
+    Write-Host "══════════════════════════════════════════════════════════════" -ForegroundColor Magenta
+    Write-Host ""
+}
+else
+{
+    # Normal processing mode (when KeepLatest is not specified)
 
 # For failed runs: keep most recent per workflow, delete the rest
 if ($failedRuns -and $failedRuns.Count -gt 0)
@@ -321,6 +462,10 @@ if (-not $toDelete -or $toDelete.Count -eq 0)
     {
         $message += " No excess successful runs found (all workflows have 3 or fewer successful runs)."
     }
+    if ($KeepLatest)
+    {
+        $message += " All workflows already have only their most recent successful run."
+    }
     Write-Host $message
     # Continue to Docker cleanup if requested, even if no runs to delete
     if (-not $CleanupDockerImages)
@@ -336,19 +481,37 @@ $failedCount = ($toDelete | Where-Object { $_.conclusion -eq 'failure' }).Count
 $cancelledCount = ($toDelete | Where-Object { $_.tag -eq 'cancelled' }).Count
 $noBuildCount = ($toDelete | Where-Object { $_.tag -eq 'no-build' }).Count
 $successCount = ($toDelete | Where-Object { $_.tag -eq 'success' }).Count
+$deletedWorkflowCount = ($toDelete | Where-Object { $_.tag -eq 'deleted-workflow' }).Count
+$keepLatestCount = ($toDelete | Where-Object { $_.tag -eq 'keep-latest' }).Count
+$noSuccessfulRunsCount = ($toDelete | Where-Object { $_.tag -eq 'no-successful-runs' }).Count
 
 Write-Host "Found $($toDelete.Count) run(s) to delete:"
-if ($failedCount -gt 0) {
-    Write-Host "  - Failed runs: $failedCount (keeping most recent per workflow)" -ForegroundColor Red
+if ($KeepLatest)
+{
+    if ($deletedWorkflowCount -gt 0) {
+        Write-Host "  - Deleted workflow runs: $deletedWorkflowCount (deleting ALL runs for workflows that no longer exist)" -ForegroundColor Red
+    }
+    if ($keepLatestCount -gt 0) {
+        Write-Host "  - Other runs: $keepLatestCount (keeping only most recent successful run per workflow)" -ForegroundColor Yellow
+    }
+    if ($noSuccessfulRunsCount -gt 0) {
+        Write-Host "  - No successful runs: $noSuccessfulRunsCount (deleting ALL runs for workflows with no successful runs)" -ForegroundColor Yellow
+    }
 }
-if ($cancelledCount -gt 0) {
-    Write-Host "  - Cancelled runs: $cancelledCount (deleting ALL cancelled runs)" -ForegroundColor Yellow
-}
-if ($noBuildCount -gt 0) {
-    Write-Host "  - No-build runs: $noBuildCount (deleting ALL no-build tagged runs)" -ForegroundColor Cyan
-}
-if ($successCount -gt 0) {
-    Write-Host "  - Successful runs: $successCount (keeping only first 3 per workflow)" -ForegroundColor Green
+else
+{
+    if ($failedCount -gt 0) {
+        Write-Host "  - Failed runs: $failedCount (keeping most recent per workflow)" -ForegroundColor Red
+    }
+    if ($cancelledCount -gt 0) {
+        Write-Host "  - Cancelled runs: $cancelledCount (deleting ALL cancelled runs)" -ForegroundColor Yellow
+    }
+    if ($noBuildCount -gt 0) {
+        Write-Host "  - No-build runs: $noBuildCount (deleting ALL no-build tagged runs)" -ForegroundColor Cyan
+    }
+    if ($successCount -gt 0) {
+        Write-Host "  - Successful runs: $successCount (keeping only first 3 per workflow)" -ForegroundColor Green
+    }
 }
 Write-Host ''
 
