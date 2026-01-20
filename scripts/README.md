@@ -439,7 +439,7 @@ steps:
     inputs:
       filePath: 'scripts/Initialize-Installation.ps1'
       arguments: '-SkipDockerCheck -Force'
-      
+
   - task: PowerShell@2
     inputs:
       filePath: 'scripts/Start-Application.ps1'

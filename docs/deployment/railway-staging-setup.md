@@ -215,7 +215,7 @@ https://railway.com/project/9dce0bf4-23a8-4e8b-bdda-7ce048c0c73d
 # Location API
 curl https://staging-location-api-production-xxxx.up.railway.app/health
 
-# Marketing API  
+# Marketing API
 curl https://staging-marketing-api-production-xxxx.up.railway.app/health
 
 # Expected response:

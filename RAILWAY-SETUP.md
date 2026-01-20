@@ -96,5 +96,5 @@ Expected: `{"status":"Healthy"}`
 
 ---
 
-**Railway Project:** https://railway.com/project/9dce0bf4-23a8-4e8b-bdda-7ce048c0c73d  
+**Railway Project:** https://railway.com/project/9dce0bf4-23a8-4e8b-bdda-7ce048c0c73d
 **GitHub Actions:** https://github.com/sharpninja/FunWasHad/actions
