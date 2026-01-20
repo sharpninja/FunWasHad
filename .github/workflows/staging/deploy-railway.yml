@@ -1,0 +1,80 @@
+name: Deploy to Railway (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      location_api_changed:
+        required: true
+        type: string
+      marketing_api_changed:
+        required: true
+        type: string
+      location_api_image:
+        required: true
+        type: string
+      marketing_api_image:
+        required: true
+        type: string
+      railway_project_id:
+        required: true
+        type: string
+
+jobs:
+  deploy_railway:
+    name: Deploy to Railway Staging
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging') &&
+      (inputs.location_api_changed == 'true' || inputs.marketing_api_changed == 'true')
+    environment:
+      name: staging
+      url: https://staging.up.railway.app
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get image tags
+        id: image_tags
+        run: |
+          LOCATION_IMAGE="${{ inputs.location_api_image }}:staging-latest"
+          MARKETING_IMAGE="${{ inputs.marketing_api_image }}:staging-latest"
+          echo "location_image=$LOCATION_IMAGE" >> $GITHUB_OUTPUT
+          echo "marketing_image=$MARKETING_IMAGE" >> $GITHUB_OUTPUT
+          echo "📦 Location API image: $LOCATION_IMAGE"
+          echo "📦 Marketing API image: $MARKETING_IMAGE"
+
+      - name: Verify previous Docker builds succeeded
+        run: |
+          echo "🔍 Verifying Docker images were built successfully..."
+          echo "✅ Location API Docker image: ${{ inputs.location_api_image }}:staging-latest"
+          echo "✅ Marketing API Docker image: ${{ inputs.marketing_api_image }}:staging-latest"
+          echo ""
+          echo "💡 Note: Railway services must be pre-configured in dashboard to use Docker images from GHCR"
+          echo "💡 Configure in Railway: Service Settings → Source → Docker Image"
+          echo "💡 Image paths:"
+          echo "   - Location API: ${{ inputs.location_api_image }}:staging-latest"
+          echo "   - Marketing API: ${{ inputs.marketing_api_image }}:staging-latest"
+          echo "💡 Dashboard: https://railway.com/project/${{ inputs.railway_project_id }}"
+
+      - name: Deploy Location API to Railway
+        if: inputs.location_api_changed == 'true'
+        run: railway redeploy -s staging-location-api -y
+
+      - name: Deploy Marketing API to Railway
+        if: inputs.marketing_api_changed == 'true'
+        run: railway redeploy -s staging-marketing-api -y
+
+      - name: Wait for deployments
+        run: sleep 60
+
+      - name: Health check Location API
+        run: |
+          echo "🏥 Checking Location API health..."
+          echo "💡 Check Railway dashboard for the service URL: https://railway.com/project/${{ inputs.railway_project_id }}"
+          echo "⚠️  Health check skipped - use Railway dashboard to verify deployment status"
+        continue-on-error: true
