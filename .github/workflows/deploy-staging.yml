@@ -373,59 +373,76 @@ jobs:
         id: find_apk
         shell: pwsh
         run: |
+          Write-Host "Searching for APK file..." -ForegroundColor Cyan
+          $workspaceRoot = $env:GITHUB_WORKSPACE
+          Write-Host "Workspace root: $workspaceRoot" -ForegroundColor Gray
+          
+          # Search in multiple possible locations
           $searchPaths = @(
             "src\FWH.Mobile\FWH.Mobile.Android\bin\Staging\net9.0-android",
-            "src\FWH.Mobile\FWH.Mobile.Android\bin\Staging\net9.0-android\publish"
+            "src\FWH.Mobile\FWH.Mobile.Android\bin\Staging\net9.0-android\publish",
+            "src\FWH.Mobile\FWH.Mobile.Android\bin\Staging",
+            "src\FWH.Mobile\FWH.Mobile.Android\bin"
           )
+          
           $apkPath = $null
+          Write-Host "Searching in the following paths:" -ForegroundColor Cyan
           foreach ($path in $searchPaths) {
-            if (Test-Path $path) {
-              $found = Get-ChildItem -Path $path -Filter "*.apk" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            $fullPath = Join-Path $workspaceRoot $path
+            Write-Host "  - $path" -ForegroundColor Gray
+            if (Test-Path $fullPath) {
+              Write-Host "    (exists)" -ForegroundColor Green
+              $found = Get-ChildItem -Path $fullPath -Filter "*.apk" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
               if ($found) {
                 $apkPath = $found
+                Write-Host "    ✓ Found APK: $($found.FullName)" -ForegroundColor Green
                 break
+              } else {
+                Write-Host "    (no APK found, listing files:)" -ForegroundColor Yellow
+                Get-ChildItem -Path $fullPath -Recurse -File | Select-Object -First 5 | ForEach-Object { Write-Host "      $($_.Name)" -ForegroundColor Gray }
+              }
+            } else {
+              Write-Host "    (does not exist)" -ForegroundColor Red
+            }
+          }
+          
+          # If not found in expected paths, search more broadly
+          if (-not $apkPath) {
+            Write-Host "APK not found in expected paths, searching more broadly..." -ForegroundColor Yellow
+            $mobileAndroidPath = Join-Path $workspaceRoot "src\FWH.Mobile\FWH.Mobile.Android"
+            if (Test-Path $mobileAndroidPath) {
+              $found = Get-ChildItem -Path $mobileAndroidPath -Filter "*.apk" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($found) {
+                $apkPath = $found
+                Write-Host "✓ Found APK in broader search: $($found.FullName)" -ForegroundColor Green
               }
             }
           }
+          
           if ($apkPath) {
             $fullPath = $apkPath.FullName
-            $workspaceRoot = $env:GITHUB_WORKSPACE
             if ($fullPath.StartsWith($workspaceRoot)) {
               $relativePath = $fullPath.Substring($workspaceRoot.Length).TrimStart('\', '/')
             } else {
               $relativePath = $fullPath
             }
-            Write-Host "Found APK: $fullPath"
-            Write-Host "Workspace root: $workspaceRoot"
-            Write-Host "Relative path: $relativePath"
+            Write-Host "" -ForegroundColor Green
+            Write-Host "✅ APK found successfully!" -ForegroundColor Green
+            Write-Host "   Full path: $fullPath" -ForegroundColor Gray
+            Write-Host "   Relative path: $relativePath" -ForegroundColor Gray
+            Write-Host "   File name: $($apkPath.Name)" -ForegroundColor Gray
             Write-Host "APK_PATH=$relativePath" >> $env:GITHUB_OUTPUT
             Write-Host "APK_NAME=$($apkPath.Name)" >> $env:GITHUB_OUTPUT
           } else {
-            Write-Error "APK file not found in any of the expected locations"
-            Write-Host "Searched paths:"
+            Write-Host "" -ForegroundColor Red
+            Write-Error "APK file not found in any location"
+            Write-Host "Searched paths:" -ForegroundColor Yellow
             foreach ($path in $searchPaths) {
-              Write-Host "  - $path"
-              if (Test-Path $path) {
-                Write-Host "    (exists, listing contents:)"
-                Get-ChildItem -Path $path -Recurse | Select-Object -First 10 | ForEach-Object { Write-Host "      $($_.FullName)" }
-              }
+              Write-Host "  - $path" -ForegroundColor Gray
             }
+            Write-Host "Also searched: src\FWH.Mobile\FWH.Mobile.Android (recursive)" -ForegroundColor Gray
             exit 1
           }
-
-      - name: Validate APK path
-        shell: pwsh
-        run: |
-          $apkPath = "${{ steps.find_apk.outputs.APK_PATH }}"
-          if ([string]::IsNullOrWhiteSpace($apkPath)) {
-            Write-Error "APK_PATH output is empty or not set"
-            exit 1
-          }
-          if (-not (Test-Path $apkPath)) {
-            Write-Error "APK file not found at path: $apkPath"
-            exit 1
-          }
-          Write-Host "✅ APK path validated: $apkPath"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
