@@ -50,6 +50,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Cache .NET environment and workload assets
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.dotnet
+            ~/.nuget
+          key: ${{ runner.os }}-dotnet-env-${{ env.DOTNET_VERSION }}-${{ hashFiles('global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-dotnet-env-${{ env.DOTNET_VERSION }}-
+            ${{ runner.os }}-dotnet-env-
+
       - name: Cache build outputs
         uses: actions/cache@v4
         with:
@@ -110,15 +121,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Cache .NET workloads
+      - name: Cache .NET workloads and assets
         uses: actions/cache@v4
         with:
           path: |
             ~/.dotnet/workloads
+            ~/.dotnet/packs
+            ~/.dotnet/sdk-manifests
+            ~/.dotnet/toolResolverCache
             C:\Program Files\dotnet\sdk-manifests
           key: ${{ runner.os }}-dotnet-workloads-android-${{ env.DOTNET_VERSION }}
           restore-keys: |
             ${{ runner.os }}-dotnet-workloads-android-
+            ${{ runner.os }}-dotnet-env-${{ env.DOTNET_VERSION }}-
 
       - name: Cache build outputs
         uses: actions/cache@v4
