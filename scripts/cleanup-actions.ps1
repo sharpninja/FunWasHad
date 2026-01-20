@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Delete failed, cancelled, and no-build tagged GitHub Actions workflow runs in a repository, keeping only the most recent failed run per workflow.
+  Delete failed, cancelled, no-build tagged, and excess successful GitHub Actions workflow runs in a repository, keeping only the most recent failed run per workflow.
 
 .DESCRIPTION
   Uses the GitHub CLI (`gh`) to enumerate workflow runs for a repository, finds runs whose conclusion is "failure" or "cancelled",
@@ -8,6 +8,7 @@
   - Failed runs: Keeps the most recent failed run per workflow (grouped by workflow_id), deletes all others.
   - Cancelled runs: Deletes ALL cancelled runs (none are kept).
   - No-build runs: Deletes ALL runs tagged with "no-build" check run (none are kept).
+  - Successful runs (when -KeepOnlyThree is specified): Keeps only the first 3 most recent successful runs per workflow, deletes all others.
   By default the script prompts before performing deletions. Use -Force to skip the prompt, or -WhatIf to simulate.
 
 .PARAMETER Repo
@@ -21,6 +22,9 @@
 
 .PARAMETER CleanupDockerImages
   When specified, also clean up old Docker images from GHCR, keeping the most recent image for each API.
+
+.PARAMETER KeepOnlyThree
+  When specified, also deletes successful runs beyond the first three most recent per workflow.
 
 .EXAMPLE
   # Simulate cleanup for owner/FunWasHad
@@ -38,6 +42,10 @@
   # Clean up both workflow runs and Docker images
   .\cleanup-actions.ps1 -Repo "owner/FunWasHad" -CleanupDockerImages
 
+.EXAMPLE
+  # Keep only the first 3 successful runs per workflow, delete the rest
+  .\cleanup-actions.ps1 -Repo "owner/FunWasHad" -KeepOnlyThree
+
 .NOTES
   - Requires `gh` CLI installed and authenticated with a token that has repo/actions and packages permissions.
   - For Docker image cleanup, token needs `read:packages` and `delete:packages` scopes.
@@ -48,7 +56,8 @@ param(
     [string]$Repo = '',
     [switch]$Force,
     [switch]$WhatIf,
-    [switch]$CleanupDockerImages
+    [switch]$CleanupDockerImages,
+    [switch]$KeepOnlyThree
 )
 
 function Get-RepoFullName
@@ -124,9 +133,10 @@ foreach ($line in $base64Lines)
     }
 }
 
-# Filter failed and cancelled runs separately
+# Filter failed, cancelled, and successful runs separately
 $failedRuns = $runs | Where-Object { $_.conclusion -eq 'failure' }
 $cancelledRuns = $runs | Where-Object { $_.conclusion -eq 'cancelled' }
+$successfulRuns = if ($KeepOnlyThree) { $runs | Where-Object { $_.conclusion -eq 'success' } } else { @() }
 
 # Find runs tagged with "no-build" check run
 Write-Host 'Checking for runs tagged with "no-build"...' -ForegroundColor Cyan
@@ -153,11 +163,16 @@ foreach ($run in $runs)
     }
 }
 
-$hasRunsToProcess = ($failedRuns -and $failedRuns.Count -gt 0) -or ($cancelledRuns -and $cancelledRuns.Count -gt 0) -or ($noBuildRuns -and $noBuildRuns.Count -gt 0)
+$hasRunsToProcess = ($failedRuns -and $failedRuns.Count -gt 0) -or ($cancelledRuns -and $cancelledRuns.Count -gt 0) -or ($noBuildRuns -and $noBuildRuns.Count -gt 0) -or ($successfulRuns -and $successfulRuns.Count -gt 0)
 
 if (-not $hasRunsToProcess)
 {
-    Write-Host 'No failed, cancelled, or no-build tagged workflow runs to process.'
+    $message = 'No failed, cancelled, or no-build tagged workflow runs to process.'
+    if ($KeepOnlyThree)
+    {
+        $message += ' No successful runs to process.'
+    }
+    Write-Host $message
     # Continue to Docker cleanup if requested, even if no runs to process
     if (-not $CleanupDockerImages)
     {
@@ -234,9 +249,41 @@ if ($noBuildRuns -and $noBuildRuns.Count -gt 0)
     }
 }
 
+# For successful runs: keep first 3 per workflow, delete the rest (only if KeepOnlyThree is specified)
+if ($KeepOnlyThree -and $successfulRuns -and $successfulRuns.Count -gt 0)
+{
+    Write-Host "Processing successful runs (keeping only first 3 per workflow)..." -ForegroundColor Green
+    $grouped = $successfulRuns | Group-Object -Property workflow_id
+    foreach ($grp in $grouped)
+    {
+        $sorted = $grp.Group | Sort-Object { [DateTime]$_.created_at } -Descending
+        # Keep the first 3 (most recent successful runs), delete the rest
+        $candidates = $sorted | Select-Object -Skip 3
+        foreach ($r in $candidates)
+        {
+            $toDelete += [PSCustomObject]@{
+                id          = $r.id
+                workflow_id = $r.workflow_id
+                name        = $r.name
+                head_branch = $r.head_branch
+                event       = $r.event
+                conclusion  = $r.conclusion
+                created_at  = $r.created_at
+                url         = $r.html_url
+                tag         = 'success'
+            }
+        }
+    }
+}
+
 if (-not $toDelete -or $toDelete.Count -eq 0)
 {
-    Write-Host "Nothing to delete — most recent failed run per workflow is preserved, and no cancelled or no-build runs found."
+    $message = "Nothing to delete — most recent failed run per workflow is preserved, and no cancelled or no-build runs found."
+    if ($KeepOnlyThree)
+    {
+        $message += " No excess successful runs found (all workflows have 3 or fewer successful runs)."
+    }
+    Write-Host $message
     # Continue to Docker cleanup if requested, even if no runs to delete
     if (-not $CleanupDockerImages)
     {
@@ -250,6 +297,7 @@ if (-not $toDelete -or $toDelete.Count -eq 0)
 $failedCount = ($toDelete | Where-Object { $_.conclusion -eq 'failure' }).Count
 $cancelledCount = ($toDelete | Where-Object { $_.tag -eq 'cancelled' }).Count
 $noBuildCount = ($toDelete | Where-Object { $_.tag -eq 'no-build' }).Count
+$successCount = ($toDelete | Where-Object { $_.tag -eq 'success' }).Count
 
 Write-Host "Found $($toDelete.Count) run(s) to delete:"
 if ($failedCount -gt 0) {
@@ -261,6 +309,9 @@ if ($cancelledCount -gt 0) {
 if ($noBuildCount -gt 0) {
     Write-Host "  - No-build runs: $noBuildCount (deleting ALL no-build tagged runs)" -ForegroundColor Cyan
 }
+if ($successCount -gt 0) {
+    Write-Host "  - Successful runs: $successCount (keeping only first 3 per workflow)" -ForegroundColor Green
+}
 Write-Host ''
 
 foreach ($item in $toDelete)
@@ -269,6 +320,11 @@ foreach ($item in $toDelete)
     {
         $conclusionColor = 'Cyan'
         $status = 'no-build'
+    }
+    elseif ($item.tag -eq 'success')
+    {
+        $conclusionColor = 'Green'
+        $status = 'success'
     }
     elseif ($item.conclusion -eq 'failure')
     {
