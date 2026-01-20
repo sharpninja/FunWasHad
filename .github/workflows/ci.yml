@@ -42,6 +42,25 @@ jobs:
       - name: Display .NET version
         run: dotnet --version
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/Directory.Build.props', '**/Directory.Build.targets', 'FunWasHad.sln') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Cache build outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/bin
+            **/obj
+          key: ${{ runner.os }}-build-${{ hashFiles('**/*.csproj', 'FunWasHad.sln') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ hashFiles('**/*.csproj', 'FunWasHad.sln') }}-
+            ${{ runner.os }}-build-
+
       - name: Restore dependencies
         timeout-minutes: 10
         run: dotnet restore FunWasHad.sln
@@ -82,6 +101,35 @@ jobs:
         with:
           distribution: 'microsoft'
           java-version: '17'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/Directory.Build.props', '**/Directory.Build.targets', 'FunWasHad.sln') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Cache .NET workloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.dotnet/workloads
+            C:\Program Files\dotnet\sdk-manifests
+          key: ${{ runner.os }}-dotnet-workloads-android-${{ env.DOTNET_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-dotnet-workloads-android-
+
+      - name: Cache build outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/bin
+            **/obj
+          key: ${{ runner.os }}-build-mobile-${{ hashFiles('src/FWH.Mobile/**/*.csproj') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-mobile-${{ hashFiles('src/FWH.Mobile/**/*.csproj') }}-
+            ${{ runner.os }}-build-mobile-
 
       - name: Install .NET MAUI Android workload
         timeout-minutes: 15
