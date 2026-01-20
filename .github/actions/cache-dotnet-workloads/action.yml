@@ -1,0 +1,24 @@
+name: Cache .NET Workloads
+description: Cache .NET workload assets for Android/MAUI builds
+
+inputs:
+  dotnet-version:
+    description: '.NET SDK version'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Cache .NET workloads and assets
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.dotnet/workloads
+          ~/.dotnet/packs
+          ~/.dotnet/sdk-manifests
+          ~/.dotnet/toolResolverCache
+          C:\Program Files\dotnet\sdk-manifests
+        key: ${{ runner.os }}-dotnet-workloads-android-${{ inputs.dotnet-version }}
+        restore-keys: |
+          ${{ runner.os }}-dotnet-workloads-android-
+          ${{ runner.os }}-dotnet-env-${{ inputs.dotnet-version }}-

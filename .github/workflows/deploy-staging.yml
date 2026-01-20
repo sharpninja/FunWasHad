@@ -134,35 +134,11 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
+      - name: Cache .NET environment
+        uses: ./.github/actions/cache-dotnet
         with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/Directory.Build.props', '**/Directory.Build.targets', 'FunWasHad.sln') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: Cache .NET environment and workload assets
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.dotnet
-            ~/.nuget
-          key: ${{ runner.os }}-dotnet-env-${{ env.DOTNET_VERSION }}-${{ hashFiles('global.json') }}
-          restore-keys: |
-            ${{ runner.os }}-dotnet-env-${{ env.DOTNET_VERSION }}-
-            ${{ runner.os }}-dotnet-env-
-
-      - name: Cache build outputs
-        uses: actions/cache@v4
-        with:
-          path: |
-            **/bin
-            **/obj
-          key: ${{ runner.os }}-build-${{ hashFiles('**/*.csproj', 'FunWasHad.sln') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ hashFiles('**/*.csproj', 'FunWasHad.sln') }}-
-            ${{ runner.os }}-build-
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          build-outputs-key-suffix: -${{ github.sha }}
 
       - name: Restore dependencies
         run: |
@@ -403,38 +379,19 @@ jobs:
           distribution: 'microsoft'
           java-version: '17'
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
+      - name: Cache .NET environment
+        uses: ./.github/actions/cache-dotnet
         with:
-          path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/Directory.Build.props', '**/Directory.Build.targets', 'FunWasHad.sln') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          build-outputs-key-suffix: -${{ github.sha }}
+          project-files-pattern: 'src/FWH.Mobile/**/*.csproj'
+          solution-file: 'FunWasHad.sln'
+          cache-key-prefix: 'build-mobile'
 
-      - name: Cache .NET workloads and assets
-        uses: actions/cache@v4
+      - name: Cache .NET workloads
+        uses: ./.github/actions/cache-dotnet-workloads
         with:
-          path: |
-            ~/.dotnet/workloads
-            ~/.dotnet/packs
-            ~/.dotnet/sdk-manifests
-            ~/.dotnet/toolResolverCache
-            C:\Program Files\dotnet\sdk-manifests
-          key: ${{ runner.os }}-dotnet-workloads-android-${{ env.DOTNET_VERSION }}
-          restore-keys: |
-            ${{ runner.os }}-dotnet-workloads-android-
-            ${{ runner.os }}-dotnet-env-${{ env.DOTNET_VERSION }}-
-
-      - name: Cache build outputs
-        uses: actions/cache@v4
-        with:
-          path: |
-            **/bin
-            **/obj
-          key: ${{ runner.os }}-build-mobile-${{ hashFiles('src/FWH.Mobile/**/*.csproj') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-build-mobile-${{ hashFiles('src/FWH.Mobile/**/*.csproj') }}-
-            ${{ runner.os }}-build-mobile-
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Install .NET MAUI Android workload
         timeout-minutes: 15
