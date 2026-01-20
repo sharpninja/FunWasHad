@@ -1,5 +1,38 @@
-# Generate-Documentation.ps1
-# Generates project documentation using DocFX
+<#
+.SYNOPSIS
+  Generates project documentation using DocFX.
+
+.DESCRIPTION
+  This script generates documentation for the FunWasHad project using DocFX.
+  It builds the solution to generate XML documentation files, then uses DocFX
+  to create HTML documentation. Optionally, it can serve the documentation
+  locally for preview.
+
+.PARAMETER Serve
+  When specified, starts a local web server to preview the generated documentation.
+
+.PARAMETER Port
+  The port number to use when serving documentation. Defaults to 8080.
+  Only used when -Serve is specified.
+
+.EXAMPLE
+  # Generate documentation
+  .\Generate-Documentation.ps1
+
+.EXAMPLE
+  # Generate and serve documentation locally
+  .\Generate-Documentation.ps1 -Serve
+
+.EXAMPLE
+  # Generate and serve on custom port
+  .\Generate-Documentation.ps1 -Serve -Port 9000
+
+.NOTES
+  - Requires .NET SDK to be installed.
+  - DocFX will be installed globally if not already present.
+  - Documentation is generated in the docs\_site directory.
+  - When serving, the script will attempt to use Python's http.server, falling back to Node.js http-server if Python is not available.
+#>
 
 param(
     [switch]$Serve,

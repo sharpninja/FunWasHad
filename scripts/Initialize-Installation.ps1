@@ -1,6 +1,51 @@
-# FunWasHad Installation Script
-# This script initializes a new installation of the FunWasHad application
-# including Docker setup, PostgreSQL configuration, and initial database setup
+<#
+.SYNOPSIS
+  Initializes a new installation of the FunWasHad application.
+
+.DESCRIPTION
+  This script performs a complete initialization of the FunWasHad application, including:
+  - Docker setup and verification
+  - PostgreSQL volume creation and configuration
+  - .NET SDK and workload installation
+  - Project dependency restoration
+  - Database initialization
+  - Environment configuration
+
+.PARAMETER InstallPath
+  The path where the FunWasHad application is installed. Defaults to "E:\GitHub\FunWasHad".
+
+.PARAMETER SkipDockerCheck
+  When specified, skips the Docker installation and running status check.
+
+.PARAMETER ResetDatabase
+  When specified, removes and recreates the PostgreSQL volume, deleting all existing data.
+
+.PARAMETER SkipDependencies
+  When specified, skips .NET SDK and workload installation steps.
+
+.EXAMPLE
+  # Standard installation
+  .\Initialize-Installation.ps1
+
+.EXAMPLE
+  # Installation with custom path
+  .\Initialize-Installation.ps1 -InstallPath "C:\Projects\FunWasHad"
+
+.EXAMPLE
+  # Reset database during installation
+  .\Initialize-Installation.ps1 -ResetDatabase
+
+.EXAMPLE
+  # Skip dependency installation (if already installed)
+  .\Initialize-Installation.ps1 -SkipDependencies
+
+.NOTES
+  - Requires PowerShell 5.1 or later.
+  - Requires administrator privileges for some operations.
+  - Docker Desktop must be installed and running (unless -SkipDockerCheck is used).
+  - .NET SDK will be installed if not present (unless -SkipDependencies is used).
+  - ⚠️ WARNING: Using -ResetDatabase will DELETE all existing database data!
+#>
 
 #Requires -Version 5.1
 

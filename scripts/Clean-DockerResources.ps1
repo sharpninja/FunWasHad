@@ -1,5 +1,58 @@
-# Clean Docker Resources Script
-# Cleans up Docker containers, volumes, and images related to FunWasHad
+<#
+.SYNOPSIS
+  Cleans up Docker containers, volumes, and images related to FunWasHad.
+
+.DESCRIPTION
+  This script provides a convenient way to clean up Docker resources created by
+  the FunWasHad application. It can clean containers, volumes, and images separately
+  or all at once. By default, the script shows usage information if no options are provided.
+
+.PARAMETER All
+  When specified, cleans all Docker resources (containers, volumes, and images).
+
+.PARAMETER Containers
+  When specified, cleans only containers related to FunWasHad.
+
+.PARAMETER Volumes
+  When specified, cleans only volumes related to FunWasHad.
+  ⚠️ WARNING: This will DELETE all database data!
+
+.PARAMETER Images
+  When specified, cleans only Docker images related to FunWasHad.
+
+.PARAMETER Force
+  When specified, skips confirmation prompts and proceeds with cleanup immediately.
+
+.EXAMPLE
+  # Show usage information
+  .\Clean-DockerResources.ps1
+
+.EXAMPLE
+  # Clean all resources (interactive)
+  .\Clean-DockerResources.ps1 -All
+
+.EXAMPLE
+  # Clean all resources without confirmation
+  .\Clean-DockerResources.ps1 -All -Force
+
+.EXAMPLE
+  # Clean only containers
+  .\Clean-DockerResources.ps1 -Containers
+
+.EXAMPLE
+  # Clean only volumes (deletes data!)
+  .\Clean-DockerResources.ps1 -Volumes
+
+.EXAMPLE
+  # Clean only images
+  .\Clean-DockerResources.ps1 -Images
+
+.NOTES
+  - Requires Docker to be installed and running.
+  - ⚠️ WARNING: Volume cleanup will DELETE all database data permanently!
+  - The script only removes resources with "funwashad" or "fwh" in their names.
+  - After cleanup, the script displays remaining resources for verification.
+#>
 
 #Requires -Version 5.1
 
