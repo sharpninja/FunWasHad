@@ -20,6 +20,8 @@ jobs:
   detect_changes:
     name: Detect Changes
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
     outputs:
       location_api_changed: ${{ steps.changes.outputs.location_api }}
       marketing_api_changed: ${{ steps.changes.outputs.marketing_api }}
@@ -94,6 +96,26 @@ jobs:
           else
             echo "any_changes=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Create no-build check run
+        if: steps.changes.outputs.any_changes == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🏷️  Creating 'no-build' check run (no changes detected)"
+
+          # Create a check run to tag this workflow run
+          CHECK_RUN_ID=$(gh api \
+            -X POST \
+            "/repos/${{ github.repository }}/check-runs" \
+            -f name="no-build" \
+            -f head_sha="${{ github.sha }}" \
+            -f status="completed" \
+            -f conclusion="success" \
+            -f output='{"title":"No Build Required","summary":"No relevant files changed. Build steps were skipped.","text":"This workflow run was tagged as `no-build` because no changes were detected in Location API, Marketing API, or Mobile app files."}' \
+            --jq '.id')
+
+          echo "✅ Created check run with ID: $CHECK_RUN_ID"
 
   build_and_test:
     name: Build and Test
@@ -376,7 +398,7 @@ jobs:
           Write-Host "Searching for APK file..." -ForegroundColor Cyan
           $workspaceRoot = $env:GITHUB_WORKSPACE
           Write-Host "Workspace root: $workspaceRoot" -ForegroundColor Gray
-          
+
           # Search in multiple possible locations
           $searchPaths = @(
             "src\FWH.Mobile\FWH.Mobile.Android\bin\Staging\net9.0-android",
@@ -384,7 +406,7 @@ jobs:
             "src\FWH.Mobile\FWH.Mobile.Android\bin\Staging",
             "src\FWH.Mobile\FWH.Mobile.Android\bin"
           )
-          
+
           $apkPath = $null
           Write-Host "Searching in the following paths:" -ForegroundColor Cyan
           foreach ($path in $searchPaths) {
@@ -405,7 +427,7 @@ jobs:
               Write-Host "    (does not exist)" -ForegroundColor Red
             }
           }
-          
+
           # If not found in expected paths, search more broadly
           if (-not $apkPath) {
             Write-Host "APK not found in expected paths, searching more broadly..." -ForegroundColor Yellow
@@ -418,7 +440,7 @@ jobs:
               }
             }
           }
-          
+
           if ($apkPath) {
             $fullPath = $apkPath.FullName
             if ($fullPath.StartsWith($workspaceRoot)) {
@@ -441,10 +463,14 @@ jobs:
               Write-Host "  - $path" -ForegroundColor Gray
             }
             Write-Host "Also searched: src\FWH.Mobile\FWH.Mobile.Android (recursive)" -ForegroundColor Gray
+            # Set empty output so condition check works, then exit with error
+            Write-Host "APK_PATH=" >> $env:GITHUB_OUTPUT
+            Write-Host "APK_NAME=" >> $env:GITHUB_OUTPUT
             exit 1
           }
 
       - name: Upload APK artifact
+        if: steps.find_apk.outputs.APK_PATH != ''
         uses: actions/upload-artifact@v4
         with:
           name: android-apk-staging
