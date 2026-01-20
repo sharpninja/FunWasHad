@@ -388,17 +388,44 @@ jobs:
             }
           }
           if ($apkPath) {
-            Write-Host "Found APK: $($apkPath.FullName)"
-            Write-Host "APK_PATH=$($apkPath.FullName)" >> $env:GITHUB_OUTPUT
+            $fullPath = $apkPath.FullName
+            $workspaceRoot = $env:GITHUB_WORKSPACE
+            if ($fullPath.StartsWith($workspaceRoot)) {
+              $relativePath = $fullPath.Substring($workspaceRoot.Length).TrimStart('\', '/')
+            } else {
+              $relativePath = $fullPath
+            }
+            Write-Host "Found APK: $fullPath"
+            Write-Host "Workspace root: $workspaceRoot"
+            Write-Host "Relative path: $relativePath"
+            Write-Host "APK_PATH=$relativePath" >> $env:GITHUB_OUTPUT
             Write-Host "APK_NAME=$($apkPath.Name)" >> $env:GITHUB_OUTPUT
           } else {
             Write-Error "APK file not found in any of the expected locations"
             Write-Host "Searched paths:"
             foreach ($path in $searchPaths) {
               Write-Host "  - $path"
+              if (Test-Path $path) {
+                Write-Host "    (exists, listing contents:)"
+                Get-ChildItem -Path $path -Recurse | Select-Object -First 10 | ForEach-Object { Write-Host "      $($_.FullName)" }
+              }
             }
             exit 1
           }
+
+      - name: Validate APK path
+        shell: pwsh
+        run: |
+          $apkPath = "${{ steps.find_apk.outputs.APK_PATH }}"
+          if ([string]::IsNullOrWhiteSpace($apkPath)) {
+            Write-Error "APK_PATH output is empty or not set"
+            exit 1
+          }
+          if (-not (Test-Path $apkPath)) {
+            Write-Error "APK file not found at path: $apkPath"
+            exit 1
+          }
+          Write-Host "✅ APK path validated: $apkPath"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -406,6 +433,7 @@ jobs:
           name: android-apk-staging
           path: ${{ steps.find_apk.outputs.APK_PATH }}
           retention-days: 30
+          if-no-files-found: error
 
   release_android_staging:
     name: Create Android Release Candidate
