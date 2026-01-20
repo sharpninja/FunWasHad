@@ -59,16 +59,16 @@
 param(
     [Parameter(Mandatory=$false)]
     [switch]$All,
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$Containers,
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$Volumes,
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$Images,
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$Force
 )
@@ -101,11 +101,11 @@ if (-not ($All -or $Containers -or $Volumes -or $Images)) {
 # Confirmation
 if (-not $Force) {
     Write-Host "[!] This will remove Docker resources related to FunWasHad" -ForegroundColor Yellow
-    
+
     if ($All -or $Volumes) {
         Write-Host "[!] WARNING: Volume cleanup will DELETE all database data!" -ForegroundColor Red
     }
-    
+
     $confirm = Read-Host "Continue? (yes/no)"
     if ($confirm -ne "yes") {
         Write-Host "[i] Cleanup cancelled" -ForegroundColor Cyan
@@ -118,7 +118,7 @@ Write-Host ""
 # Clean Containers
 if ($All -or $Containers) {
     Write-Host "[i] Cleaning containers..." -ForegroundColor Cyan
-    
+
     # Stop running containers
     $runningContainers = docker ps --filter "name=funwashad" --format "{{.ID}}"
     if ($runningContainers) {
@@ -126,7 +126,7 @@ if ($All -or $Containers) {
         $runningContainers | ForEach-Object { docker stop $_ }
         Write-Host "[✓] Containers stopped" -ForegroundColor Green
     }
-    
+
     # Remove stopped containers
     $stoppedContainers = docker ps -a --filter "name=funwashad" --format "{{.ID}}"
     if ($stoppedContainers) {
@@ -143,10 +143,10 @@ if ($All -or $Containers) {
 if ($All -or $Volumes) {
     Write-Host "[i] Cleaning volumes..." -ForegroundColor Cyan
     Write-Host "[!] This will DELETE all database data!" -ForegroundColor Red
-    
+
     $volumeToRemove = "funwashad-postgres-data"
     $volumeExists = docker volume ls --format "{{.Name}}" | Select-String -Pattern "^$volumeToRemove$"
-    
+
     if ($volumeExists) {
         if (-not $Force) {
             $confirmVolume = Read-Host "Really delete volume '$volumeToRemove'? (yes/no)"
@@ -171,10 +171,10 @@ if ($All -or $Volumes) {
 # Clean Images
 if ($All -or $Images) {
     Write-Host "[i] Cleaning images..." -ForegroundColor Cyan
-    
+
     # Find FunWasHad related images
     $images = docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | Select-String -Pattern "fwh|funwashad"
-    
+
     if ($images) {
         Write-Host "    Found images to remove:" -ForegroundColor Gray
         $images | ForEach-Object {

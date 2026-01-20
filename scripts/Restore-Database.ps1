@@ -40,10 +40,10 @@
 param(
     [Parameter(Mandatory=$true)]
     [string]$BackupFile,
-    
+
     [Parameter(Mandatory=$false)]
     [string]$VolumeName = "funwashad-postgres-data",
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$Force
 )
@@ -71,7 +71,7 @@ Write-Host ""
 if (-not $Force) {
     Write-Host "[!] WARNING: This will REPLACE all existing data in the volume!" -ForegroundColor Yellow
     $confirm = Read-Host "Are you sure you want to continue? (yes/no)"
-    
+
     if ($confirm -ne "yes") {
         Write-Host "[i] Restore cancelled" -ForegroundColor Cyan
         exit 0
@@ -96,10 +96,10 @@ Write-Host "[i] Restoring backup..." -ForegroundColor Cyan
 try {
     # Determine if backup is compressed
     $isCompressed = $BackupFile -match "\.gz$"
-    
+
     $backupDir = Split-Path -Parent (Resolve-Path $BackupFile)
     $backupFileName = Split-Path -Leaf $BackupFile
-    
+
     if ($isCompressed) {
         docker run --rm `
             -v ${VolumeName}:/data `
@@ -114,7 +114,7 @@ try {
             alpine `
             sh -c "rm -rf /data/* && tar xf /backup/$backupFileName -C /data"
     }
-    
+
     Write-Host "[✓] Restore completed successfully!" -ForegroundColor Green
     Write-Host ""
     Write-Host "[i] You can now start the application" -ForegroundColor Cyan

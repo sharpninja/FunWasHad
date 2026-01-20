@@ -45,10 +45,10 @@ param(
     [Parameter(Mandatory=$false)]
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Debug",
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$NoBrowser,
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$Verbose
 )

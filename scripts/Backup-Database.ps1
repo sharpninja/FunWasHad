@@ -40,10 +40,10 @@
 param(
     [Parameter(Mandatory=$false)]
     [string]$BackupPath = ".\backups",
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$CompressBackup = $true,
-    
+
     [Parameter(Mandatory=$false)]
     [string]$VolumeName = "funwashad-postgres-data"
 )
@@ -84,32 +84,32 @@ try {
     if ($CompressBackup) {
         # Create compressed backup
         $backupFileFull = "$BackupPath\$backupFile.tar.gz"
-        
+
         docker run --rm `
             -v ${VolumeName}:/data `
             -v ${PWD}/${BackupPath}:/backup `
             alpine `
             tar czf /backup/$backupFile.tar.gz -C /data .
-        
+
         Write-Host "[✓] Backup created: $backupFileFull" -ForegroundColor Green
     }
     else {
         # Create uncompressed backup
         $backupFileFull = "$BackupPath\$backupFile.tar"
-        
+
         docker run --rm `
             -v ${VolumeName}:/data `
             -v ${PWD}/${BackupPath}:/backup `
             alpine `
             tar cf /backup/$backupFile.tar -C /data .
-        
+
         Write-Host "[✓] Backup created: $backupFileFull" -ForegroundColor Green
     }
-    
+
     # Get backup file size
     $fileSize = (Get-Item $backupFileFull).Length / 1MB
     Write-Host "[i] Backup size: $([math]::Round($fileSize, 2)) MB" -ForegroundColor Cyan
-    
+
     Write-Host ""
     Write-Host "[✓] Backup completed successfully!" -ForegroundColor Green
     Write-Host ""
