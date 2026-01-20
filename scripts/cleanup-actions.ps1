@@ -134,9 +134,24 @@ foreach ($line in $base64Lines)
 }
 
 # Filter failed, cancelled, and successful runs separately
-$failedRuns = $runs | Where-Object { $_.conclusion -eq 'failure' }
-$cancelledRuns = $runs | Where-Object { $_.conclusion -eq 'cancelled' }
-$successfulRuns = if ($KeepOnlyThree) { $runs | Where-Object { $_.conclusion -eq 'success' } } else { @() }
+# Only process completed runs to avoid in-progress runs
+$completedRuns = $runs | Where-Object { $_.status -eq 'completed' }
+$failedRuns = $completedRuns | Where-Object { $_.conclusion -eq 'failure' }
+$cancelledRuns = $completedRuns | Where-Object { $_.conclusion -eq 'cancelled' }
+$successfulRuns = if ($KeepOnlyThree) { $completedRuns | Where-Object { $_.conclusion -eq 'success' } } else { @() }
+
+Write-Host "Found $($runs.Count) total workflow run(s)" -ForegroundColor Cyan
+Write-Host "  - Completed runs: $($completedRuns.Count)" -ForegroundColor Cyan
+if ($failedRuns.Count -gt 0) {
+    Write-Host "  - Failed runs: $($failedRuns.Count)" -ForegroundColor Red
+}
+if ($cancelledRuns.Count -gt 0) {
+    Write-Host "  - Cancelled runs: $($cancelledRuns.Count)" -ForegroundColor Yellow
+}
+if ($successfulRuns.Count -gt 0) {
+    Write-Host "  - Successful runs: $($successfulRuns.Count)" -ForegroundColor Green
+}
+Write-Host ""
 
 # Find runs tagged with "no-build" check run
 Write-Host 'Checking for runs tagged with "no-build"...' -ForegroundColor Cyan
@@ -188,26 +203,40 @@ $toDelete = @()
 # For failed runs: keep most recent per workflow, delete the rest
 if ($failedRuns -and $failedRuns.Count -gt 0)
 {
+    Write-Host "Processing failed runs by workflow..." -ForegroundColor Cyan
     $grouped = $failedRuns | Group-Object -Property workflow_id
     foreach ($grp in $grouped)
     {
         $sorted = $grp.Group | Sort-Object { [DateTime]$_.created_at } -Descending
+        $mostRecent = $sorted[0]
+        Write-Host "  Workflow: $($mostRecent.name) (ID: $($grp.Name)) - $($sorted.Count) failed run(s)" -ForegroundColor Gray
+        Write-Host "    Keeping: Run ID $($mostRecent.id) (created: $($mostRecent.created_at))" -ForegroundColor Green
+        
         # Keep the first (most recent failed run), delete the rest
         $candidates = $sorted | Select-Object -Skip 1
-        foreach ($r in $candidates)
+        if ($candidates.Count -gt 0)
         {
-            $toDelete += [PSCustomObject]@{
-                id          = $r.id
-                workflow_id = $r.workflow_id
-                name        = $r.name
-                head_branch = $r.head_branch
-                event       = $r.event
-                conclusion  = $r.conclusion
-                created_at  = $r.created_at
-                url         = $r.html_url
+            Write-Host "    Deleting: $($candidates.Count) older failed run(s)" -ForegroundColor Yellow
+            foreach ($r in $candidates)
+            {
+                $toDelete += [PSCustomObject]@{
+                    id          = $r.id
+                    workflow_id = $r.workflow_id
+                    name        = $r.name
+                    head_branch = $r.head_branch
+                    event       = $r.event
+                    conclusion  = $r.conclusion
+                    created_at  = $r.created_at
+                    url         = $r.html_url
+                }
             }
         }
+        else
+        {
+            Write-Host "    No older runs to delete (only 1 failed run for this workflow)" -ForegroundColor Gray
+        }
     }
+    Write-Host ""
 }
 
 # For cancelled runs: delete ALL of them (don't keep any)
