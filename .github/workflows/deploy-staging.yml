@@ -123,35 +123,44 @@ jobs:
 
           echo "✅ Created check run with ID: $CHECK_RUN_ID"
 
-  get_railway_project_id:
-    name: Get Railway Project ID
+  get_config:
+    name: Get Configuration
     runs-on: ubuntu-latest
     outputs:
-      railway_project_id: ${{ steps.set_id.outputs.railway_project_id }}
+      dotnet_version: ${{ steps.config.outputs.dotnet_version }}
+      registry: ${{ steps.config.outputs.registry }}
+      location_api_image: ${{ steps.config.outputs.location_api_image }}
+      marketing_api_image: ${{ steps.config.outputs.marketing_api_image }}
+      railway_project_id: ${{ steps.config.outputs.railway_project_id }}
     steps:
-      - name: Set Railway Project ID
-        id: set_id
-        run: echo "railway_project_id=${{ secrets.RAILWAY_STAGING_PROJECT_ID }}" >> $GITHUB_OUTPUT
+      - name: Set Configuration Values
+        id: config
+        run: |
+          echo "dotnet_version=${{ env.DOTNET_VERSION }}" >> $GITHUB_OUTPUT
+          echo "registry=${{ env.REGISTRY }}" >> $GITHUB_OUTPUT
+          echo "location_api_image=${{ env.LOCATION_API_IMAGE }}" >> $GITHUB_OUTPUT
+          echo "marketing_api_image=${{ env.MARKETING_API_IMAGE }}" >> $GITHUB_OUTPUT
+          echo "railway_project_id=${{ secrets.RAILWAY_STAGING_PROJECT_ID }}" >> $GITHUB_OUTPUT
 
   build_and_test:
     name: Build and Test
-    needs: detect_changes
+    needs: [detect_changes, get_config]
     if: needs.detect_changes.outputs.any_changes == 'true'
     uses: ./.github/workflows/staging-build-and-test.yml
     with:
-      dotnet_version: '9.0.x'
+      dotnet_version: ${{ needs.get_config.outputs.dotnet_version }}
       build_configuration: Staging
     secrets: inherit
 
   docker_location_api_staging:
     name: Build Location API Docker Image
-    needs: [detect_changes, build_and_test]
+    needs: [detect_changes, build_and_test, get_config]
     if: needs.detect_changes.outputs.location_api_changed == 'true'
     uses: ./.github/workflows/staging-docker-build-api.yml
     with:
       api_name: location-api
-      image_name: ghcr.io/${{ github.repository_owner }}/fwh-location-api
-      registry: ghcr.io
+      image_name: ${{ needs.get_config.outputs.location_api_image }}
+      registry: ${{ needs.get_config.outputs.registry }}
       dockerfile_path: ./src/FWH.Location.Api/Dockerfile.artifacts
       artifact_name: location-api
       build_configuration: Staging
@@ -159,13 +168,13 @@ jobs:
 
   docker_marketing_api_staging:
     name: Build Marketing API Docker Image
-    needs: [detect_changes, build_and_test]
+    needs: [detect_changes, build_and_test, get_config]
     if: needs.detect_changes.outputs.marketing_api_changed == 'true'
     uses: ./.github/workflows/staging-docker-build-api.yml
     with:
       api_name: marketing-api
-      image_name: ghcr.io/${{ github.repository_owner }}/fwh-marketing-api
-      registry: ghcr.io
+      image_name: ${{ needs.get_config.outputs.marketing_api_image }}
+      registry: ${{ needs.get_config.outputs.registry }}
       dockerfile_path: ./src/FWH.MarketingApi/Dockerfile.artifacts
       artifact_name: marketing-api
       build_configuration: Staging
@@ -173,23 +182,23 @@ jobs:
 
   deploy_railway_staging:
     name: Deploy to Railway
-    needs: [detect_changes, docker_location_api_staging, docker_marketing_api_staging, get_railway_project_id]
+    needs: [detect_changes, docker_location_api_staging, docker_marketing_api_staging, get_config]
     uses: ./.github/workflows/staging-deploy-railway.yml
     with:
       location_api_changed: ${{ needs.detect_changes.outputs.location_api_changed }}
       marketing_api_changed: ${{ needs.detect_changes.outputs.marketing_api_changed }}
-      location_api_image: ghcr.io/${{ github.repository_owner }}/fwh-location-api
-      marketing_api_image: ghcr.io/${{ github.repository_owner }}/fwh-marketing-api
-      railway_project_id: ${{ needs.get_railway_project_id.outputs.railway_project_id }}
+      location_api_image: ${{ needs.get_config.outputs.location_api_image }}
+      marketing_api_image: ${{ needs.get_config.outputs.marketing_api_image }}
+      railway_project_id: ${{ needs.get_config.outputs.railway_project_id }}
     secrets: inherit
 
   build_mobile_android_staging:
     name: Build Mobile Android
-    needs: [detect_changes, build_and_test]
+    needs: [detect_changes, build_and_test, get_config]
     if: needs.detect_changes.outputs.mobile_changed == 'true'
     uses: ./.github/workflows/staging-build-mobile-android.yml
     with:
-      dotnet_version: '9.0.x'
+      dotnet_version: ${{ needs.get_config.outputs.dotnet_version }}
       build_configuration: Staging
       artifact_name: android-apk-staging
     secrets: inherit
@@ -205,14 +214,14 @@ jobs:
 
   notify_deployment:
     name: Notify Deployment Status
-    needs: [detect_changes, deploy_railway_staging, release_android_staging, get_railway_project_id]
+    needs: [detect_changes, deploy_railway_staging, release_android_staging, get_config]
     if: always()
     uses: ./.github/workflows/staging-notify-deployment.yml
     with:
       location_api_changed: ${{ needs.detect_changes.outputs.location_api_changed }}
       marketing_api_changed: ${{ needs.detect_changes.outputs.marketing_api_changed }}
       mobile_changed: ${{ needs.detect_changes.outputs.mobile_changed }}
-      railway_project_id: ${{ needs.get_railway_project_id.outputs.railway_project_id }}
+      railway_project_id: ${{ needs.get_config.outputs.railway_project_id }}
       deploy_railway_result: ${{ needs.deploy_railway_staging.result }}
       release_android_result: ${{ needs.release_android_staging.result }}
     secrets: inherit
