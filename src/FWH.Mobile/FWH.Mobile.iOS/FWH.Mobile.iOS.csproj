@@ -6,14 +6,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <!-- Staging configuration -->
+  <!-- Staging configuration: based on Debug (unoptimized, with debug symbols) -->
   <PropertyGroup Condition="'$(Configuration)' == 'Staging'">
-    <DefineConstants>$(DefineConstants);STAGING</DefineConstants>
-    <Optimize>true</Optimize>
+    <Optimize>false</Optimize>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <!-- Disable ReadyToRun for mobile platforms -->
-    <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="..\..\..\workflow.puml" Link="workflow.puml">

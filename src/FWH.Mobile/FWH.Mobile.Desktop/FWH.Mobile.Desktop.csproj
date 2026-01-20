@@ -9,10 +9,9 @@
     <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
   </PropertyGroup>
 
-  <!-- Staging configuration -->
+  <!-- Staging configuration: based on Debug (unoptimized, with debug symbols) -->
   <PropertyGroup Condition="'$(Configuration)' == 'Staging'">
-    <DefineConstants>$(DefineConstants);STAGING</DefineConstants>
-    <Optimize>true</Optimize>
+    <Optimize>false</Optimize>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
@@ -23,10 +22,10 @@
 
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" />
-    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release and Staging configurations.-->
+    <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Include="Avalonia.Diagnostics" >
-      <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
-      <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
+      <IncludeAssets Condition="'$(Configuration)' != 'Debug' and '$(Configuration)' != 'Staging'">None</IncludeAssets>
+      <PrivateAssets Condition="'$(Configuration)' != 'Debug' and '$(Configuration)' != 'Staging'">All</PrivateAssets>
     </PackageReference>
   </ItemGroup>
   

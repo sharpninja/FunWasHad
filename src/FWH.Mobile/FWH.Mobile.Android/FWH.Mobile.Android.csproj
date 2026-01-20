@@ -19,22 +19,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>$(DefineConstants);ANDROID</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Staging|AnyCPU'">
+    <DefineConstants>$(DefineConstants);ANDROID</DefineConstants>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DefineConstants>$(DefineConstants);ANDROID</DefineConstants>
     <!-- Prevent Windows assemblies from being included in publish -->
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>link</TrimMode>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Staging|AnyCPU'">
-    <DefineConstants>$(DefineConstants);ANDROID;STAGING</DefineConstants>
-    <!-- Staging uses Release-like optimization -->
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>link</TrimMode>
-    <!-- Enable debug symbols for better diagnostics -->
-    <DebugType>portable</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <!-- Disable ReadyToRun for mobile platforms -->
-    <PublishReadyToRun>false</PublishReadyToRun>
   </PropertyGroup>
 
   <!-- Skip Windows-specific assemblies during Android linking -->
@@ -70,33 +62,28 @@
     <AndroidAsset Include="..\FWH.Mobile\appsettings.json" Link="appsettings.json" />
   </ItemGroup>
 
-  <!-- MSBuild target to detect host IP and process config for DEBUG builds -->
-  <Target Name="DetectHostIpAddress" BeforeTargets="BeforeBuild" Condition="'$(Configuration)' == 'Debug'">
+  <!-- MSBuild target to detect host IP and process config for DEBUG and STAGING builds -->
+  <Target Name="DetectHostIpAddress" BeforeTargets="BeforeBuild" Condition="'$(Configuration)' == 'Debug' or '$(Configuration)' == 'Staging'">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DetectHostIp.ps1&quot; &quot;$(ProjectDir)&quot;"
           ConsoleToMSBuild="true"
           IgnoreExitCode="false" />
   </Target>
 
-  <!-- Use the processed config file for Android assets in DEBUG builds -->
-  <ItemGroup Condition="'$(Configuration)' == 'Debug' and Exists('obj\appsettings.Development.processed.json')">
+  <!-- Use the processed config file for Android assets in DEBUG and STAGING builds -->
+  <ItemGroup Condition="('$(Configuration)' == 'Debug' or '$(Configuration)' == 'Staging') and Exists('obj\appsettings.Development.processed.json')">
     <AndroidAsset Include="obj\appsettings.Development.processed.json">
       <Link>appsettings.Development.json</Link>
     </AndroidAsset>
   </ItemGroup>
-
+  
   <!-- Fallback to original file if processed doesn't exist -->
-  <ItemGroup Condition="'$(Configuration)' == 'Debug' and !Exists('obj\appsettings.Development.processed.json')">
-    <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />
-  </ItemGroup>
-
-  <!-- In Release and Staging, use appropriate config files -->
-  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+  <ItemGroup Condition="('$(Configuration)' == 'Debug' or '$(Configuration)' == 'Staging') and !Exists('obj\appsettings.Development.processed.json')">
     <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />
   </ItemGroup>
   
-  <ItemGroup Condition="'$(Configuration)' == 'Staging'">
-    <AndroidAsset Include="..\FWH.Mobile\appsettings.Staging.json" Link="appsettings.Staging.json" Condition="Exists('..\FWH.Mobile\appsettings.Staging.json')" />
-    <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" Condition="!Exists('..\FWH.Mobile\appsettings.Staging.json')" />
+  <!-- In Release, always use original (with placeholder/default) -->
+  <ItemGroup Condition="'$(Configuration)' != 'Debug' and '$(Configuration)' != 'Staging'">
+    <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />
   </ItemGroup>
 
   <!-- Clean up processed config files -->

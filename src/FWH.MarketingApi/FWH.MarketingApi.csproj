@@ -11,10 +11,9 @@
     <NoWarn>$(NoWarn);1591</NoWarn> <!-- Suppress warnings for missing XML docs (will enable after full audit) -->
   </PropertyGroup>
 
-  <!-- Staging configuration -->
+  <!-- Staging configuration: based on Debug (unoptimized, with debug symbols) -->
   <PropertyGroup Condition="'$(Configuration)' == 'Staging'">
-    <DefineConstants>$(DefineConstants);STAGING</DefineConstants>
-    <Optimize>true</Optimize>
+    <Optimize>false</Optimize>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
