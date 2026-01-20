@@ -13,4 +13,38 @@
     -->
     <NoWarn>$(NoWarn);NU1507;NETSDK1201;PRI257;NU1605</NoWarn>
   </PropertyGroup>
+
+  <!-- Staging configuration: inherits from Release settings -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Staging'">
+    <!-- Optimize like Release -->
+    <Optimize>true</Optimize>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    
+    <!-- Define Staging constant for conditional compilation -->
+    <DefineConstants>$(DefineConstants);STAGING</DefineConstants>
+    
+    <!-- Warning level same as Release -->
+    <WarningLevel>4</WarningLevel>
+    
+    <!-- Output configuration -->
+    <OutputPath>bin\Staging\</OutputPath>
+    <IntermediateOutputPath>obj\Staging\</IntermediateOutputPath>
+    
+    <!-- Performance optimizations like Release -->
+    <TieredCompilation>true</TieredCompilation>
+    <TieredCompilationQuickJit>true</TieredCompilationQuickJit>
+    
+    <!-- Enable ready-to-run for better startup performance -->
+    <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
+    
+    <!-- Trim unused code (optional, can be disabled per-project if needed) -->
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <!-- Staging configuration for web projects -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Staging' AND '$(IsAspNetCoreProject)' == 'true'">
+    <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
+  </PropertyGroup>
 </Project>
+
