@@ -23,19 +23,19 @@
 
 .EXAMPLE
   # Simulate cleanup for owner/FunWasHad
-  .\cleanup-failed-runs.ps1 -Repo "owner/FunWasHad" -WhatIf
+  .\cleanup-actions.ps1 -Repo "owner/FunWasHad" -WhatIf
 
 .EXAMPLE
   # Actually delete (after confirmation)
-  .\cleanup-failed-runs.ps1 -Repo "owner/FunWasHad"
+  .\cleanup-actions.ps1 -Repo "owner/FunWasHad"
 
 .EXAMPLE
   # Force delete without interactive confirmation
-  .\cleanup-failed-runs.ps1 -Repo "owner/FunWasHad" -Force
+  .\cleanup-actions.ps1 -Repo "owner/FunWasHad" -Force
 
 .EXAMPLE
   # Clean up both workflow runs and Docker images
-  .\cleanup-failed-runs.ps1 -Repo "owner/FunWasHad" -CleanupDockerImages
+  .\cleanup-actions.ps1 -Repo "owner/FunWasHad" -CleanupDockerImages
 
 .NOTES
   - Requires `gh` CLI installed and authenticated with a token that has repo/actions and packages permissions.

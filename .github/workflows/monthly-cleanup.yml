@@ -46,7 +46,7 @@ jobs:
           Write-Host "  - Old failed workflow runs (keeping most recent per workflow)" -ForegroundColor Gray
           Write-Host "  - Old Docker images from GHCR (keeping most recent per API)" -ForegroundColor Gray
           Write-Host ""
-          .\scripts\cleanup-failed-runs.ps1 -CleanupDockerImages -Force
+          .\scripts\cleanup-actions.ps1 -CleanupDockerImages -Force
 
       - name: Cleanup summary
         if: always()
