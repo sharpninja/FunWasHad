@@ -1,5 +1,5 @@
 # Workflow for building DocFX documentation and deploying to GitHub Pages
-name: Build and Deploy Documentation
+name: Generate Pages
 
 on:
   # Runs on pushes targeting the default branch
