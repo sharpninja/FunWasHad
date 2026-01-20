@@ -187,7 +187,6 @@ jobs:
       name: staging
       url: https://staging.up.railway.app
     env:
-      SVC_ID: staging-location-api
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
     steps:
@@ -218,15 +217,10 @@ jobs:
           echo "💡 Dashboard: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
 
       - name: Deploy Location API to Railway
-        run: railway up --service=${{ env.SVC_ID }}
+        run: railway redeploy -s staging-location-api -y
 
-      # - name: Deploy Marketing API to Railway
-        # uses: bervProject/railway-deploy@main
-        # env:
-        #   RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        # with:
-        #   service: staging-marketing-api
-        #   detach: false
+      - name: Deploy Marketing API to Railway
+        run: railway redeploy -s staging-marketing-api -y
 
       - name: Wait for deployments
         run: sleep 60
