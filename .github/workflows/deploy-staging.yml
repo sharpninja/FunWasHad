@@ -197,7 +197,23 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
           RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_STAGING_PROJECT_ID }}
-        run: railway link $RAILWAY_PROJECT_ID
+        run: |
+          # Verify secrets are set
+          if [ -z "$RAILWAY_TOKEN" ]; then
+            echo "❌ Error: RAILWAY_STAGING_TOKEN secret is not set"
+            exit 1
+          fi
+
+          if [ -z "$RAILWAY_PROJECT_ID" ]; then
+            echo "❌ Error: RAILWAY_STAGING_PROJECT_ID secret is not set"
+            exit 1
+          fi
+
+          echo "🔐 Authenticating with Railway..."
+          echo "📋 Project ID length: ${#RAILWAY_PROJECT_ID} characters"
+
+          # Link to Railway project using explicit --project flag
+          railway link --project "$RAILWAY_PROJECT_ID"
 
       - name: Get image tags
         id: image_tags
