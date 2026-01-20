@@ -156,6 +156,9 @@ jobs:
     name: Build Location API Docker Image
     needs: [detect_changes, build_and_test, get_config]
     if: needs.detect_changes.outputs.location_api_changed == 'true'
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/staging-docker-build-api.yml
     with:
       api_name: location-api
@@ -170,6 +173,9 @@ jobs:
     name: Build Marketing API Docker Image
     needs: [detect_changes, build_and_test, get_config]
     if: needs.detect_changes.outputs.marketing_api_changed == 'true'
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/staging-docker-build-api.yml
     with:
       api_name: marketing-api
