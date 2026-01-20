@@ -148,26 +148,17 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
         var connectionStringPreview = connectionString.Length > 50
             ? connectionString.Substring(0, 50) + "..."
             : connectionString;
+        var isUriFormat = connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+                          connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase);
         logger.LogInformation("Connection string found (length: {Length} characters, format: {Format})",
             connectionString.Length,
-            connectionString.StartsWith("postgresql://") || connectionString.StartsWith("postgres://")
-                ? "URI"
-                : "Connection String");
+            isUriFormat ? "URI" : "Connection String");
 
-        // Validate connection string can be parsed
-        try
+        // Note: We don't validate by parsing here because DatabaseMigrationService handles URI format conversion.
+        // URI format connection strings will be converted to standard format in DatabaseMigrationService.
+        if (isUriFormat)
         {
-            var testBuilder = new NpgsqlConnectionStringBuilder(connectionString);
-            logger.LogDebug("Connection string parsed successfully. Database: {Database}, Host: {Host}",
-                testBuilder.Database, testBuilder.Host);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Connection string format is invalid. Preview: {Preview}", connectionStringPreview);
-            throw new InvalidOperationException(
-                $"Connection string format is invalid: {ex.Message}. " +
-                "Railway DATABASE_URL should be in PostgreSQL URI format (postgresql://...) or standard connection string format.",
-                ex);
+            logger.LogDebug("Connection string is in URI format - will be converted by DatabaseMigrationService");
         }
 
         // Create and run migration service

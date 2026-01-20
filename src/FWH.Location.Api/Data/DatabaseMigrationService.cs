@@ -28,6 +28,64 @@ public class DatabaseMigrationService
     }
 
     /// <summary>
+    /// Converts PostgreSQL URI format connection string to standard format if needed.
+    /// NpgsqlConnectionStringBuilder doesn't support URI format directly.
+    /// </summary>
+    private string GetConnectionString()
+    {
+        var connectionString = _connectionString;
+        if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                // Parse the URI manually
+                var uri = new Uri(connectionString);
+                var builder = new NpgsqlConnectionStringBuilder
+                {
+                    Host = uri.Host,
+                    Port = uri.Port > 0 ? uri.Port : 5432,
+                    Database = uri.AbsolutePath.TrimStart('/'),
+                    Username = uri.UserInfo.Split(':')[0],
+                    Password = uri.UserInfo.Contains(':') 
+                        ? Uri.UnescapeDataString(uri.UserInfo.Split(':', 2)[1]) 
+                        : string.Empty
+                };
+
+                // Parse query string parameters if present (e.g., ?sslmode=require)
+                if (!string.IsNullOrEmpty(uri.Query) && uri.Query.Length > 1)
+                {
+                    var query = uri.Query.Substring(1); // Remove leading '?'
+                    var pairs = query.Split('&');
+                    foreach (var pair in pairs)
+                    {
+                        var keyValue = pair.Split('=', 2);
+                        if (keyValue.Length == 2 && !string.IsNullOrEmpty(keyValue[0]))
+                        {
+                            var key = Uri.UnescapeDataString(keyValue[0]);
+                            var value = Uri.UnescapeDataString(keyValue[1]);
+                            builder[key] = value;
+                        }
+                    }
+                }
+
+                connectionString = builder.ToString();
+                _logger.LogDebug("Converted PostgreSQL URI to connection string format");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse connection string URI format. Connection string starts with: {Prefix}",
+                    connectionString.Substring(0, Math.Min(20, connectionString.Length)));
+                throw new ArgumentException(
+                    "Connection string is in URI format but cannot be parsed. " +
+                    "Ensure Railway DATABASE_URL is properly formatted.", ex);
+            }
+        }
+
+        return connectionString;
+    }
+
+    /// <summary>
     /// Applies all pending migrations to the database.
     /// </summary>
     public async Task ApplyMigrationsAsync(CancellationToken cancellationToken = default)
@@ -83,27 +141,8 @@ public class DatabaseMigrationService
     /// </summary>
     private async Task EnsureDatabaseExistsAsync(CancellationToken cancellationToken)
     {
-        // Handle PostgreSQL URI format (e.g., postgresql://user:pass@host:port/db)
-        var connectionString = _connectionString;
-        if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
-            connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
-        {
-            // Npgsql can handle URI format, but let's ensure it's properly formatted
-            try
-            {
-                var uriBuilder = new NpgsqlConnectionStringBuilder(connectionString);
-                connectionString = uriBuilder.ToString();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to parse connection string URI format. Connection string starts with: {Prefix}",
-                    connectionString.Substring(0, Math.Min(20, connectionString.Length)));
-                throw new ArgumentException(
-                    "Connection string is in URI format but cannot be parsed. " +
-                    "Ensure Railway DATABASE_URL is properly formatted.", ex);
-            }
-        }
-
+        // Get connection string (converts URI format if needed)
+        var connectionString = GetConnectionString();
         var connectionStringBuilder = new NpgsqlConnectionStringBuilder(connectionString);
         var databaseName = connectionStringBuilder.Database;
 
@@ -145,7 +184,8 @@ public class DatabaseMigrationService
     /// </summary>
     private async Task EnsureMigrationsTableExistsAsync(CancellationToken cancellationToken)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        var connectionString = GetConnectionString();
+        await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
 
         var createTableSql = @"
@@ -166,7 +206,8 @@ public class DatabaseMigrationService
     /// </summary>
     private async Task<HashSet<string>> GetAppliedMigrationsAsync(CancellationToken cancellationToken)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        var connectionString = GetConnectionString();
+        await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
 
         var sql = "SELECT migration_name FROM __migrations ORDER BY id";
@@ -222,7 +263,8 @@ public class DatabaseMigrationService
     {
         _logger.LogInformation("Applying migration: {Name}", migration.Name);
 
-        await using var connection = new NpgsqlConnection(_connectionString);
+        var connectionString = GetConnectionString();
+        await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
 
         // Start transaction
