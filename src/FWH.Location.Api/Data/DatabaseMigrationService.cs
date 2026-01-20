@@ -91,8 +91,8 @@ public class DatabaseMigrationService
             // Npgsql can handle URI format, but let's ensure it's properly formatted
             try
             {
-                var builder = new NpgsqlConnectionStringBuilder(connectionString);
-                connectionString = builder.ToString();
+                var uriBuilder = new NpgsqlConnectionStringBuilder(connectionString);
+                connectionString = uriBuilder.ToString();
             }
             catch (Exception ex)
             {
@@ -104,12 +104,12 @@ public class DatabaseMigrationService
             }
         }
 
-        var builder = new NpgsqlConnectionStringBuilder(connectionString);
-        var databaseName = builder.Database;
+        var connectionStringBuilder = new NpgsqlConnectionStringBuilder(connectionString);
+        var databaseName = connectionStringBuilder.Database;
 
         // Connect to postgres database to check if target database exists
-        builder.Database = "postgres";
-        var adminConnectionString = builder.ToString();
+        connectionStringBuilder.Database = "postgres";
+        var adminConnectionString = connectionStringBuilder.ToString();
 
         await using var connection = new NpgsqlConnection(adminConnectionString);
         await connection.OpenAsync(cancellationToken);
