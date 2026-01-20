@@ -1,4 +1,4 @@
-name: Deploy to Staging
+name: Staging Actions
 
 on:
   push:
@@ -67,7 +67,7 @@ jobs:
           MOBILE_CHANGED="false"
 
           # Check for Location API changes
-          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Location\.Api/|^src/FWH\.Common\.Location/|^src/FWH\.ServiceDefaults/|^src/FWH\.Common\.(Chat|Imaging|Workflow)/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/deploy-staging\.yml|^src/FWH\.Location\.Api/.*Dockerfile"; then
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Location\.Api/|^src/FWH\.Common\.Location/|^src/FWH\.ServiceDefaults/|^src/FWH\.Common\.(Chat|Imaging|Workflow)/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/staging\.yml|^src/FWH\.Location\.Api/.*Dockerfile"; then
             echo "✅ Location API files changed"
             LOCATION_CHANGED="true"
             echo "location_api=true" >> $GITHUB_OUTPUT
@@ -77,7 +77,7 @@ jobs:
           fi
 
           # Check for Marketing API changes
-          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.MarketingApi/|^src/FWH\.ServiceDefaults/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/deploy-staging\.yml|^src/FWH\.MarketingApi/.*Dockerfile"; then
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.MarketingApi/|^src/FWH\.ServiceDefaults/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/staging\.yml|^src/FWH\.MarketingApi/.*Dockerfile"; then
             echo "✅ Marketing API files changed"
             MARKETING_CHANGED="true"
             echo "marketing_api=true" >> $GITHUB_OUTPUT
@@ -87,7 +87,7 @@ jobs:
           fi
 
           # Check for Mobile app changes
-          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Mobile/|^src/FWH\.Mobile\.Data/|^src/FWH\.Common\.(Location|Chat|Imaging|Workflow)/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/deploy-staging\.yml"; then
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Mobile/|^src/FWH\.Mobile\.Data/|^src/FWH\.Common\.(Location|Chat|Imaging|Workflow)/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/staging\.yml"; then
             echo "✅ Mobile app files changed"
             MOBILE_CHANGED="true"
             echo "mobile=true" >> $GITHUB_OUTPUT
