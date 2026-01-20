@@ -212,6 +212,10 @@ jobs:
   release_android_staging:
     name: Create Android Release
     needs: [detect_changes, build_mobile_android_staging, deploy_railway_staging]
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging') &&
+      needs.detect_changes.outputs.mobile_changed == 'true'
     permissions:
       contents: write
     uses: ./.github/workflows/staging-release-android.yml
