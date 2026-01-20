@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-  Delete failed GitHub Actions workflow runs in a repository while keeping the most recent failed run per workflow.
+  Delete failed and cancelled GitHub Actions workflow runs in a repository while keeping the most recent run per workflow.
 
 .DESCRIPTION
-  Uses the GitHub CLI (`gh`) to enumerate workflow runs for a repository, finds runs whose conclusion is "failure",
-  and deletes all but the most recent failed run for each workflow (grouped by workflow_id).
+  Uses the GitHub CLI (`gh`) to enumerate workflow runs for a repository, finds runs whose conclusion is "failure" or "cancelled",
+  and deletes all but the most recent failed/cancelled run for each workflow (grouped by workflow_id).
   By default the script prompts before performing deletions. Use -Force to skip the prompt, or -WhatIf to simulate.
 
 .PARAMETER Repo
@@ -121,14 +121,14 @@ foreach ($line in $base64Lines)
     }
 }
 
-# Filter failed runs
-$failedRuns = $runs | Where-Object { $_.conclusion -eq 'failure' }
+# Filter failed and cancelled runs
+$failedRuns = $runs | Where-Object { $_.conclusion -eq 'failure' -or $_.conclusion -eq 'cancelled' }
 $hasFailedRuns = $failedRuns -and $failedRuns.Count -gt 0
 
 if (-not $hasFailedRuns)
 {
-    Write-Host 'No failed workflow runs to process.'
-    # Continue to Docker cleanup if requested, even if no failed runs
+    Write-Host 'No failed or cancelled workflow runs to process.'
+    # Continue to Docker cleanup if requested, even if no failed/cancelled runs
     if (-not $CleanupDockerImages)
     {
         exit 0
@@ -143,7 +143,7 @@ $grouped = $failedRuns | Group-Object -Property workflow_id
 foreach ($grp in $grouped)
 {
     $sorted = $grp.Group | Sort-Object { [DateTime]$_.created_at } -Descending
-    # Keep the first (most recent failed run), delete the rest
+    # Keep the first (most recent failed/cancelled run), delete the rest
     $candidates = $sorted | Select-Object -Skip 1
     foreach ($r in $candidates)
     {
@@ -153,6 +153,7 @@ foreach ($grp in $grouped)
             name        = $r.name
             head_branch = $r.head_branch
             event       = $r.event
+            conclusion  = $r.conclusion
             created_at  = $r.created_at
             url         = $r.html_url
         }
@@ -161,7 +162,7 @@ foreach ($grp in $grouped)
 
 if (-not $toDelete -or $toDelete.Count -eq 0)
 {
-    Write-Host "Nothing to delete — each workflow's most recent failed run is preserved."
+    Write-Host "Nothing to delete — each workflow's most recent failed/cancelled run is preserved."
     # Continue to Docker cleanup if requested, even if no runs to delete
     if (-not $CleanupDockerImages)
     {
@@ -171,12 +172,23 @@ if (-not $toDelete -or $toDelete.Count -eq 0)
     Write-Host ""
 }
 
-Write-Host "Found $($toDelete.Count) failed run(s) to delete (keeping the most recent failed run per workflow)."
+# Count by conclusion type for reporting
+$failedCount = ($toDelete | Where-Object { $_.conclusion -eq 'failure' }).Count
+$cancelledCount = ($toDelete | Where-Object { $_.conclusion -eq 'cancelled' }).Count
+
+Write-Host "Found $($toDelete.Count) run(s) to delete (keeping the most recent failed/cancelled run per workflow)."
+if ($failedCount -gt 0) {
+    Write-Host "  - Failed runs: $failedCount" -ForegroundColor Red
+}
+if ($cancelledCount -gt 0) {
+    Write-Host "  - Cancelled runs: $cancelledCount" -ForegroundColor Yellow
+}
 Write-Host ''
 
 foreach ($item in $toDelete)
 {
-    Write-Host ('Run ID: {0}  Workflow: {1}  Name: {2}  Branch: {3}  Created: {4}' -f $item.id, $item.workflow_id, $item.name, $item.head_branch, $item.created_at)
+    $conclusionColor = if ($item.conclusion -eq 'failure') { 'Red' } else { 'Yellow' }
+    Write-Host ('Run ID: {0}  Workflow: {1}  Name: {2}  Branch: {3}  Status: {4}  Created: {5}' -f $item.id, $item.workflow_id, $item.name, $item.head_branch, $item.conclusion, $item.created_at) -ForegroundColor $conclusionColor
     Write-Host "  URL: $($item.url)"
     Write-Host ''
 }
