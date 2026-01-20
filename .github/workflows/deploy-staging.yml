@@ -121,41 +121,44 @@ jobs:
     name: Build and Test
     needs: detect_changes
     if: needs.detect_changes.outputs.any_changes == 'true'
-    uses: ./.github/workflows/staging/build-and-test.yml
+    uses: ./.github/workflows/staging-build-and-test.yml
     with:
       dotnet_version: ${{ env.DOTNET_VERSION }}
+      build_configuration: Staging
     secrets: inherit
 
   docker_location_api_staging:
     name: Build Location API Docker Image
     needs: [detect_changes, build_and_test]
     if: needs.detect_changes.outputs.location_api_changed == 'true'
-    uses: ./.github/workflows/staging/docker-build-api.yml
+    uses: ./.github/workflows/staging-docker-build-api.yml
     with:
       api_name: location-api
       image_name: ${{ env.LOCATION_API_IMAGE }}
       registry: ${{ env.REGISTRY }}
       dockerfile_path: ./src/FWH.Location.Api/Dockerfile.artifacts
       artifact_name: location-api
+      build_configuration: Staging
     secrets: inherit
 
   docker_marketing_api_staging:
     name: Build Marketing API Docker Image
     needs: [detect_changes, build_and_test]
     if: needs.detect_changes.outputs.marketing_api_changed == 'true'
-    uses: ./.github/workflows/staging/docker-build-api.yml
+    uses: ./.github/workflows/staging-docker-build-api.yml
     with:
       api_name: marketing-api
       image_name: ${{ env.MARKETING_API_IMAGE }}
       registry: ${{ env.REGISTRY }}
       dockerfile_path: ./src/FWH.MarketingApi/Dockerfile.artifacts
       artifact_name: marketing-api
+      build_configuration: Staging
     secrets: inherit
 
   deploy_railway_staging:
     name: Deploy to Railway
     needs: [detect_changes, docker_location_api_staging, docker_marketing_api_staging]
-    uses: ./.github/workflows/staging/deploy-railway.yml
+    uses: ./.github/workflows/staging-deploy-railway.yml
     with:
       location_api_changed: ${{ needs.detect_changes.outputs.location_api_changed }}
       marketing_api_changed: ${{ needs.detect_changes.outputs.marketing_api_changed }}
@@ -168,7 +171,7 @@ jobs:
     name: Build Mobile Android
     needs: [detect_changes, build_and_test]
     if: needs.detect_changes.outputs.mobile_changed == 'true'
-    uses: ./.github/workflows/staging/build-mobile-android.yml
+    uses: ./.github/workflows/staging-build-mobile-android.yml
     with:
       dotnet_version: ${{ env.DOTNET_VERSION }}
       build_configuration: Staging
@@ -178,7 +181,7 @@ jobs:
   release_android_staging:
     name: Create Android Release
     needs: [detect_changes, build_mobile_android_staging, deploy_railway_staging]
-    uses: ./.github/workflows/staging/release-android.yml
+    uses: ./.github/workflows/staging-release-android.yml
     with:
       mobile_changed: ${{ needs.detect_changes.outputs.mobile_changed }}
       artifact_name: android-apk-staging
@@ -188,7 +191,7 @@ jobs:
     name: Notify Deployment Status
     needs: [detect_changes, deploy_railway_staging, release_android_staging]
     if: always()
-    uses: ./.github/workflows/staging/notify-deployment.yml
+    uses: ./.github/workflows/staging-notify-deployment.yml
     with:
       location_api_changed: ${{ needs.detect_changes.outputs.location_api_changed }}
       marketing_api_changed: ${{ needs.detect_changes.outputs.marketing_api_changed }}
