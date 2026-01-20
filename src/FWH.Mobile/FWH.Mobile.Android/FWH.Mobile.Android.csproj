@@ -21,12 +21,25 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <DefineConstants>$(DefineConstants);ANDROID</DefineConstants>
+    <!-- Prevent Windows assemblies from being included in publish -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
   </PropertyGroup>
 
   <!-- Skip Windows-specific assemblies during Android linking -->
   <PropertyGroup>
     <AndroidLinkSkip>System.Private.Windows.Core;System.Private.Windows.GdiPlus;System.Runtime.WindowsRuntime;System.Runtime.WindowsRuntime.UI.Xaml</AndroidLinkSkip>
+    <!-- Exclude Windows assemblies from runtime pack -->
+    <RuntimePackExclude>System.Private.Windows.Core;System.Private.Windows.GdiPlus;System.Runtime.WindowsRuntime;System.Runtime.WindowsRuntime.UI.Xaml</RuntimePackExclude>
   </PropertyGroup>
+  
+  <!-- Explicitly exclude Windows assemblies from runtime pack -->
+  <ItemGroup>
+    <RuntimePackExclude Include="System.Private.Windows.Core" />
+    <RuntimePackExclude Include="System.Private.Windows.GdiPlus" />
+    <RuntimePackExclude Include="System.Runtime.WindowsRuntime" />
+    <RuntimePackExclude Include="System.Runtime.WindowsRuntime.UI.Xaml" />
+  </ItemGroup>
 
   <ItemGroup>
     <AndroidResource Include="Icon.png">
@@ -86,13 +99,24 @@
 
   <!-- Exclude Windows-specific assemblies from Android build -->
   <ItemGroup>
-    <!-- Exclude Windows-specific assemblies from AOT compilation -->
+    <!-- Exclude Windows-specific assemblies from AOT compilation and trimming -->
     <TrimmerRootAssembly Remove="System.Private.Windows.Core" />
+    <TrimmerRootAssembly Remove="System.Private.Windows.GdiPlus" />
     <TrimmerRootAssembly Remove="System.Runtime.WindowsRuntime" />
     <TrimmerRootAssembly Remove="System.Runtime.WindowsRuntime.UI.Xaml" />
     <TrimmerRootAssembly Remove="WindowsBase" />
     <TrimmerRootAssembly Remove="PresentationCore" />
     <TrimmerRootAssembly Remove="PresentationFramework" />
+    <!-- Explicitly exclude from publish -->
+    <TrimmerRootAssembly Remove="System.Formats.Nrbf" Condition="'$(TargetFramework)' == 'net9.0-android'" />
+  </ItemGroup>
+  
+  <!-- Exclude Windows assemblies from being resolved as dependencies -->
+  <ItemGroup>
+    <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" 
+                          Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Private.Windows'))" />
+    <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" 
+                          Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Runtime.Windows'))" />
   </ItemGroup>
 
   <!-- Additional exclusion for Windows assemblies during linking -->
@@ -129,23 +153,13 @@
 
   <!-- Remove Windows assemblies from linked folder before AOT compilation -->
   <Target Name="RemoveWindowsAssembliesFromLinkedFolder" AfterTargets="_LinkAssemblies" BeforeTargets="_AndroidAotCompile">
-    <ItemGroup>
-      <_WindowsAssembliesToRemove Include="$(IntermediateOutputPath)linked\System.Private.Windows.Core.dll" />
-      <_WindowsAssembliesToRemove Include="$(IntermediateOutputPath)linked\System.Private.Windows.GdiPlus.dll" />
-      <_WindowsAssembliesToRemove Include="$(IntermediateOutputPath)linked\System.Runtime.WindowsRuntime.dll" />
-      <_WindowsAssembliesToRemove Include="$(IntermediateOutputPath)linked\System.Runtime.WindowsRuntime.UI.Xaml.dll" />
-      <!-- Also remove for all architectures -->
-      <_WindowsAssembliesToRemove Include="$(IntermediateOutputPath)android-*\linked\System.Private.Windows.Core.dll" />
-      <_WindowsAssembliesToRemove Include="$(IntermediateOutputPath)android-*\linked\System.Private.Windows.GdiPlus.dll" />
-      <_WindowsAssembliesToRemove Include="$(IntermediateOutputPath)android-*\linked\System.Runtime.WindowsRuntime.dll" />
-      <_WindowsAssembliesToRemove Include="$(IntermediateOutputPath)android-*\linked\System.Runtime.WindowsRuntime.UI.Xaml.dll" />
-    </ItemGroup>
-    <Delete Files="@(_WindowsAssembliesToRemove)" ContinueOnError="true" />
-    <Message Text="Removed Windows assemblies from linked folder: @(_WindowsAssembliesToRemove)" Importance="normal" />
-  </Target>
-
-  <!-- Exclude Windows assemblies from AOT compilation -->
-  <Target Name="ExcludeWindowsAssembliesFromAot" BeforeTargets="_AndroidAotCompile">
+    <!-- Use PowerShell to find and delete Windows assemblies (works on Windows and Linux with pwsh) -->
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$files = Get-ChildItem -Path '$(IntermediateOutputPath)' -Recurse -Include 'System.Private.Windows.*.dll','System.Runtime.Windows*.dll' -ErrorAction SilentlyContinue | Where-Object { $_.DirectoryName -match '\\linked\\' }; if ($files) { $files | Remove-Item -Force -ErrorAction SilentlyContinue; Write-Host 'Removed' $files.Count 'Windows assemblies' }&quot;" 
+          ContinueOnError="true" 
+          IgnoreExitCode="true" />
+    <Message Text="Removed Windows assemblies from linked folders in $(IntermediateOutputPath)" Importance="normal" />
+    
+    <!-- Also remove using RemoveItem to ensure they're not in any item groups -->
     <ItemGroup>
       <_AotInputAssemblies Remove="@(_AotInputAssemblies)" 
                            Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Private.Windows'))" />
@@ -154,5 +168,34 @@
       <_AotInputAssemblies Remove="@(_AotInputAssemblies)" 
                            Condition="$([System.String]::Copy('%(Filename)').Contains('WindowsRuntime'))" />
     </ItemGroup>
+  </Target>
+
+  <!-- Exclude Windows assemblies from AOT compilation - runs before AOT to filter input assemblies -->
+  <Target Name="ExcludeWindowsAssembliesFromAot" BeforeTargets="_AndroidAotCompile">
+    <ItemGroup>
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)" 
+                           Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Private.Windows'))" />
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)" 
+                           Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Runtime.Windows'))" />
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)" 
+                           Condition="$([System.String]::Copy('%(Filename)').Contains('WindowsRuntime'))" />
+      <!-- Also remove by full path pattern -->
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)" 
+                           Condition="$([System.String]::Copy('%(FullPath)').Contains('System.Private.Windows'))" />
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)" 
+                           Condition="$([System.String]::Copy('%(FullPath)').Contains('System.Runtime.Windows'))" />
+    </ItemGroup>
+    <Message Text="Excluded Windows assemblies from AOT: @(_AotInputAssemblies->WithMetadataValue('Filename', 'System.Private.Windows'))" Importance="normal" Condition="'@(_AotInputAssemblies->WithMetadataValue('Filename', 'System.Private.Windows'))' != ''" />
+  </Target>
+  
+  <!-- Additional safety: Remove Windows assemblies from publish output -->
+  <Target Name="RemoveWindowsAssembliesFromPublish" AfterTargets="Publish" BeforeTargets="_AndroidAotCompile">
+    <ItemGroup>
+      <_PublishFilesToRemove Include="@(ResolvedFileToPublish)" 
+                            Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Private.Windows'))" />
+      <_PublishFilesToRemove Include="@(ResolvedFileToPublish)" 
+                            Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Runtime.Windows'))" />
+    </ItemGroup>
+    <Delete Files="@(_PublishFilesToRemove)" ContinueOnError="true" />
   </Target>
 </Project>
