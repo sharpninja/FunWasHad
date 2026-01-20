@@ -50,10 +50,10 @@ jobs:
         continue-on-error: true
 
       - name: Publish Location API
-        run: dotnet publish src/FWH.Location.Api/FWH.Location.Api.csproj --configuration Release --output ./publish/location-api --no-build
+        run: dotnet publish src/FWH.Location.Api/FWH.Location.Api.csproj --configuration Release --output ./publish/location-api --no-restore
 
       - name: Publish Marketing API
-        run: dotnet publish src/FWH.MarketingApi/FWH.MarketingApi.csproj --configuration Release --output ./publish/marketing-api --no-build
+        run: dotnet publish src/FWH.MarketingApi/FWH.MarketingApi.csproj --configuration Release --output ./publish/marketing-api --no-restore
 
       - name: Upload Location API artifacts
         uses: actions/upload-artifact@v4
