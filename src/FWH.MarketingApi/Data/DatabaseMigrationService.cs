@@ -94,7 +94,7 @@ public class DatabaseMigrationService
 
             // Get migration files from Migrations directory
             var migrationsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Migrations");
-            
+
             if (!Directory.Exists(migrationsPath))
             {
                 _logger.LogWarning("Migrations directory not found at {Path}, skipping migrations", migrationsPath);
@@ -117,7 +117,7 @@ public class DatabaseMigrationService
             foreach (var migrationFile in migrationFiles)
             {
                 var migrationName = Path.GetFileNameWithoutExtension(migrationFile);
-                
+
                 if (await IsMigrationAppliedAsync(migrationName))
                 {
                     _logger.LogDebug("Migration {Name} already applied, skipping", migrationName);
