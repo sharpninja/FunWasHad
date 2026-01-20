@@ -105,15 +105,25 @@ jobs:
           echo "🏷️  Creating 'no-build' check run (no changes detected)"
 
           # Create a check run to tag this workflow run
-          # Use -F for JSON objects (parses JSON) instead of -f (treats as string)
+          # Use a JSON file to properly pass nested JSON objects
+          cat > /tmp/check-run.json << 'EOF'
+          {
+            "name": "no-build",
+            "head_sha": "${{ github.sha }}",
+            "status": "completed",
+            "conclusion": "success",
+            "output": {
+              "title": "No Build Required",
+              "summary": "No relevant files changed. Build steps were skipped.",
+              "text": "This workflow run was tagged as `no-build` because no changes were detected in Location API, Marketing API, or Mobile app files."
+            }
+          }
+          EOF
+
           CHECK_RUN_ID=$(gh api \
             -X POST \
             "/repos/${{ github.repository }}/check-runs" \
-            -f name="no-build" \
-            -f head_sha="${{ github.sha }}" \
-            -f status="completed" \
-            -f conclusion="success" \
-            -F output='{"title":"No Build Required","summary":"No relevant files changed. Build steps were skipped.","text":"This workflow run was tagged as `no-build` because no changes were detected in Location API, Marketing API, or Mobile app files."}' \
+            --input /tmp/check-run.json \
             --jq '.id')
 
           echo "✅ Created check run with ID: $CHECK_RUN_ID"
