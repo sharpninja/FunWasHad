@@ -96,7 +96,13 @@ catch
 if (-not $base64Lines)
 {
     Write-Host 'No workflow runs found.'
-    exit 0
+    # Continue to Docker cleanup if requested, even if no workflow runs
+    if (-not $CleanupDockerImages)
+    {
+        exit 0
+    }
+    Write-Host 'Proceeding to Docker image cleanup...'
+    Write-Host ""
 }
 
 # Decode base64 lines and convert to objects
@@ -117,10 +123,18 @@ foreach ($line in $base64Lines)
 
 # Filter failed runs
 $failedRuns = $runs | Where-Object { $_.conclusion -eq 'failure' }
-if (-not $failedRuns -or $failedRuns.Count -eq 0)
+$hasFailedRuns = $failedRuns -and $failedRuns.Count -gt 0
+
+if (-not $hasFailedRuns)
 {
     Write-Host 'No failed workflow runs to process.'
-    exit 0
+    # Continue to Docker cleanup if requested, even if no failed runs
+    if (-not $CleanupDockerImages)
+    {
+        exit 0
+    }
+    Write-Host 'Proceeding to Docker image cleanup...'
+    Write-Host ""
 }
 
 # Group by workflow_id and prepare deletion list (keep most recent per workflow)
@@ -148,7 +162,13 @@ foreach ($grp in $grouped)
 if (-not $toDelete -or $toDelete.Count -eq 0)
 {
     Write-Host "Nothing to delete — each workflow's most recent failed run is preserved."
-    exit 0
+    # Continue to Docker cleanup if requested, even if no runs to delete
+    if (-not $CleanupDockerImages)
+    {
+        exit 0
+    }
+    Write-Host 'Proceeding to Docker image cleanup...'
+    Write-Host ""
 }
 
 Write-Host "Found $($toDelete.Count) failed run(s) to delete (keeping the most recent failed run per workflow)."
@@ -168,8 +188,14 @@ if (-not $WhatIf)
         $ans = Read-Host "Proceed to delete these $($toDelete.Count) runs? Type 'yes' to confirm"
         if ($ans.Trim().ToLower() -ne 'yes')
         {
-            Write-Host 'Aborted by user.'
-            exit 0
+            Write-Host 'Workflow run deletion aborted by user.'
+            # Continue to Docker cleanup if requested, even if user aborted workflow cleanup
+            if (-not $CleanupDockerImages)
+            {
+                exit 0
+            }
+            Write-Host 'Proceeding to Docker image cleanup...'
+            Write-Host ""
         }
     }
 
