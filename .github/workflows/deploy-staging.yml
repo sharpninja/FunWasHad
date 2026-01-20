@@ -367,7 +367,7 @@ jobs:
 
       - name: Publish Android APK (Staging)
         timeout-minutes: 30
-        run: dotnet publish src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj --no-build --configuration Staging -f net9.0-android -p:AndroidPackageFormat=apk
+        run: dotnet publish src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj --no-restore --configuration Staging -f net9.0-android -p:AndroidPackageFormat=apk
 
       - name: Find APK file
         id: find_apk
