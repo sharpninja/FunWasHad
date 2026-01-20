@@ -118,7 +118,7 @@ jobs:
             -f head_sha="${{ github.sha }}" \
             -f status="completed" \
             -f conclusion="success" \
-            -f output='{"title":"No Build Required","summary":"No relevant files changed. Build steps were skipped.","text":"This workflow run was tagged as `no-build` because no changes were detected in Location API, Marketing API, or Mobile app files."}' \
+            --raw-field output='{"title":"No Build Required","summary":"No relevant files changed. Build steps were skipped.","text":"This workflow run was tagged as `no-build` because no changes were detected in Location API, Marketing API, or Mobile app files."}' \
             --jq '.id')
 
           echo "✅ Created check run with ID: $CHECK_RUN_ID"
