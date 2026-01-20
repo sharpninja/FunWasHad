@@ -1,12 +1,13 @@
 <#
 .SYNOPSIS
-  Delete failed and cancelled GitHub Actions workflow runs in a repository, keeping only the most recent failed run per workflow.
+  Delete failed, cancelled, and no-build tagged GitHub Actions workflow runs in a repository, keeping only the most recent failed run per workflow.
 
 .DESCRIPTION
   Uses the GitHub CLI (`gh`) to enumerate workflow runs for a repository, finds runs whose conclusion is "failure" or "cancelled",
-  and deletes them according to the following rules:
+  or runs tagged with "no-build" check run, and deletes them according to the following rules:
   - Failed runs: Keeps the most recent failed run per workflow (grouped by workflow_id), deletes all others.
   - Cancelled runs: Deletes ALL cancelled runs (none are kept).
+  - No-build runs: Deletes ALL runs tagged with "no-build" check run (none are kept).
   By default the script prompts before performing deletions. Use -Force to skip the prompt, or -WhatIf to simulate.
 
 .PARAMETER Repo
@@ -126,12 +127,38 @@ foreach ($line in $base64Lines)
 # Filter failed and cancelled runs separately
 $failedRuns = $runs | Where-Object { $_.conclusion -eq 'failure' }
 $cancelledRuns = $runs | Where-Object { $_.conclusion -eq 'cancelled' }
-$hasRunsToProcess = ($failedRuns -and $failedRuns.Count -gt 0) -or ($cancelledRuns -and $cancelledRuns.Count -gt 0)
+
+# Find runs tagged with "no-build" check run
+Write-Host 'Checking for runs tagged with "no-build"...' -ForegroundColor Cyan
+$noBuildRuns = @()
+foreach ($run in $runs)
+{
+    try
+    {
+        $checkRunsJson = gh api "repos/$repoFullName/actions/runs/$($run.id)/check-runs" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $checkRunsJson)
+        {
+            $checkRuns = $checkRunsJson | ConvertFrom-Json
+            $hasNoBuildTag = $checkRuns.check_runs | Where-Object { $_.name -eq 'no-build' }
+            if ($hasNoBuildTag)
+            {
+                $noBuildRuns += $run
+            }
+        }
+    }
+    catch
+    {
+        # Silently skip if we can't check check runs (e.g., insufficient permissions or API error)
+        # This is not critical - we'll just miss some no-build runs
+    }
+}
+
+$hasRunsToProcess = ($failedRuns -and $failedRuns.Count -gt 0) -or ($cancelledRuns -and $cancelledRuns.Count -gt 0) -or ($noBuildRuns -and $noBuildRuns.Count -gt 0)
 
 if (-not $hasRunsToProcess)
 {
-    Write-Host 'No failed or cancelled workflow runs to process.'
-    # Continue to Docker cleanup if requested, even if no failed/cancelled runs
+    Write-Host 'No failed, cancelled, or no-build tagged workflow runs to process.'
+    # Continue to Docker cleanup if requested, even if no runs to process
     if (-not $CleanupDockerImages)
     {
         exit 0
@@ -182,13 +209,34 @@ if ($cancelledRuns -and $cancelledRuns.Count -gt 0)
             conclusion  = $r.conclusion
             created_at  = $r.created_at
             url         = $r.html_url
+            tag         = 'cancelled'
+        }
+    }
+}
+
+# For no-build runs: delete ALL of them (don't keep any)
+if ($noBuildRuns -and $noBuildRuns.Count -gt 0)
+{
+    Write-Host "Found $($noBuildRuns.Count) run(s) tagged with 'no-build'" -ForegroundColor Cyan
+    foreach ($r in $noBuildRuns)
+    {
+        $toDelete += [PSCustomObject]@{
+            id          = $r.id
+            workflow_id = $r.workflow_id
+            name        = $r.name
+            head_branch = $r.head_branch
+            event       = $r.event
+            conclusion  = $r.conclusion
+            created_at  = $r.created_at
+            url         = $r.html_url
+            tag         = 'no-build'
         }
     }
 }
 
 if (-not $toDelete -or $toDelete.Count -eq 0)
 {
-    Write-Host "Nothing to delete — most recent failed run per workflow is preserved, and no cancelled runs found."
+    Write-Host "Nothing to delete — most recent failed run per workflow is preserved, and no cancelled or no-build runs found."
     # Continue to Docker cleanup if requested, even if no runs to delete
     if (-not $CleanupDockerImages)
     {
@@ -198,9 +246,10 @@ if (-not $toDelete -or $toDelete.Count -eq 0)
     Write-Host ""
 }
 
-# Count by conclusion type for reporting
+# Count by type for reporting
 $failedCount = ($toDelete | Where-Object { $_.conclusion -eq 'failure' }).Count
-$cancelledCount = ($toDelete | Where-Object { $_.conclusion -eq 'cancelled' }).Count
+$cancelledCount = ($toDelete | Where-Object { $_.tag -eq 'cancelled' }).Count
+$noBuildCount = ($toDelete | Where-Object { $_.tag -eq 'no-build' }).Count
 
 Write-Host "Found $($toDelete.Count) run(s) to delete:"
 if ($failedCount -gt 0) {
@@ -209,12 +258,29 @@ if ($failedCount -gt 0) {
 if ($cancelledCount -gt 0) {
     Write-Host "  - Cancelled runs: $cancelledCount (deleting ALL cancelled runs)" -ForegroundColor Yellow
 }
+if ($noBuildCount -gt 0) {
+    Write-Host "  - No-build runs: $noBuildCount (deleting ALL no-build tagged runs)" -ForegroundColor Cyan
+}
 Write-Host ''
 
 foreach ($item in $toDelete)
 {
-    $conclusionColor = if ($item.conclusion -eq 'failure') { 'Red' } else { 'Yellow' }
-    Write-Host ('Run ID: {0}  Workflow: {1}  Name: {2}  Branch: {3}  Status: {4}  Created: {5}' -f $item.id, $item.workflow_id, $item.name, $item.head_branch, $item.conclusion, $item.created_at) -ForegroundColor $conclusionColor
+    if ($item.tag -eq 'no-build')
+    {
+        $conclusionColor = 'Cyan'
+        $status = 'no-build'
+    }
+    elseif ($item.conclusion -eq 'failure')
+    {
+        $conclusionColor = 'Red'
+        $status = 'failure'
+    }
+    else
+    {
+        $conclusionColor = 'Yellow'
+        $status = 'cancelled'
+    }
+    Write-Host ('Run ID: {0}  Workflow: {1}  Name: {2}  Branch: {3}  Status: {4}  Created: {5}' -f $item.id, $item.workflow_id, $item.name, $item.head_branch, $status, $item.created_at) -ForegroundColor $conclusionColor
     Write-Host "  URL: $($item.url)"
     Write-Host ''
 }
