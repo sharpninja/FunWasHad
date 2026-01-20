@@ -180,11 +180,15 @@ jobs:
   deploy_railway_staging:
     name: Deploy to Railway Staging
     runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
     needs: [docker_location_api_staging, docker_marketing_api_staging]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging')
     environment:
       name: staging
       url: https://staging.up.railway.app
+    env:
+      SVC_ID: staging-location-api
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -214,20 +218,15 @@ jobs:
           echo "💡 Dashboard: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
 
       - name: Deploy Location API to Railway
-        uses: bervProject/railway-deploy@main
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        with:
-          service: staging-location-api
-          detach: true
+        run: railway up --service=${{ env.SVC_ID }}
 
-      - name: Deploy Marketing API to Railway
+      # - name: Deploy Marketing API to Railway
         uses: bervProject/railway-deploy@main
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         with:
           service: staging-marketing-api
-          detach: true
+          detach: false
 
       - name: Wait for deployments
         run: sleep 60
@@ -239,12 +238,12 @@ jobs:
           echo "⚠️  Health check skipped - use Railway dashboard to verify deployment status"
         continue-on-error: true
 
-      - name: Health check Marketing API
-        run: |
-          echo "🏥 Checking Marketing API health..."
-          echo "💡 Check Railway dashboard for the service URL: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
-          echo "⚠️  Health check skipped - use Railway dashboard to verify deployment status"
-        continue-on-error: true
+      # - name: Health check Marketing API
+      #   run: |
+      #     echo "🏥 Checking Marketing API health..."
+      #     echo "💡 Check Railway dashboard for the service URL: https://railway.com/project/${{ secrets.RAILWAY_STAGING_PROJECT_ID }}"
+      #     echo "⚠️  Health check skipped - use Railway dashboard to verify deployment status"
+      #   continue-on-error: true
 
   notify_deployment:
     name: Notify Deployment Status
