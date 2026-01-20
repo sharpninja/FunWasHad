@@ -14,6 +14,12 @@ on:
       - main
       - release/**
 
+# Cancel in-progress runs when a new workflow is triggered on the same branch
+# This ensures only the latest run executes, preventing resource conflicts
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   STEP_TIMEOUT_MINUTES: 60
   DOTNET_VERSION: '9.0.x'
