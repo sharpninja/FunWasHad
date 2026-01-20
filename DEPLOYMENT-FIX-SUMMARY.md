@@ -139,7 +139,7 @@ The `railway redeploy` command triggers Railway to pull the latest Docker image 
 ## 📚 Related Documentation
 
 - **Railway Setup Guide:** `docs/deployment/railway-staging-setup.md`
-- **Workflow File:** `.github/workflows/deploy-staging.yml`
+- **Workflow File:** `.github/workflows/staging.yml`
 - **Railway Dashboard:** https://railway.com/project/{PROJECT_ID}
 
 ## ✅ Verification Checklist
@@ -165,5 +165,5 @@ Before the workflow can succeed, ensure:
 ---
 
 **Fixed Date:** 2025-01-19
-**Workflow File:** `.github/workflows/deploy-staging.yml`
+**Workflow File:** `.github/workflows/staging.yml`
 **Status:** ✅ Ready for testing

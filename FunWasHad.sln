@@ -53,7 +53,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Location.Api", "src\FWH
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Actions", "Actions", "{558EBDB4-8E40-4FBD-9ECA-6CB3BB381FCA}"
 	ProjectSection(SolutionItems) = preProject
-		.github\workflows\ci.yml = .github\workflows\ci.yml
+		.github\workflows\main.yml = .github\workflows\main.yml
+		.github\workflows\staging.yml = .github\workflows\staging.yml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.AppHost", "src\FWH.AppHost\FWH.AppHost.csproj", "{16307AAA-351D-4FBC-9353-E9D6573CAADA}"

@@ -76,7 +76,7 @@ Expected: `{"status":"Healthy"}`
 
 - **Complete Setup Guide:** [docs/deployment/railway-staging-setup.md](docs/deployment/railway-staging-setup.md)
 - **Staging Environment Overview:** [docs/deployment/staging-environment-guide.md](docs/deployment/staging-environment-guide.md)
-- **GitHub Actions Workflow:** [.github/workflows/deploy-staging.yml](.github/workflows/deploy-staging.yml)
+- **GitHub Actions Workflow:** [.github/workflows/staging.yml](.github/workflows/staging.yml)
 
 ---
 

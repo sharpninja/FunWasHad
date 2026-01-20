@@ -18,7 +18,7 @@
 
 ### 1. YAML Syntax Errors (Fixed)
 **Problem:** GitHub Actions workflow had indentation issues  
-**Solution:** Corrected all YAML indentation in `.github/workflows/deploy-staging.yml`  
+**Solution:** Corrected all YAML indentation in `.github/workflows/staging.yml`  
 **Commits:** `61faacc`, `17d2b86`, `213e59d`
 
 ### 2. SDK Version Mismatch (Fixed)
@@ -195,7 +195,7 @@ The latest build (`8ae81df`) should:
 ## 📚 Files Modified in This Session
 
 ### Configuration Files
-- ✅ `.github/workflows/deploy-staging.yml` - Staging workflow
+- ✅ `.github/workflows/staging.yml` - Staging workflow
 - ✅ `global.json` - Added SDK rollForward
 - ✅ `NuGet.config` - Added with extended timeouts
 - ✅ `Directory.Packages.props` - Aligned package versions

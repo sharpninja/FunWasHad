@@ -451,7 +451,7 @@ Logging__LogLevel__Microsoft.EntityFrameworkCore=Information
 - **Railway Environment Variables:** https://docs.railway.app/develop/variables
 - **Railway CLI Reference:** https://docs.railway.app/develop/cli
 - **Your Staging Project:** https://railway.com/project/9dce0bf4-23a8-4e8b-bdda-7ce048c0c73d
-- **GitHub Actions Workflow:** [.github/workflows/deploy-staging.yml](../../.github/workflows/deploy-staging.yml)
+- **GitHub Actions Workflow:** [.github/workflows/staging.yml](../../.github/workflows/staging.yml)
 - **Staging Configuration Guide:** [staging-environment-guide.md](./staging-environment-guide.md)
 
 ---

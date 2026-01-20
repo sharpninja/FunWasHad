@@ -124,16 +124,27 @@ docker-compose down
 
 ### CI/CD Pipeline
 
-The GitHub Actions workflow automatically:
-- Builds and tests the solution
+The project uses two main GitHub Actions workflows:
+
+**Main Actions** (`.github/workflows/main.yml`):
+- Triggers on pushes to `main`, `release/**` branches, and version tags (`v*.*.*`)
+- Builds and tests with `Release` configuration
 - Creates Docker images for both APIs
 - Pushes images to GitHub Container Registry
 - Supports multi-platform builds (AMD64/ARM64)
+- Creates Android releases for version tags
 
-Images are tagged with:
+**Staging Actions** (`.github/workflows/staging.yml`):
+- Triggers on pushes to `develop` and `staging` branches
+- Builds and tests with `Staging` configuration
+- Creates Docker images and deploys to Railway staging environment
+- Creates Android release candidates for testing
+
+**Image Tagging:**
 - `latest` - Latest main branch build
 - `v1.0.0` - Semantic version tags
 - `main-abc1234` - Git SHA for traceability
+- `staging-rc-*` - Staging release candidates
 
 ## 📚 Documentation
 
