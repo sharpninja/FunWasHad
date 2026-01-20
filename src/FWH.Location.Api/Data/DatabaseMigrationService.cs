@@ -83,9 +83,30 @@ public class DatabaseMigrationService
     /// </summary>
     private async Task EnsureDatabaseExistsAsync(CancellationToken cancellationToken)
     {
-        var builder = new NpgsqlConnectionStringBuilder(_connectionString);
+        // Handle PostgreSQL URI format (e.g., postgresql://user:pass@host:port/db)
+        var connectionString = _connectionString;
+        if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+        {
+            // Npgsql can handle URI format, but let's ensure it's properly formatted
+            try
+            {
+                var builder = new NpgsqlConnectionStringBuilder(connectionString);
+                connectionString = builder.ToString();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse connection string URI format. Connection string starts with: {Prefix}",
+                    connectionString.Substring(0, Math.Min(20, connectionString.Length)));
+                throw new ArgumentException(
+                    "Connection string is in URI format but cannot be parsed. " +
+                    "Ensure Railway DATABASE_URL is properly formatted.", ex);
+            }
+        }
+
+        var builder = new NpgsqlConnectionStringBuilder(connectionString);
         var databaseName = builder.Database;
-        
+
         // Connect to postgres database to check if target database exists
         builder.Database = "postgres";
         var adminConnectionString = builder.ToString();

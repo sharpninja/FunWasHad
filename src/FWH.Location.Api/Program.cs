@@ -3,6 +3,7 @@ using FWH.Common.Location.Configuration;
 using FWH.Common.Location.Extensions;
 using FWH.Location.Api.Data;
 using FWH.Common.Chat.Services;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -143,7 +144,31 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
                 "Example: ConnectionStrings__funwashad=${{Postgres.DATABASE_URL}}");
         }
 
-        logger.LogInformation("Connection string found (length: {Length} characters)", connectionString.Length);
+        // Log connection string format (without sensitive data)
+        var connectionStringPreview = connectionString.Length > 50
+            ? connectionString.Substring(0, 50) + "..."
+            : connectionString;
+        logger.LogInformation("Connection string found (length: {Length} characters, format: {Format})",
+            connectionString.Length,
+            connectionString.StartsWith("postgresql://") || connectionString.StartsWith("postgres://")
+                ? "URI"
+                : "Connection String");
+
+        // Validate connection string can be parsed
+        try
+        {
+            var testBuilder = new NpgsqlConnectionStringBuilder(connectionString);
+            logger.LogDebug("Connection string parsed successfully. Database: {Database}, Host: {Host}",
+                testBuilder.Database, testBuilder.Host);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Connection string format is invalid. Preview: {Preview}", connectionStringPreview);
+            throw new InvalidOperationException(
+                $"Connection string format is invalid: {ex.Message}. " +
+                "Railway DATABASE_URL should be in PostgreSQL URI format (postgresql://...) or standard connection string format.",
+                ex);
+        }
 
         // Create and run migration service
         var migrationLogger = scope.ServiceProvider.GetRequiredService<ILogger<DatabaseMigrationService>>();
