@@ -271,7 +271,7 @@ jobs:
 
       - name: Deploy Marketing API to Railway
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           echo "🚀 Deploying Marketing API..."
           echo "📦 Image: ${{ steps.image_tags.outputs.marketing_image }}"
