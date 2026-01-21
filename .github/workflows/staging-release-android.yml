@@ -13,11 +13,11 @@ on:
       location_api_url:
         required: false
         type: string
-        default: 'https://staging-location-api-production.up.railway.app:8080'
+        default: 'https://staging-location-api-production.up.railway.app'
       marketing_api_url:
         required: false
         type: string
-        default: 'https://staging-marketing-api-production.up.railway.app:8080'
+        default: 'https://staging-marketing-api-production.up.railway.app'
 
 jobs:
   release_android:
