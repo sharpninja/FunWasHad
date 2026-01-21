@@ -5,6 +5,7 @@ using AndroidX.Core.Content;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,13 +39,13 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
             {
                 var context = global::Android.App.Application.Context;
                 var permission = ContextCompat.CheckSelfPermission(context, global::Android.Manifest.Permission.AccessFineLocation);
-                
+
                 if (permission != Permission.Granted)
                     return false;
 
                 var isGpsEnabled = _locationManager.IsProviderEnabled(LocationManager.GpsProvider);
                 var isNetworkEnabled = _locationManager.IsProviderEnabled(LocationManager.NetworkProvider);
-                
+
                 return isGpsEnabled || isNetworkEnabled;
             }
             catch
@@ -57,7 +58,7 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
     public async Task<bool> RequestLocationPermissionAsync()
     {
         var context = global::Android.App.Application.Context;
-        
+
         // Check if permission is already granted
         var permission = ContextCompat.CheckSelfPermission(context, global::Android.Manifest.Permission.AccessFineLocation);
         if (permission == Permission.Granted)
@@ -71,30 +72,81 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
 
     public async Task<GpsCoordinates?> GetCurrentLocationAsync(CancellationToken cancellationToken = default)
     {
-        if (_locationManager == null || !IsLocationAvailable)
-            return null;
+        var context = global::Android.App.Application.Context;
+        var diagnostics = new Dictionary<string, object?>();
 
         try
         {
-            var context = global::Android.App.Application.Context;
+            // Collect diagnostic information
+            diagnostics["LocationManagerAvailable"] = _locationManager != null;
+            diagnostics["IsLocationAvailable"] = IsLocationAvailable;
+
+            if (_locationManager == null)
+            {
+                diagnostics["Error"] = "LocationManager is null - system service unavailable";
+                throw new LocationServicesException(
+                    "Android",
+                    "GetCurrentLocationAsync",
+                    "LocationManager system service is not available",
+                    diagnostics);
+            }
+
             var permission = ContextCompat.CheckSelfPermission(context, global::Android.Manifest.Permission.AccessFineLocation);
-            
+            diagnostics["PermissionStatus"] = permission.ToString();
+            diagnostics["PermissionGranted"] = permission == Permission.Granted;
+
             if (permission != Permission.Granted)
-                return null;
+            {
+                diagnostics["Error"] = "Location permission not granted";
+                throw new LocationServicesException(
+                    "Android",
+                    "GetCurrentLocationAsync",
+                    "Location permission is not granted",
+                    diagnostics);
+            }
+
+            // Check provider availability
+            var isGpsEnabled = _locationManager.IsProviderEnabled(LocationManager.GpsProvider);
+            var isNetworkEnabled = _locationManager.IsProviderEnabled(LocationManager.NetworkProvider);
+            var isPassiveEnabled = _locationManager.IsProviderEnabled(LocationManager.PassiveProvider);
+
+            diagnostics["GpsProviderEnabled"] = isGpsEnabled;
+            diagnostics["NetworkProviderEnabled"] = isNetworkEnabled;
+            diagnostics["PassiveProviderEnabled"] = isPassiveEnabled;
+
+            if (!isGpsEnabled && !isNetworkEnabled)
+            {
+                diagnostics["Error"] = "No location providers are enabled";
+                throw new LocationServicesException(
+                    "Android",
+                    "GetCurrentLocationAsync",
+                    "No location providers (GPS or Network) are enabled on the device",
+                    diagnostics);
+            }
 
             _locationTcs = new TaskCompletionSource<GpsCoordinates?>();
 
             // Try to get last known location first (faster)
             var lastKnownLocation = GetLastKnownLocation();
+            diagnostics["LastKnownLocationAvailable"] = lastKnownLocation != null;
+            if (lastKnownLocation != null)
+            {
+                diagnostics["LastKnownLocationAge"] = (DateTimeOffset.UtcNow - lastKnownLocation.Timestamp).TotalMinutes;
+                diagnostics["LastKnownLocationRecent"] = IsLocationRecent(lastKnownLocation);
+            }
+
             if (lastKnownLocation != null && IsLocationRecent(lastKnownLocation))
             {
                 return lastKnownLocation;
             }
 
             // Request location updates
-            var provider = _locationManager.IsProviderEnabled(LocationManager.GpsProvider)
+            var provider = isGpsEnabled
                 ? LocationManager.GpsProvider
                 : LocationManager.NetworkProvider;
+
+            diagnostics["SelectedProvider"] = provider;
+            diagnostics["TimeoutSeconds"] = LocationTimeoutSeconds;
 
             _locationManager.RequestLocationUpdates(
                 provider,
@@ -108,7 +160,12 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
 
             linkedCts.Token.Register(() =>
             {
-                _locationTcs?.TrySetResult(lastKnownLocation);
+                if (!_locationTcs.Task.IsCompleted)
+                {
+                    diagnostics["TimedOut"] = true;
+                    diagnostics["FallbackToLastKnown"] = lastKnownLocation != null;
+                    _locationTcs?.TrySetResult(lastKnownLocation);
+                }
             });
 
             var result = await _locationTcs.Task;
@@ -118,14 +175,39 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
             {
                 _locationManager.RemoveUpdates(this);
             }
-            catch { }
+            catch (Exception cleanupEx)
+            {
+                diagnostics["CleanupError"] = cleanupEx.Message;
+            }
+
+            if (result == null)
+            {
+                diagnostics["Error"] = "Location request completed but returned null";
+                throw new LocationServicesException(
+                    "Android",
+                    "GetCurrentLocationAsync",
+                    "Location request completed but no location was obtained",
+                    diagnostics);
+            }
 
             return result;
         }
+        catch (LocationServicesException)
+        {
+            throw; // Re-throw our custom exception as-is
+        }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error getting GPS location: {ex}");
-            return null;
+            diagnostics["ExceptionType"] = ex.GetType().Name;
+            diagnostics["ExceptionMessage"] = ex.Message;
+            diagnostics["StackTrace"] = ex.StackTrace;
+
+            throw new LocationServicesException(
+                "Android",
+                "GetCurrentLocationAsync",
+                $"Unexpected error getting GPS location: {ex.Message}",
+                diagnostics,
+                ex);
         }
     }
 

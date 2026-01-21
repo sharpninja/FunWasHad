@@ -109,41 +109,60 @@ public class LocationTrackingService : ILocationTrackingService
             var hasPermission = await _gpsService.RequestLocationPermissionAsync();
             if (!hasPermission)
             {
-                _logger.LogError("Location permission denied");
-                throw new InvalidOperationException("Location permission is required for tracking");
+                _logger.LogWarning("Location permission not yet granted, tracking will start when permission is available");
+                // Don't throw - allow tracking to start and it will work once permission is granted
+                // The tracking loop will handle the case where location is not available
             }
         }
 
         _logger.LogDebug("Starting location tracking with {Distance}m threshold and {Speed} mph walking/riding threshold",
             MinimumDistanceMeters, WalkingRidingSpeedThresholdMph);
 
-        // Initialize with current location immediately
-        try
-        {
-            var initialLocation = await _gpsService.GetCurrentLocationAsync(cancellationToken);
-            if (initialLocation != null && initialLocation.IsValid())
-            {
-                _lastKnownLocation = initialLocation;
-                _lastReportedLocation = initialLocation;
-                _lastLocationTime = initialLocation.Timestamp;
-                _logger.LogInformation("Location tracking initialized with current location: {Latitude:F6}, {Longitude:F6}",
-                    initialLocation.Latitude, initialLocation.Longitude);
-
-                // Trigger location updated event for initial location
-                LocationUpdated?.Invoke(this, initialLocation);
-            }
-            else
-            {
-                _logger.LogWarning("Could not get initial location, will start tracking loop");
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to get initial location, will start tracking loop");
-        }
-
         _trackingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _trackingTask = TrackLocationLoopAsync(_trackingCts.Token);
+
+        // Initialize with current location asynchronously (non-blocking)
+        // Don't await this to prevent blocking UI thread during app startup
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                // Use a shorter timeout for initial location to avoid ANR
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                var initialLocation = await _gpsService.GetCurrentLocationAsync(timeoutCts.Token).ConfigureAwait(false);
+
+                if (initialLocation != null && initialLocation.IsValid())
+                {
+                    _lastKnownLocation = initialLocation;
+                    _lastReportedLocation = initialLocation;
+                    _lastLocationTime = initialLocation.Timestamp;
+                    _logger.LogInformation("Location tracking initialized with current location: {Latitude:F6}, {Longitude:F6}",
+                        initialLocation.Latitude, initialLocation.Longitude);
+
+                    // Trigger location updated event for initial location
+                    LocationUpdated?.Invoke(this, initialLocation);
+                }
+                else
+                {
+                    _logger.LogDebug("Could not get initial location, tracking loop will obtain it");
+                }
+            }
+            catch (LocationServicesException ex)
+            {
+                _logger.LogWarning(ex,
+                    "Location service error during initialization. Platform: {Platform}, Operation: {Operation}. Tracking loop will retry.",
+                    ex.Platform,
+                    ex.Operation);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogDebug("Initial location request timed out, tracking loop will obtain location");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Initial location request completed, tracking loop will obtain location");
+            }
+        }, cancellationToken);
     }
 
     public async Task StopTrackingAsync()
@@ -255,6 +274,26 @@ public class LocationTrackingService : ILocationTrackingService
             {
                 // Normal cancellation
                 throw;
+            }
+            catch (LocationServicesException ex)
+            {
+                // Log detailed location service exception with all diagnostics
+                _logger.LogError(ex,
+                    "Location service error in tracking loop. Platform: {Platform}, Operation: {Operation}, Diagnostics: {Diagnostics}",
+                    ex.Platform,
+                    ex.Operation,
+                    string.Join(", ", ex.Diagnostics.Select(kvp => $"{kvp.Key}={kvp.Value}")));
+                LocationUpdateFailed?.Invoke(this, ex);
+
+                // Wait before retrying
+                try
+                {
+                    await Task.Delay(PollingInterval, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
             }
             catch (Exception ex)
             {

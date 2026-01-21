@@ -6,7 +6,6 @@ using FWH.Mobile.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
 using Xunit;
 
 namespace FWH.Mobile.Tests;
@@ -14,7 +13,7 @@ namespace FWH.Mobile.Tests;
 /// <summary>
 /// Integration tests for LocationApiClient.
 /// These tests verify that the mobile app can successfully call the Location Web API.
-/// 
+///
 /// Prerequisites:
 /// - Location API must be running (e.g., dotnet run --project FWH.Location.Api)
 /// - Default URL: https://localhost:5001/
@@ -31,7 +30,7 @@ public class LocationApiClientIntegrationTests
         _logger = NullLogger<LocationApiClient>.Instance;
 
         // Get API URL from environment or use default
-        _apiBaseUrl = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL") 
+        _apiBaseUrl = Environment.GetEnvironmentVariable("LOCATION_API_BASE_URL")
                       ?? "https://localhost:5001/";
     }
 
@@ -71,13 +70,13 @@ public class LocationApiClientIntegrationTests
         });
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => 
+        Assert.Throws<InvalidOperationException>(() =>
             new LocationApiClient(httpClient, options, _logger));
     }
 
     /// <summary>
     /// Integration test: Verify GetNearbyBusinessesAsync calls the API.
-    /// 
+    ///
     /// This test is marked as [Fact(Skip = ...)] by default because it requires
     /// the Location API to be running. To run this test:
     /// 1. Start the Location API: dotnet run --project FWH.Location.Api
@@ -103,8 +102,8 @@ public class LocationApiClientIntegrationTests
 
         // Act
         var results = await client.GetNearbyBusinessesAsync(
-            latitude, 
-            longitude, 
+            latitude,
+            longitude,
             radiusMeters);
 
         // Assert
@@ -115,7 +114,7 @@ public class LocationApiClientIntegrationTests
 
     /// <summary>
     /// Integration test: Verify GetClosestBusinessAsync calls the API.
-    /// 
+    ///
     /// This test is marked as [Fact(Skip = ...)] by default because it requires
     /// the Location API to be running. To run this test:
     /// 1. Start the Location API: dotnet run --project FWH.Location.Api
@@ -141,8 +140,8 @@ public class LocationApiClientIntegrationTests
 
         // Act
         var result = await client.GetClosestBusinessAsync(
-            latitude, 
-            longitude, 
+            latitude,
+            longitude,
             maxDistanceMeters);
 
         // Assert
@@ -173,8 +172,8 @@ public class LocationApiClientIntegrationTests
 
         // Act
         var results = await client.GetNearbyBusinessesAsync(
-            latitude, 
-            longitude, 
+            latitude,
+            longitude,
             radiusMeters);
 
         // Assert
@@ -191,11 +190,11 @@ public class LocationApiClientIntegrationTests
     {
         // For development with self-signed certificates
         var handler = new HttpClientHandler();
-        
+
         // Only bypass SSL validation in development
         if (_apiBaseUrl.Contains("localhost"))
         {
-            handler.ServerCertificateCustomValidationCallback = 
+            handler.ServerCertificateCustomValidationCallback =
                 HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
         }
 

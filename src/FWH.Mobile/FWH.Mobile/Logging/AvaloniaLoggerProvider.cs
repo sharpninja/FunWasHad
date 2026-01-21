@@ -1,5 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
+using System.Linq;
+using System.Text;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 
@@ -68,10 +71,11 @@ public sealed class AvaloniaLoggerProvider : ILoggerProvider, ISupportExternalSc
                     if (scope is null)
                         return;
 
+                    var scopeString = FormatScope(scope);
                     if (message.Length == 0)
-                        message = scope.ToString() ?? string.Empty;
+                        message = scopeString;
                     else
-                        message = $"{message} | {scope}";
+                        message = $"{message} | {scopeString}";
                 }, state: (object?)null);
             }
 
@@ -84,6 +88,63 @@ public sealed class AvaloniaLoggerProvider : ILoggerProvider, ISupportExternalSc
                 EventId: eventId,
                 Message: message,
                 Exception: exception));
+        }
+
+        private static string FormatScope(object scope)
+        {
+            // Handle dictionaries and key-value pair collections
+            if (scope is IEnumerable<KeyValuePair<string, object?>> kvpEnum)
+            {
+                var parts = kvpEnum
+                    .Where(kvp => kvp.Key != null)
+                    .Select(kvp => $"{kvp.Key}={FormatValue(kvp.Value)}")
+                    .ToList();
+                return parts.Count > 0 ? string.Join(", ", parts) : scope.ToString() ?? string.Empty;
+            }
+
+            // Handle IDictionary<string, object?>
+            if (scope is IDictionary<string, object?> dict)
+            {
+                var parts = dict
+                    .Where(kvp => kvp.Key != null)
+                    .Select(kvp => $"{kvp.Key}={FormatValue(kvp.Value)}")
+                    .ToList();
+                return parts.Count > 0 ? string.Join(", ", parts) : scope.ToString() ?? string.Empty;
+            }
+
+            // Handle IDictionary (non-generic)
+            if (scope is IDictionary dictNonGeneric)
+            {
+                var parts = new List<string>();
+                foreach (DictionaryEntry entry in dictNonGeneric)
+                {
+                    if (entry.Key != null)
+                    {
+                        parts.Add($"{entry.Key}={FormatValue(entry.Value)}");
+                    }
+                }
+                return parts.Count > 0 ? string.Join(", ", parts) : scope.ToString() ?? string.Empty;
+            }
+
+            // Default to ToString() for other types
+            return scope.ToString() ?? string.Empty;
+        }
+
+        private static string FormatValue(object? value)
+        {
+            if (value == null)
+                return "null";
+
+            // Handle collections
+            if (value is IEnumerable enumerable && value is not string)
+            {
+                var items = enumerable.Cast<object?>().Select(FormatValue).ToList();
+                return $"[{string.Join(", ", items)}]";
+            }
+
+            // Handle complex objects - use ToString() but limit length
+            var str = value.ToString() ?? "null";
+            return str.Length > 100 ? str.Substring(0, 100) + "..." : str;
         }
 
         private sealed class NullScope : IDisposable

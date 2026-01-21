@@ -15,12 +15,14 @@ public sealed class LogViewerViewModel : INotifyPropertyChanged
     private readonly AvaloniaLogStore _store;
     private LogLevel _selectedLogLevel = LogLevel.Trace;
     private readonly ObservableCollection<AvaloniaLogEntry> _filteredEntries = new();
+    private bool _isPaused;
 
     public LogViewerViewModel(AvaloniaLogStore store)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         ClearCommand = new RelayCommand(_store.Clear);
         ScrollToEndCommand = new RelayCommand(() => ScrollToEndRequested?.Invoke());
+        TogglePauseCommand = new RelayCommand(TogglePause);
 
         // Initialize filtered entries and subscribe to changes
         UpdateFilteredEntries(scrollToEnd: false);
@@ -34,6 +36,27 @@ public sealed class LogViewerViewModel : INotifyPropertyChanged
     public ICommand ClearCommand { get; }
 
     public ICommand ScrollToEndCommand { get; }
+
+    public ICommand TogglePauseCommand { get; }
+
+    public bool IsPaused
+    {
+        get => _isPaused;
+        private set
+        {
+            if (_isPaused != value)
+            {
+                _isPaused = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PauseButtonText));
+                OnPropertyChanged(nameof(PauseButtonToolTip));
+            }
+        }
+    }
+
+    public string PauseButtonText => _isPaused ? "▶" : "⏸";
+
+    public string PauseButtonToolTip => _isPaused ? "Resume logging" : "Pause logging";
 
     public event Action? ScrollToEndRequested;
 
@@ -63,6 +86,12 @@ public sealed class LogViewerViewModel : INotifyPropertyChanged
 
     private void OnEntriesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        // If paused, don't process new entries
+        if (_isPaused && e.Action == NotifyCollectionChangedAction.Add)
+        {
+            return;
+        }
+
         if (e.Action == NotifyCollectionChangedAction.Add && e.NewItems != null)
         {
             // Only add new entries that match the filter
@@ -85,6 +114,17 @@ public sealed class LogViewerViewModel : INotifyPropertyChanged
         {
             // Rebuild filtered list for any other collection change (Reset, Remove, Replace, Move)
             UpdateFilteredEntries(scrollToEnd: false);
+        }
+    }
+
+    private void TogglePause()
+    {
+        IsPaused = !IsPaused;
+
+        // If resuming, update filtered entries to catch up on any missed entries
+        if (!IsPaused)
+        {
+            UpdateFilteredEntries(scrollToEnd: true);
         }
     }
 

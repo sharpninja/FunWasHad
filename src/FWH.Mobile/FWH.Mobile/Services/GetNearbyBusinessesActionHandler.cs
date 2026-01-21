@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FWH.Common.Location;
+using FWH.Common.Location.Models;
 using FWH.Common.Workflow.Actions;
 using Microsoft.Extensions.Logging;
 
@@ -86,7 +87,39 @@ public class GetNearbyBusinessesActionHandler : IWorkflowActionHandler
             _notificationService.ShowInfo("Getting your current location...", "Please Wait");
             _logger.LogInformation("Requesting current GPS coordinates");
 
-            var coordinates = await _gpsService.GetCurrentLocationAsync(cancellationToken);
+            GpsCoordinates? coordinates = null;
+            try
+            {
+                coordinates = await _gpsService.GetCurrentLocationAsync(cancellationToken);
+            }
+            catch (LocationServicesException ex)
+            {
+                _logger.LogError(ex,
+                    "Location service error. Platform: {Platform}, Operation: {Operation}, Diagnostics: {Diagnostics}",
+                    ex.Platform,
+                    ex.Operation,
+                    string.Join(", ", ex.Diagnostics.Select(kvp => $"{kvp.Key}={kvp.Value}")));
+
+                var errorMessage = $"Location service error: {ex.Message}";
+                if (ex.Diagnostics.Count > 0)
+                {
+                    var diagInfo = string.Join(", ", ex.Diagnostics
+                        .Where(kvp => kvp.Key != "StackTrace")
+                        .Select(kvp => $"{kvp.Key}={kvp.Value}"));
+                    errorMessage += $"\nDetails: {diagInfo}";
+                }
+
+                _notificationService.ShowError(errorMessage, "Location Service Error");
+
+                return new Dictionary<string, string>
+                {
+                    ["status"] = "error",
+                    ["error"] = ex.Message,
+                    ["platform"] = ex.Platform,
+                    ["operation"] = ex.Operation,
+                    ["diagnostics"] = string.Join("; ", ex.Diagnostics.Select(kvp => $"{kvp.Key}={kvp.Value}"))
+                };
+            }
 
             if (coordinates == null || !coordinates.IsValid())
             {
@@ -174,6 +207,26 @@ public class GetNearbyBusinessesActionHandler : IWorkflowActionHandler
             {
                 ["status"] = "cancelled",
                 ["error"] = "Operation cancelled"
+            };
+        }
+        catch (LocationServicesException ex)
+        {
+            // This should already be handled above, but catch here as a safety net
+            _logger.LogError(ex,
+                "Location service error in action handler. Platform: {Platform}, Operation: {Operation}",
+                ex.Platform,
+                ex.Operation);
+
+            _notificationService.ShowError(
+                $"Location service error: {ex.Message}",
+                "Location Service Error");
+
+            return new Dictionary<string, string>
+            {
+                ["status"] = "error",
+                ["error"] = ex.Message,
+                ["platform"] = ex.Platform,
+                ["operation"] = ex.Operation
             };
         }
         catch (Exception ex)

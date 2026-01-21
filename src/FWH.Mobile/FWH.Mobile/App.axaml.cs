@@ -10,6 +10,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -407,18 +408,13 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
-    public override async void OnFrameworkInitializationCompleted()
+    public override void OnFrameworkInitializationCompleted()
     {
-        // Initialize database asynchronously before setting up the UI
-        await EnsureDatabaseInitializedAsync();
-
+        // Create UI immediately to prevent ANR - don't await anything before showing UI
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
             DisableAvaloniaDataAnnotationValidation();
-
-            // Initialize workflow from workflow.puml
-            await InitializeWorkflowAsync();
 
             var chatViewModel = ServiceProvider.GetRequiredService<ChatViewModel>();
             var logViewerViewModel = ServiceProvider.GetRequiredService<LogViewerViewModel>();
@@ -435,15 +431,35 @@ public partial class App : Application
             desktop.MainWindow = mainWindow;
             mainWindow.Show();
 
-            // Start location tracking on desktop
-            await StartLocationTrackingAsync();
+            // Initialize everything in background to avoid blocking UI
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Initialize database with timeout to prevent hanging
+                    using var dbCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await EnsureDatabaseInitializedAsync().WaitAsync(dbCts.Token).ConfigureAwait(false);
 
+                    // Initialize workflow with timeout
+                    using var workflowCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    await InitializeWorkflowAsync().WaitAsync(workflowCts.Token).ConfigureAwait(false);
+
+                    // Start location tracking (already has internal timeouts)
+                    await StartLocationTrackingAsync().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    System.Diagnostics.Debug.WriteLine("Background initialization timed out");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Background initialization error: {ex.Message}");
+                }
+            });
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
-            // Initialize workflow from workflow.puml
-            await InitializeWorkflowAsync();
-
+            // Create MainView immediately on UI thread - don't await anything
             var chatViewModel = ServiceProvider.GetRequiredService<ChatViewModel>();
 
             singleViewPlatform.MainView = new MainView
@@ -451,8 +467,32 @@ public partial class App : Application
                 DataContext = chatViewModel
             };
 
-            // Start location tracking on mobile
-            await StartLocationTrackingAsync();
+            // Initialize everything in background to avoid ANR
+            // Use Task.Run to ensure it's on a background thread
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Initialize database first with timeout to prevent hanging
+                    using var dbCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await EnsureDatabaseInitializedAsync().WaitAsync(dbCts.Token).ConfigureAwait(false);
+
+                    // Then initialize workflow with timeout
+                    using var workflowCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    await InitializeWorkflowAsync().WaitAsync(workflowCts.Token).ConfigureAwait(false);
+
+                    // Finally start location tracking (already has internal timeouts)
+                    await StartLocationTrackingAsync().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    System.Diagnostics.Debug.WriteLine("Background initialization timed out - app will continue");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Background initialization error: {ex.Message}");
+                }
+            });
         }
 
         base.OnFrameworkInitializationCompleted();

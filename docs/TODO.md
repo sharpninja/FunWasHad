@@ -23,6 +23,8 @@ This document tracks pending tasks, improvements, and future work for the FunWas
 
 ## Testing
 
+- [ ] Add XMLDOC to each unit test expressing what is being tested, what data is involved, why the data matters and the expected outcome and the reason it is expected
+
 ## Refactoring
 
 ---
@@ -36,6 +38,7 @@ This document tracks pending tasks, improvements, and future work for the FunWas
 - [x] Configure cursor to skip executing $PROFILE on commands (2025-01-26)
 - [x] When starting the application, initialize the location tracking with the current location (2025-01-26)
 - [x] Update log viewer control to ensure the most recently added entry is visible immediately after being added (2025-01-26)
+- [x] Add pause feature to log viewer and use icons instead of text for buttons (2025-01-26)
 
 ---
 

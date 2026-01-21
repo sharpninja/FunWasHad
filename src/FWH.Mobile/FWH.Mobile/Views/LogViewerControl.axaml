@@ -9,21 +9,33 @@
 
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-            <Button Content="Clear"
+            <Button Content="✕"
                     Command="{Binding ClearCommand}"
+                    ToolTip.Tip="Clear logs"
                     HorizontalAlignment="Left"
                     Margin="0,0,6,0"
-                    MinWidth="60" />
+                    Width="32"
+                    Height="32" />
+
+            <Button Content="{Binding PauseButtonText}"
+                    Command="{Binding TogglePauseCommand}"
+                    ToolTip.Tip="{Binding PauseButtonToolTip}"
+                    HorizontalAlignment="Left"
+                    Margin="0,0,6,0"
+                    Width="32"
+                    Height="32" />
 
             <ComboBox ItemsSource="{Binding LogLevels}"
                       SelectedItem="{Binding SelectedLogLevel}"
                       MinWidth="120"
                       Margin="0,0,6,0" />
 
-            <Button Content="Scroll to End"
+            <Button Content="⬇"
                     Command="{Binding ScrollToEndCommand}"
+                    ToolTip.Tip="Scroll to end"
                     HorizontalAlignment="Left"
-                    MinWidth="100" />
+                    Width="32"
+                    Height="32" />
         </StackPanel>
 
         <Border BorderBrush="#3A3A3A" BorderThickness="1" CornerRadius="4" Padding="6">
