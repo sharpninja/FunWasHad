@@ -32,8 +32,8 @@ builder.AddNpgsqlDbContext<LocationDbContext>("funwashad");
 
 builder.Services.AddControllers();
 
-// Add Swagger/OpenAPI for Debug builds only
-#if DEBUG
+// Add Swagger/OpenAPI for Debug and Staging builds
+#if DEBUG || STAGING
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -77,8 +77,8 @@ await ApplyDatabaseMigrationsAsync(app);
 // Map Aspire default endpoints (health checks, metrics)
 app.MapDefaultEndpoints();
 
-// Enable Swagger UI for Debug builds only
-#if DEBUG
+// Enable Swagger UI for Debug and Staging builds
+#if DEBUG || STAGING
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {

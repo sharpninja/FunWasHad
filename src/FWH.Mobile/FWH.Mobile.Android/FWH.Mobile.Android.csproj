@@ -75,12 +75,12 @@
       <Link>appsettings.Development.json</Link>
     </AndroidAsset>
   </ItemGroup>
-  
+
   <!-- Fallback to original file if processed doesn't exist -->
   <ItemGroup Condition="('$(Configuration)' == 'Debug' or '$(Configuration)' == 'Staging') and !Exists('obj\appsettings.Development.processed.json')">
     <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />
   </ItemGroup>
-  
+
   <!-- In Release, always use original (with placeholder/default) -->
   <ItemGroup Condition="'$(Configuration)' != 'Debug' and '$(Configuration)' != 'Staging'">
     <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />

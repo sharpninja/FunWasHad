@@ -12,7 +12,7 @@ if (builder.Environment.IsDevelopment())
     {
         // Listen on all interfaces for HTTP (port configured by Aspire: 4750)
         options.ListenAnyIP(4750);
-        
+
         // Listen on all interfaces for HTTPS (port configured by Aspire: 4749)
         options.ListenAnyIP(4749, listenOptions =>
         {
@@ -37,8 +37,8 @@ builder.Services.AddControllers()
 // Add problem details
 builder.Services.AddProblemDetails();
 
-// Add Swagger/OpenAPI for Debug builds only
-#if DEBUG
+// Add Swagger/OpenAPI for Debug and Staging builds
+#if DEBUG || STAGING
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -67,8 +67,8 @@ await ApplyDatabaseMigrationsAsync(app);
 // Map Aspire default endpoints (health checks, metrics)
 app.MapDefaultEndpoints();
 
-// Enable Swagger UI for Debug builds only
-#if DEBUG
+// Enable Swagger UI for Debug and Staging builds
+#if DEBUG || STAGING
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {

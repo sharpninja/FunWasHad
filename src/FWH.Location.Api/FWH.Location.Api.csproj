@@ -17,6 +17,7 @@
     <Optimize>false</Optimize>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>$(DefineConstants);STAGING</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
