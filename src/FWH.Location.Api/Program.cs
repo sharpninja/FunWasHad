@@ -27,8 +27,11 @@ if (builder.Environment.IsDevelopment())
 // Add Aspire service defaults (telemetry, health checks, resilience)
 builder.AddServiceDefaults();
 
-// Add PostgreSQL with Aspire
-builder.AddNpgsqlDbContext<LocationDbContext>("funwashad");
+// Add PostgreSQL with Aspire (skip in Test environment to allow test factory override)
+if (!builder.Environment.IsEnvironment("Test"))
+{
+    builder.AddNpgsqlDbContext<LocationDbContext>("funwashad");
+}
 
 builder.Services.AddControllers();
 

@@ -83,8 +83,6 @@ public class LocationsControllerTests : IClassFixture<CustomWebApplicationFactor
     public async Task Confirmed_Persists_AndReturnsCreated()
     {
         var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<LocationDbContext>();
 
         var request = new
         {
@@ -105,6 +103,9 @@ public class LocationsControllerTests : IClassFixture<CustomWebApplicationFactor
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
+        // Query the database after the request completes to ensure we're using the same DbContext instance
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<LocationDbContext>();
         var saved = db.LocationConfirmations.ToList();
         Assert.Single(saved);
         Assert.Equal("Cafe Uno", saved[0].BusinessName);

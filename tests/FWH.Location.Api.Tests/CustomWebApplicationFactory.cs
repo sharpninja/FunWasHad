@@ -17,10 +17,15 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     public ILocationService LocationServiceSubstitute { get; } = Substitute.For<ILocationService>();
 
-    protected override IHost CreateHost(IHostBuilder builder)
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Configure connection string BEFORE base host is created
-        // This prevents Aspire from failing during validation
+        base.ConfigureWebHost(builder);
+
+        // Set environment to prevent migrations from running
+        builder.UseEnvironment("Test");
+
+        // Configure connection string BEFORE Program.cs runs
+        // This prevents Aspire from failing during AddNpgsqlDbContext validation
         builder.ConfigureAppConfiguration(config =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -29,57 +34,66 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 { "Aspire:Npgsql:EntityFrameworkCore:PostgreSQL:LocationDbContext:ConnectionString", "Host=localhost;Database=test;Username=test;Password=test" }
             });
         });
-        
-        // Set environment to prevent migrations from running
-        builder.UseEnvironment("Test");
-        
+    }
+
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        // Override services AFTER Program.cs has run
+        // This allows us to remove Aspire's pooled DbContext and replace with in-memory
         builder.ConfigureServices(services =>
         {
-            // Remove Aspire's pooled DbContext registration
-            var descriptorOptions = services.SingleOrDefault(d =>
-                d.ServiceType == typeof(DbContextOptions<LocationDbContext>));
-            if (descriptorOptions != null)
-                services.Remove(descriptorOptions);
+            // Remove ALL existing DbContext registrations including pooling
+            // Use RemoveAll to ensure we get all registrations
+            services.RemoveAll<DbContextOptions<LocationDbContext>>();
+            services.RemoveAll<LocationDbContext>();
 
-            var descriptorContext = services.SingleOrDefault(d =>
-                d.ServiceType == typeof(LocationDbContext));
-            if (descriptorContext != null)
-                services.Remove(descriptorContext);
-            
-            // Remove pooling services
-            var poolDescriptors = services.Where(d =>
-                d.ServiceType.IsGenericType &&
-                (d.ServiceType.GetGenericTypeDefinition() == typeof(IDbContextPool<>) ||
-                 d.ServiceType.GetGenericTypeDefinition() == typeof(IScopedDbContextLease<>)) &&
-                d.ServiceType.GetGenericArguments().Length > 0 &&
-                d.ServiceType.GetGenericArguments()[0] == typeof(LocationDbContext)
-            ).ToList();
-            
-            foreach (var descriptor in poolDescriptors)
+            // Remove pooling services by type
+            services.RemoveAll(typeof(IDbContextPool<>));
+            services.RemoveAll(typeof(IDbContextPool<LocationDbContext>));
+            services.RemoveAll(typeof(IScopedDbContextLease<>));
+            services.RemoveAll(typeof(IScopedDbContextLease<LocationDbContext>));
+
+            // Also remove any remaining by checking all descriptors
+            var allDescriptors = services.ToList();
+            foreach (var descriptor in allDescriptors)
             {
-                services.Remove(descriptor);
+                if (descriptor.ServiceType.IsGenericType)
+                {
+                    var genericTypeDef = descriptor.ServiceType.GetGenericTypeDefinition();
+                    var genericArgs = descriptor.ServiceType.GetGenericArguments();
+
+                    if (genericArgs.Length > 0 && genericArgs[0] == typeof(LocationDbContext))
+                    {
+                        if (genericTypeDef == typeof(IDbContextPool<>) ||
+                            genericTypeDef == typeof(IScopedDbContextLease<>))
+                        {
+                            services.Remove(descriptor);
+                        }
+                    }
+                }
             }
-            
+
             // Register DbContext WITHOUT pooling for tests using in-memory database
+            // Use a fixed database name so all scopes share the same in-memory database
             services.AddDbContext<LocationDbContext>((sp, options) =>
             {
-                options.UseInMemoryDatabase($"location-tests-{Guid.NewGuid()}");
+                options.UseInMemoryDatabase("location-tests-shared");
                 options.EnableSensitiveDataLogging();
             }, ServiceLifetime.Scoped, ServiceLifetime.Scoped);
 
             services.RemoveAll<ILocationService>();
             services.AddSingleton(LocationServiceSubstitute);
         });
-        
+
         var host = base.CreateHost(builder);
-        
+
         // Ensure database schema is created
         using (var scope = host.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<LocationDbContext>();
             db.Database.EnsureCreated();
         }
-        
+
         return host;
     }
 }
