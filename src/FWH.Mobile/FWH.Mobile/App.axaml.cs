@@ -42,12 +42,12 @@ public partial class App : Application
     {
         // Build configuration
         var configuration = BuildConfiguration();
-        
+
         var services = new ServiceCollection();
 
         // Register configuration
         services.AddSingleton<IConfiguration>(configuration);
-        
+
         // Register API settings
         var apiSettings = configuration.GetSection("ApiSettings").Get<ApiSettings>() ?? new ApiSettings();
         services.AddSingleton(apiSettings);
@@ -106,17 +106,11 @@ public partial class App : Application
             locationApiBaseAddress = locationEnvVar;
             marketingApiBaseAddress = marketingEnvVar;
         }
-        else if (OperatingSystem.IsAndroid())
-        {
-            // On Android, use configured IP address from appsettings
-            locationApiBaseAddress = apiSettings.GetLocationApiBaseUrl();
-            marketingApiBaseAddress = apiSettings.GetMarketingApiBaseUrl();
-        }
         else
         {
-            // Desktop/iOS: Use HTTPS with localhost
-            locationApiBaseAddress = "https://localhost:4747/";
-            marketingApiBaseAddress = "https://localhost:4749/";
+            // Use configured URLs from appsettings (supports both full URLs for staging and IP/port for development)
+            locationApiBaseAddress = apiSettings.GetLocationApiBaseUrl();
+            marketingApiBaseAddress = apiSettings.GetMarketingApiBaseUrl();
         }
 
         services.AddApiHttpClients(options =>
@@ -198,6 +192,11 @@ public partial class App : Application
     {
         var builder = new ConfigurationBuilder();
 
+        // Get environment name (Staging, Development, Production, etc.)
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+            ?? "Development";
+
         if (OperatingSystem.IsAndroid())
         {
             // On Android, read from assets
@@ -206,11 +205,12 @@ public partial class App : Application
             {
                 builder.AddJsonStream(appSettingsStream);
             }
-            
-            var devSettingsStream = LoadAndroidAsset("appsettings.Development.json");
-            if (devSettingsStream != null)
+
+            // Load environment-specific appsettings file
+            var envSettingsStream = LoadAndroidAsset($"appsettings.{environment}.json");
+            if (envSettingsStream != null)
             {
-                builder.AddJsonStream(devSettingsStream);
+                builder.AddJsonStream(envSettingsStream);
             }
         }
         else
@@ -219,7 +219,7 @@ public partial class App : Application
             builder
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true);
+                .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true);
         }
 
         builder.AddEnvironmentVariables();
@@ -273,7 +273,7 @@ public partial class App : Application
     private static string? GetHostIpAddress(IConfiguration configuration)
     {
         var hostIp = configuration["ApiSettings:HostIpAddress"];
-        
+
         if (string.IsNullOrEmpty(hostIp) || hostIp == "HOST_IP_PLACEHOLDER")
         {
             return null;

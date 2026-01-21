@@ -1,5 +1,43 @@
-# Start Application Script
-# Starts the FunWasHad application with all services
+<#
+.SYNOPSIS
+  Starts the FunWasHad application with all services using .NET Aspire AppHost.
+
+.DESCRIPTION
+  This script starts the FunWasHad application using the Aspire AppHost, which orchestrates
+  all services including Location API, Marketing API, PostgreSQL database, and PgAdmin.
+  The script checks for Docker and required volumes before starting.
+
+.PARAMETER Configuration
+  The build configuration to use. Valid values: Debug, Release. Defaults to "Debug".
+
+.PARAMETER NoBrowser
+  When specified, prevents the browser from automatically opening the Aspire dashboard.
+
+.PARAMETER Verbose
+  When specified, enables detailed verbosity in the dotnet run command.
+
+.EXAMPLE
+  # Start application in Debug mode
+  .\Start-Application.ps1
+
+.EXAMPLE
+  # Start in Release mode without opening browser
+  .\Start-Application.ps1 -Configuration Release -NoBrowser
+
+.EXAMPLE
+  # Start with verbose output
+  .\Start-Application.ps1 -Verbose
+
+.NOTES
+  - Requires Docker to be installed and running.
+  - Requires .NET SDK to be installed.
+  - Services will be available at:
+    - Aspire Dashboard: http://localhost:15888
+    - Location API: http://localhost:4748
+    - Location API SSL: https://localhost:4747
+    - PgAdmin: http://localhost:5050
+  - Press Ctrl+C to stop all services.
+#>
 
 #Requires -Version 5.1
 
@@ -7,10 +45,10 @@ param(
     [Parameter(Mandatory=$false)]
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Debug",
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$NoBrowser,
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$Verbose
 )

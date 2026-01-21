@@ -199,6 +199,57 @@ Cleans up Docker containers, volumes, and images related to FunWasHad.
 
 ---
 
+### 🧹 Cleanup-Actions.ps1
+
+Cleans up GitHub Actions workflow runs and optionally Docker images from GitHub Container Registry.
+
+**Usage:**
+```powershell
+# Simulate cleanup (see what would be deleted)
+.\scripts\cleanup-actions.ps1 -Repo "owner/FunWasHad" -WhatIf
+
+# Actually delete (after confirmation)
+.\scripts\cleanup-actions.ps1 -Repo "owner/FunWasHad"
+
+# Force delete without interactive confirmation
+.\scripts\cleanup-actions.ps1 -Repo "owner/FunWasHad" -Force
+
+# Clean up both workflow runs and Docker images
+.\scripts\cleanup-actions.ps1 -Repo "owner/FunWasHad" -CleanupDockerImages
+
+# Keep only the first 3 successful runs per workflow, delete the rest
+.\scripts\cleanup-actions.ps1 -Repo "owner/FunWasHad" -LastThree
+
+# Keep only the most recent successful run per workflow, delete everything else
+.\scripts\cleanup-actions.ps1 -Repo "owner/FunWasHad" -KeepLatest
+```
+
+**What it does:**
+- 🗑️ Deletes failed workflow runs (keeps most recent per workflow)
+- 🗑️ Deletes ALL cancelled runs
+- 🗑️ Deletes ALL runs tagged with "no-build" check run
+- 🗑️ Optionally deletes excess successful runs (with -LastThree or -KeepLatest)
+- 🐳 Optionally cleans up old Docker images from GHCR (with -CleanupDockerImages or -KeepLatest)
+
+**Cleanup Rules:**
+- **Failed runs:** Keeps the most recent failed run per workflow, deletes all others
+- **Cancelled runs:** Deletes ALL cancelled runs (none are kept)
+- **No-build runs:** Deletes ALL runs tagged with "no-build" check run
+- **Successful runs (LastThree):** Keeps only the first 3 most recent successful runs per workflow
+- **KeepLatest mode:** Keeps only the most recent successful run per existing workflow, deletes all other runs. Also deletes ALL runs for workflows that no longer exist. Automatically includes Docker image cleanup.
+
+**Parameters:**
+- `-Repo` - Repository in owner/repo format (auto-detected if omitted)
+- `-Force` - Skip confirmation prompts
+- `-WhatIf` - Simulate only, don't actually delete
+- `-CleanupDockerImages` - Also clean up old Docker images from GHCR
+- `-LastThree` - Keep only first 3 successful runs per workflow
+- `-KeepLatest` - Keep only most recent successful run per workflow (aggressive cleanup, includes Docker cleanup)
+
+**⚠️ WARNING:** Deletions are irreversible. Use `-WhatIf` first to verify what will be deleted.
+
+---
+
 ## Common Workflows
 
 ### 🆕 New Installation
@@ -388,7 +439,7 @@ steps:
     inputs:
       filePath: 'scripts/Initialize-Installation.ps1'
       arguments: '-SkipDockerCheck -Force'
-      
+
   - task: PowerShell@2
     inputs:
       filePath: 'scripts/Start-Application.ps1'

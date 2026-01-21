@@ -1,4 +1,9 @@
+using Microsoft.Extensions.Logging;
 using Npgsql;
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace FWH.MarketingApi.Data;
 
@@ -17,6 +22,64 @@ public class DatabaseMigrationService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <summary>
+    /// Converts PostgreSQL URI format connection string to standard format if needed.
+    /// NpgsqlConnectionStringBuilder doesn't support URI format directly.
+    /// </summary>
+    private string GetConnectionString()
+    {
+        var connectionString = _connectionString;
+        if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
+            connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                // Parse the URI manually
+                var uri = new Uri(connectionString);
+                var builder = new NpgsqlConnectionStringBuilder
+                {
+                    Host = uri.Host,
+                    Port = uri.Port > 0 ? uri.Port : 5432,
+                    Database = uri.AbsolutePath.TrimStart('/'),
+                    Username = uri.UserInfo.Split(':')[0],
+                    Password = uri.UserInfo.Contains(':')
+                        ? Uri.UnescapeDataString(uri.UserInfo.Split(':', 2)[1])
+                        : string.Empty
+                };
+
+                // Parse query string parameters if present (e.g., ?sslmode=require)
+                if (!string.IsNullOrEmpty(uri.Query) && uri.Query.Length > 1)
+                {
+                    var query = uri.Query.Substring(1); // Remove leading '?'
+                    var pairs = query.Split('&');
+                    foreach (var pair in pairs)
+                    {
+                        var keyValue = pair.Split('=', 2);
+                        if (keyValue.Length == 2 && !string.IsNullOrEmpty(keyValue[0]))
+                        {
+                            var key = Uri.UnescapeDataString(keyValue[0]);
+                            var value = Uri.UnescapeDataString(keyValue[1]);
+                            builder[key] = value;
+                        }
+                    }
+                }
+
+                connectionString = builder.ToString();
+                _logger.LogDebug("Converted PostgreSQL URI to connection string format");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to parse connection string URI format. Connection string starts with: {Prefix}",
+                    connectionString.Substring(0, Math.Min(20, connectionString.Length)));
+                throw new ArgumentException(
+                    "Connection string is in URI format but cannot be parsed. " +
+                    "Ensure Railway DATABASE_URL is properly formatted.", ex);
+            }
+        }
+
+        return connectionString;
+    }
+
     public async Task ApplyMigrationsAsync()
     {
         _logger.LogInformation("Starting database migration process");
@@ -31,7 +94,7 @@ public class DatabaseMigrationService
 
             // Get migration files from Migrations directory
             var migrationsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Migrations");
-            
+
             if (!Directory.Exists(migrationsPath))
             {
                 _logger.LogWarning("Migrations directory not found at {Path}, skipping migrations", migrationsPath);
@@ -54,7 +117,7 @@ public class DatabaseMigrationService
             foreach (var migrationFile in migrationFiles)
             {
                 var migrationName = Path.GetFileNameWithoutExtension(migrationFile);
-                
+
                 if (await IsMigrationAppliedAsync(migrationName))
                 {
                     _logger.LogDebug("Migration {Name} already applied, skipping", migrationName);
@@ -80,7 +143,9 @@ public class DatabaseMigrationService
 
     private async Task EnsureDatabaseExistsAsync()
     {
-        var builder = new NpgsqlConnectionStringBuilder(_connectionString);
+        // Get connection string (converts URI format if needed)
+        var connectionString = GetConnectionString();
+        var builder = new NpgsqlConnectionStringBuilder(connectionString);
 
         // If the connection string doesn't set a database explicitly, nothing to create.
         var targetDatabase = builder.Database;
@@ -132,7 +197,8 @@ public class DatabaseMigrationService
             );
         ";
 
-        await using var connection = new NpgsqlConnection(_connectionString);
+        var connectionString = GetConnectionString();
+        await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
 
         await using var command = new NpgsqlCommand(sql, connection);
@@ -143,7 +209,8 @@ public class DatabaseMigrationService
     {
         var sql = "SELECT COUNT(*) FROM __migrations WHERE migration_name = @name";
 
-        await using var connection = new NpgsqlConnection(_connectionString);
+        var connectionString = GetConnectionString();
+        await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
 
         await using var command = new NpgsqlCommand(sql, connection);
@@ -155,7 +222,8 @@ public class DatabaseMigrationService
 
     private async Task ExecuteMigrationAsync(string sql, string migrationName)
     {
-        await using var connection = new NpgsqlConnection(_connectionString);
+        var connectionString = GetConnectionString();
+        await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
 
         await using var transaction = await connection.BeginTransactionAsync();

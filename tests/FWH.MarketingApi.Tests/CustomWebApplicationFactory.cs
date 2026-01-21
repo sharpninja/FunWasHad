@@ -35,12 +35,16 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         builder.ConfigureServices(services =>
         {
             // Replace database with PostgreSQL test container
-            // Remove existing DbContext registrations (this will also remove any pool registrations)
+            // Remove ALL existing DbContext registrations including pooling
             services.RemoveAll<DbContextOptions<MarketingDbContext>>();
             services.RemoveAll<MarketingDbContext>();
+            services.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Internal.IDbContextPool<>));
+            services.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Internal.IDbContextPool<MarketingDbContext>));
+            services.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Internal.IScopedDbContextLease<>));
+            services.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Internal.IScopedDbContextLease<MarketingDbContext>));
             
-            // Register DbContext options first
-            services.AddDbContext<MarketingDbContext>(options =>
+            // Register DbContext WITHOUT pooling for tests
+            services.AddDbContext<MarketingDbContext>((sp, options) =>
             {
                 options.UseNpgsql(_connectionString ?? throw new InvalidOperationException("PostgreSQL container not started"), npgsqlOptions =>
                 {
@@ -49,7 +53,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 // Enable sensitive data logging for debugging
                 options.EnableSensitiveDataLogging();
                 options.EnableDetailedErrors();
-            });
+            }, ServiceLifetime.Scoped, ServiceLifetime.Scoped); // Explicitly set to Scoped, not Singleton
             
             // Replace the implementation with test-specific one
             services.RemoveAll<MarketingDbContext>();

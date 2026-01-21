@@ -6,13 +6,16 @@ WORKDIR /src
 # Copy global configuration files
 COPY ["Directory.Packages.props", "."]
 COPY ["global.json", "."]
+COPY ["NuGet.config", "."]
 
 # Copy all project files for restore
 COPY ["src/FWH.MarketingApi/FWH.MarketingApi.csproj", "src/FWH.MarketingApi/"]
 COPY ["src/FWH.ServiceDefaults/FWH.ServiceDefaults.csproj", "src/FWH.ServiceDefaults/"]
 
-# Restore dependencies
-RUN dotnet restore "src/FWH.MarketingApi/FWH.MarketingApi.csproj"
+# Restore dependencies with explicit timeout
+RUN dotnet restore "src/FWH.MarketingApi/FWH.MarketingApi.csproj" \
+    --configfile NuGet.config \
+    --verbosity normal
 
 # Copy all source code
 COPY src/ src/

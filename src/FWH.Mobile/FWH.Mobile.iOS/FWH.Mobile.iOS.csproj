@@ -5,6 +5,13 @@
     <SupportedOSPlatformVersion>13.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <!-- Staging configuration: based on Debug (unoptimized, with debug symbols) -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Staging'">
+    <Optimize>false</Optimize>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
   <ItemGroup>
     <Content Include="..\..\..\workflow.puml" Link="workflow.puml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

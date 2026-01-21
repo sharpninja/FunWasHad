@@ -1,0 +1,129 @@
+name: Detect Changes (Reusable)
+
+on:
+  workflow_call:
+    outputs:
+      location_api_changed:
+        description: 'Whether Location API files changed'
+        value: ${{ jobs.detect_changes.outputs.location_api_changed }}
+      marketing_api_changed:
+        description: 'Whether Marketing API files changed'
+        value: ${{ jobs.detect_changes.outputs.marketing_api_changed }}
+      mobile_changed:
+        description: 'Whether Mobile app files changed'
+        value: ${{ jobs.detect_changes.outputs.mobile_changed }}
+      any_changes:
+        description: 'Whether any relevant files changed'
+        value: ${{ jobs.detect_changes.outputs.any_changes }}
+
+jobs:
+  detect_changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+    outputs:
+      location_api_changed: ${{ steps.changes.outputs.location_api }}
+      marketing_api_changed: ${{ steps.changes.outputs.marketing_api }}
+      mobile_changed: ${{ steps.changes.outputs.mobile }}
+      any_changes: ${{ steps.changes.outputs.location_api || steps.changes.outputs.marketing_api || steps.changes.outputs.mobile }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect file changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            # For push events, compare with previous commit
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          fi
+
+          # If BASE_SHA is empty or same as HEAD_SHA, check all files
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" == "$HEAD_SHA" ] || [ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]; then
+            echo "⚠️  Cannot determine base commit, assuming all files changed"
+            echo "location_api=true" >> $GITHUB_OUTPUT
+            echo "marketing_api=true" >> $GITHUB_OUTPUT
+            echo "mobile=true" >> $GITHUB_OUTPUT
+            echo "any_changes=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          LOCATION_CHANGED="false"
+          MARKETING_CHANGED="false"
+          MOBILE_CHANGED="false"
+
+          # Check for Location API changes
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Location\.Api/|^src/FWH\.Common\.Location/|^src/FWH\.ServiceDefaults/|^src/FWH\.Common\.(Chat|Imaging|Workflow)/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/staging\.yml|^src/FWH\.Location\.Api/.*Dockerfile"; then
+            echo "✅ Location API files changed"
+            LOCATION_CHANGED="true"
+            echo "location_api=true" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️  Location API files unchanged"
+            echo "location_api=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for Marketing API changes
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.MarketingApi/|^src/FWH\.ServiceDefaults/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/staging\.yml|^src/FWH\.MarketingApi/.*Dockerfile"; then
+            echo "✅ Marketing API files changed"
+            MARKETING_CHANGED="true"
+            echo "marketing_api=true" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️  Marketing API files unchanged"
+            echo "marketing_api=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for Mobile app changes
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Mobile/|^src/FWH\.Mobile\.Data/|^src/FWH\.Common\.(Location|Chat|Imaging|Workflow)/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/staging\.yml"; then
+            echo "✅ Mobile app files changed"
+            MOBILE_CHANGED="true"
+            echo "mobile=true" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️  Mobile app files unchanged"
+            echo "mobile=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Determine if any changes were detected
+          if [ "$LOCATION_CHANGED" == "true" ] || [ "$MARKETING_CHANGED" == "true" ] || [ "$MOBILE_CHANGED" == "true" ]; then
+            echo "any_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "any_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create no-build check run
+        if: steps.changes.outputs.any_changes == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🏷️  Creating 'no-build' check run (no changes detected)"
+
+          # Create a check run to tag this workflow run
+          # Use a JSON file to properly pass nested JSON objects
+          cat > /tmp/check-run.json << 'EOF'
+          {
+            "name": "no-build",
+            "head_sha": "${{ github.sha }}",
+            "status": "completed",
+            "conclusion": "success",
+            "output": {
+              "title": "No Build Required",
+              "summary": "No relevant files changed. Build steps were skipped.",
+              "text": "This workflow run was tagged as `no-build` because no changes were detected in Location API, Marketing API, or Mobile app files."
+            }
+          }
+          EOF
+
+          CHECK_RUN_ID=$(gh api \
+            -X POST \
+            "/repos/${{ github.repository }}/check-runs" \
+            --input /tmp/check-run.json \
+            --jq '.id')
+
+          echo "✅ Created check run with ID: $CHECK_RUN_ID"

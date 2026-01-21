@@ -1,0 +1,62 @@
+name: Monthly Cleanup
+
+on:
+  schedule:
+    # Run on the first day of each month at 00:00 UTC
+    - cron: '0 0 1 * *'
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  cleanup:
+    name: Cleanup Failed Runs and Docker Images
+    runs-on: windows-2022
+    permissions:
+      contents: write
+      actions: write
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET (for any dependencies)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Authenticate GitHub CLI
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          Write-Host "Authenticating GitHub CLI..."
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          gh auth status
+
+      - name: Run cleanup script
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          Write-Host "Running cleanup script..."
+          Write-Host "This will clean up:" -ForegroundColor Cyan
+          Write-Host "  - Old failed workflow runs (keeping most recent per workflow)" -ForegroundColor Gray
+          Write-Host "  - Old Docker images from GHCR (keeping most recent per API)" -ForegroundColor Gray
+          Write-Host ""
+          .\scripts\cleanup-actions.ps1 -CleanupDockerImages -Force
+
+      - name: Cleanup summary
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host "══════════════════════════════════════════════════════════════" -ForegroundColor Green
+          Write-Host "Monthly cleanup completed" -ForegroundColor Green
+          Write-Host "══════════════════════════════════════════════════════════════" -ForegroundColor Green
+          Write-Host ""
+          Write-Host "This workflow runs on the first day of each month to:" -ForegroundColor Cyan
+          Write-Host "  - Clean up old failed workflow runs (keeping most recent per workflow)" -ForegroundColor Gray
+          Write-Host "  - Clean up old Docker images from GHCR (keeping most recent per API)" -ForegroundColor Gray
+          Write-Host ""

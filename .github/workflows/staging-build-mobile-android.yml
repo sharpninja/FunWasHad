@@ -1,0 +1,157 @@
+name: Build Mobile Android (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      dotnet_version:
+        required: true
+        type: string
+      build_configuration:
+        required: false
+        type: string
+        default: 'Staging'
+      artifact_name:
+        required: false
+        type: string
+        default: 'android-apk-staging'
+
+jobs:
+  build_mobile_android:
+    name: Build Mobile Android
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'microsoft'
+          java-version: '17'
+
+      - name: Cache .NET environment
+        uses: ./.github/actions/cache-dotnet
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+          build-outputs-key-suffix: -${{ github.sha }}
+          project-files-pattern: 'src/FWH.Mobile/**/*.csproj'
+          solution-file: 'FunWasHad.sln'
+          cache-key-prefix: 'build-mobile'
+
+      - name: Cache .NET workloads
+        uses: ./.github/actions/cache-dotnet-workloads
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+
+      - name: Install .NET MAUI Android workload
+        timeout-minutes: 15
+        run: |
+          dotnet workload install android --source https://api.nuget.org/v3/index.json
+          dotnet workload list
+
+      - name: Restore dependencies
+        timeout-minutes: 10
+        run: dotnet restore src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj
+
+      - name: Build Android app
+        timeout-minutes: 20
+        run: dotnet build src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj --no-restore --configuration ${{ inputs.build_configuration }}
+
+      - name: Publish Android APK
+        timeout-minutes: 30
+        run: dotnet publish src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj --no-restore --configuration ${{ inputs.build_configuration }} -f net9.0-android -p:AndroidPackageFormat=apk
+
+      - name: Find APK file
+        id: find_apk
+        shell: pwsh
+        run: |
+          Write-Host "Searching for APK file..." -ForegroundColor Cyan
+          $workspaceRoot = $env:GITHUB_WORKSPACE
+          Write-Host "Workspace root: $workspaceRoot" -ForegroundColor Gray
+
+          # Search in multiple possible locations
+          $searchPaths = @(
+            "src\FWH.Mobile\FWH.Mobile.Android\bin\${{ inputs.build_configuration }}\net9.0-android",
+            "src\FWH.Mobile\FWH.Mobile.Android\bin\${{ inputs.build_configuration }}\net9.0-android\publish",
+            "src\FWH.Mobile\FWH.Mobile.Android\bin\${{ inputs.build_configuration }}",
+            "src\FWH.Mobile\FWH.Mobile.Android\bin"
+          )
+
+          $apkPath = $null
+          Write-Host "Searching in the following paths:" -ForegroundColor Cyan
+          foreach ($path in $searchPaths) {
+            $fullPath = Join-Path $workspaceRoot $path
+            Write-Host "  - $path" -ForegroundColor Gray
+            if (Test-Path $fullPath) {
+              Write-Host "    (exists)" -ForegroundColor Green
+              $found = Get-ChildItem -Path $fullPath -Filter "*.apk" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($found) {
+                $apkPath = $found
+                Write-Host "    ✓ Found APK: $($found.FullName)" -ForegroundColor Green
+                break
+              } else {
+                Write-Host "    (no APK found, listing files:)" -ForegroundColor Yellow
+                Get-ChildItem -Path $fullPath -Recurse -File | Select-Object -First 5 | ForEach-Object { Write-Host "      $($_.Name)" -ForegroundColor Gray }
+              }
+            } else {
+              Write-Host "    (does not exist)" -ForegroundColor Red
+            }
+          }
+
+          # If not found in expected paths, search more broadly
+          if (-not $apkPath) {
+            Write-Host "APK not found in expected paths, searching more broadly..." -ForegroundColor Yellow
+            $mobileAndroidPath = Join-Path $workspaceRoot "src\FWH.Mobile\FWH.Mobile.Android"
+            if (Test-Path $mobileAndroidPath) {
+              $found = Get-ChildItem -Path $mobileAndroidPath -Filter "*.apk" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($found) {
+                $apkPath = $found
+                Write-Host "✓ Found APK in broader search: $($found.FullName)" -ForegroundColor Green
+              }
+            }
+          }
+
+          if ($apkPath) {
+            $fullPath = $apkPath.FullName
+            if ($fullPath.StartsWith($workspaceRoot)) {
+              $relativePath = $fullPath.Substring($workspaceRoot.Length).TrimStart('\', '/')
+            } else {
+              $relativePath = $fullPath
+            }
+            Write-Host "" -ForegroundColor Green
+            Write-Host "✅ APK found successfully!" -ForegroundColor Green
+            Write-Host "   Full path: $fullPath" -ForegroundColor Gray
+            Write-Host "   Relative path: $relativePath" -ForegroundColor Gray
+            Write-Host "   File name: $($apkPath.Name)" -ForegroundColor Gray
+            Write-Host "APK_PATH=$relativePath" >> $env:GITHUB_OUTPUT
+            Write-Host "APK_NAME=$($apkPath.Name)" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "" -ForegroundColor Red
+            Write-Error "APK file not found in any location"
+            Write-Host "Searched paths:" -ForegroundColor Yellow
+            foreach ($path in $searchPaths) {
+              Write-Host "  - $path" -ForegroundColor Gray
+            }
+            Write-Host "Also searched: src\FWH.Mobile\FWH.Mobile.Android (recursive)" -ForegroundColor Gray
+            # Set empty output so condition check works, then exit with error
+            Write-Host "APK_PATH=" >> $env:GITHUB_OUTPUT
+            Write-Host "APK_NAME=" >> $env:GITHUB_OUTPUT
+            exit 1
+          }
+
+      - name: Upload APK artifact
+        if: steps.find_apk.outputs.APK_PATH != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ steps.find_apk.outputs.APK_PATH }}
+          retention-days: 30
+          if-no-files-found: error

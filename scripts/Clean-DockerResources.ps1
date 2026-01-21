@@ -1,21 +1,74 @@
-# Clean Docker Resources Script
-# Cleans up Docker containers, volumes, and images related to FunWasHad
+<#
+.SYNOPSIS
+  Cleans up Docker containers, volumes, and images related to FunWasHad.
+
+.DESCRIPTION
+  This script provides a convenient way to clean up Docker resources created by
+  the FunWasHad application. It can clean containers, volumes, and images separately
+  or all at once. By default, the script shows usage information if no options are provided.
+
+.PARAMETER All
+  When specified, cleans all Docker resources (containers, volumes, and images).
+
+.PARAMETER Containers
+  When specified, cleans only containers related to FunWasHad.
+
+.PARAMETER Volumes
+  When specified, cleans only volumes related to FunWasHad.
+  ⚠️ WARNING: This will DELETE all database data!
+
+.PARAMETER Images
+  When specified, cleans only Docker images related to FunWasHad.
+
+.PARAMETER Force
+  When specified, skips confirmation prompts and proceeds with cleanup immediately.
+
+.EXAMPLE
+  # Show usage information
+  .\Clean-DockerResources.ps1
+
+.EXAMPLE
+  # Clean all resources (interactive)
+  .\Clean-DockerResources.ps1 -All
+
+.EXAMPLE
+  # Clean all resources without confirmation
+  .\Clean-DockerResources.ps1 -All -Force
+
+.EXAMPLE
+  # Clean only containers
+  .\Clean-DockerResources.ps1 -Containers
+
+.EXAMPLE
+  # Clean only volumes (deletes data!)
+  .\Clean-DockerResources.ps1 -Volumes
+
+.EXAMPLE
+  # Clean only images
+  .\Clean-DockerResources.ps1 -Images
+
+.NOTES
+  - Requires Docker to be installed and running.
+  - ⚠️ WARNING: Volume cleanup will DELETE all database data permanently!
+  - The script only removes resources with "funwashad" or "fwh" in their names.
+  - After cleanup, the script displays remaining resources for verification.
+#>
 
 #Requires -Version 5.1
 
 param(
     [Parameter(Mandatory=$false)]
     [switch]$All,
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$Containers,
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$Volumes,
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$Images,
-    
+
     [Parameter(Mandatory=$false)]
     [switch]$Force
 )
@@ -48,11 +101,11 @@ if (-not ($All -or $Containers -or $Volumes -or $Images)) {
 # Confirmation
 if (-not $Force) {
     Write-Host "[!] This will remove Docker resources related to FunWasHad" -ForegroundColor Yellow
-    
+
     if ($All -or $Volumes) {
         Write-Host "[!] WARNING: Volume cleanup will DELETE all database data!" -ForegroundColor Red
     }
-    
+
     $confirm = Read-Host "Continue? (yes/no)"
     if ($confirm -ne "yes") {
         Write-Host "[i] Cleanup cancelled" -ForegroundColor Cyan
@@ -65,7 +118,7 @@ Write-Host ""
 # Clean Containers
 if ($All -or $Containers) {
     Write-Host "[i] Cleaning containers..." -ForegroundColor Cyan
-    
+
     # Stop running containers
     $runningContainers = docker ps --filter "name=funwashad" --format "{{.ID}}"
     if ($runningContainers) {
@@ -73,7 +126,7 @@ if ($All -or $Containers) {
         $runningContainers | ForEach-Object { docker stop $_ }
         Write-Host "[✓] Containers stopped" -ForegroundColor Green
     }
-    
+
     # Remove stopped containers
     $stoppedContainers = docker ps -a --filter "name=funwashad" --format "{{.ID}}"
     if ($stoppedContainers) {
@@ -90,10 +143,10 @@ if ($All -or $Containers) {
 if ($All -or $Volumes) {
     Write-Host "[i] Cleaning volumes..." -ForegroundColor Cyan
     Write-Host "[!] This will DELETE all database data!" -ForegroundColor Red
-    
+
     $volumeToRemove = "funwashad-postgres-data"
     $volumeExists = docker volume ls --format "{{.Name}}" | Select-String -Pattern "^$volumeToRemove$"
-    
+
     if ($volumeExists) {
         if (-not $Force) {
             $confirmVolume = Read-Host "Really delete volume '$volumeToRemove'? (yes/no)"
@@ -118,10 +171,10 @@ if ($All -or $Volumes) {
 # Clean Images
 if ($All -or $Images) {
     Write-Host "[i] Cleaning images..." -ForegroundColor Cyan
-    
+
     # Find FunWasHad related images
     $images = docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | Select-String -Pattern "fwh|funwashad"
-    
+
     if ($images) {
         Write-Host "    Found images to remove:" -ForegroundColor Gray
         $images | ForEach-Object {
