@@ -41,7 +41,7 @@
     <PackageVersion Include="Microsoft.Windows.SDK.Contracts" Version="10.0.22621.38" />
     <!-- .NET Aspire packages -->
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.0.0" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="9.0.0" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.1.0" />
     <PackageVersion Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="9.0.0" />
@@ -55,6 +55,6 @@
     <PackageVersion Include="Microsoft.DocAsCode.Build" Version="2.78.0" />
     <PackageVersion Include="Microsoft.DocAsCode.Dotnet" Version="2.78.0" />
     <!-- Security fix: Override KubernetesClient to fix NU1902 vulnerability (CVE-2025-9708) -->
-    <PackageVersion Include="KubernetesClient" Version="17.0.14" />
+    <PackageVersion Include="KubernetesClient" Version="18.0.5" />
   </ItemGroup>
 </Project>
