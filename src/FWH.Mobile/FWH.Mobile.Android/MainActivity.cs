@@ -13,7 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace FWH.Mobile.Android;
 
 [Activity(
-    Label = "FWH.Mobile.Android",
+    Label = "#FunWasHad",
     Theme = "@style/MyTheme.NoActionBar",
     Icon = "@drawable/icon",
     MainLauncher = true,
