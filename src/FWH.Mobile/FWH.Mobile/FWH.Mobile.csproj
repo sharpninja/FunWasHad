@@ -105,10 +105,6 @@ catch {
 # Final fallback to Android emulator alias
 if ([string]::IsNullOrEmpty($hostIp)) {
     $hostIp = '10.0.2.2'
-    Write-Host "Using Android emulator default: $hostIp" -ForegroundColor Yellow
-}
-else {
-    Write-Host "Detected Host IP: $hostIp" -ForegroundColor Green
 }
 
 # Update appsettings.Development.json with detected IP
@@ -129,9 +125,6 @@ if (Test-Path $appsettingsPath) {
 
         # Save to obj folder (temporary location)
         Set-Content -Path $processedPath -Value $updatedContent -NoNewline -Force
-
-        Write-Host "Generated processed config at: $processedPath" -ForegroundColor Green
-        Write-Host "HostIpAddress set to: $hostIp" -ForegroundColor Cyan
     }
     catch {
         Write-Error "Failed to process appsettings.Development.json: $_"

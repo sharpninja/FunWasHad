@@ -176,7 +176,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
         Func<IServiceProvider, IWorkflowActionHandler> factory = null!;
         if (directHandler != null)
         {
-            _logger.LogInformation("Using direct singleton handler for action {ActionName}", actionName);
+            _logger.LogDebug("Using direct singleton handler for action {ActionName}", actionName);
             factory = _ => directHandler;
         }
         else if (_registry.TryGetFactory(actionName ?? string.Empty, out var regFactory))
@@ -198,7 +198,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                 {
                     using var scope = _serviceProvider.CreateScope();
                     var handler = factoryFunc(scope.ServiceProvider);
-                    _logger.LogInformation("Factory produced handler instance {Handler} for action {ActionName}", handler?.Name, actionName);
+                    _logger.LogDebug("Factory produced handler instance {Handler} for action {ActionName}", handler?.Name, actionName);
 
                     // Fallback: if factory returns null, try resolving singleton handlers from the scoped provider
                     if (handler == null)
@@ -256,7 +256,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                 else
                 {
                     var handler = factoryFunc(_serviceProvider);
-                    _logger.LogInformation("Factory produced handler instance {Handler} for action {ActionName}", handler?.Name, actionName);
+                    _logger.LogDebug("Factory produced handler instance {Handler} for action {ActionName}", handler?.Name, actionName);
 
                     // Fallback: if factory returns null, try resolving singleton handlers from the provider
                     if (handler == null)
@@ -281,19 +281,19 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                     IDictionary<string,string>? updates = null;
                     try
                     {
-                        _logger.LogInformation("Invoking handler {HandlerName} for workflow {WorkflowId} node {NodeId}", handler.Name, workflowId, node.Id);
+                        _logger.LogDebug("Invoking handler {HandlerName} for workflow {WorkflowId} node {NodeId}", handler.Name, workflowId, node.Id);
                         updates = await handler.HandleAsync(ctx, resolved, cancellationToken).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
                     {
-                        _logger.LogInformation("Action {ActionName} execution cancelled", actionName);
+                        _logger.LogDebug("Action {ActionName} execution cancelled", actionName);
                         throw; // Re-throw to be caught by outer try-catch
                     }
 
                     sw.Stop();
                     if (_options.LogExecutionTime)
                     {
-                        _logger.LogInformation("Action {ActionName} handled by {HandlerName} in {ElapsedMs}ms", actionName, handler.Name ?? "<null>", sw.ElapsedMilliseconds);
+                        _logger.LogDebug("Action {ActionName} handled by {HandlerName} in {ElapsedMs}ms", actionName, handler.Name ?? "<null>", sw.ElapsedMilliseconds);
                     }
 
                     if (updates != null)

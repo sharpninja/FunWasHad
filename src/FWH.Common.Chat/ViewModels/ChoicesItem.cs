@@ -23,7 +23,6 @@ public partial class ChoicesItem(int order, string text, object? value)
     [RelayCommand(AllowConcurrentExecutions =false)]
     private Task SelectChoice(ChoicesItem? choice)
     {
-        Console.WriteLine($"[ChoicesItem] SelectChoice invoked Order={DisplayOrder} Text={ChoiceText} Value={ChoiceValue}");
         ChoiceSubmitted?.Invoke(this, choice);
         return Task.CompletedTask;
     }

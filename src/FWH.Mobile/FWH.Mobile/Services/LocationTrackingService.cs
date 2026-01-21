@@ -307,7 +307,7 @@ public class LocationTrackingService : ILocationTrackingService
         else if (_currentMovementState == MovementState.Stationary && _stationaryCountdownCts != null)
         {
             // Still stationary and countdown is active, reset it on any location change
-            _logger.LogDebug("Location changed while stationary, resetting address check countdown");
+                _logger.LogTrace("Location changed while stationary, resetting address check countdown");
             ResetStationaryCountdown();
             StartStationaryCountdown();
         }
@@ -367,7 +367,7 @@ public class LocationTrackingService : ILocationTrackingService
     {
         try
         {
-            _logger.LogInformation("Checking for address change at ({Lat:F6}, {Lon:F6})",
+            _logger.LogDebug("Checking for address change at ({Lat:F6}, {Lon:F6})",
                 location.Latitude, location.Longitude);
 
             // Get closest business/POI to determine address
@@ -379,7 +379,7 @@ public class LocationTrackingService : ILocationTrackingService
             var currentAddress = closestBusiness?.Address ??
                                 $"{location.Latitude:F6}, {location.Longitude:F6}";
 
-            _logger.LogDebug("Current address: {Address}, Previous address: {PreviousAddress}",
+            _logger.LogTrace("Current address: {Address}, Previous address: {PreviousAddress}",
                 currentAddress, _lastKnownAddress ?? "none");
 
             // Check if address has changed
@@ -522,7 +522,7 @@ public class LocationTrackingService : ILocationTrackingService
     {
         try
         {
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Storing location locally: ({Lat:F6}, {Lon:F6}) - State: {State}, Speed: {Speed:F1} mph",
                 location.Latitude,
                 location.Longitude,

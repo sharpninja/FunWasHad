@@ -22,7 +22,7 @@ public static class LocationServiceCollectionExtensions
     public static IServiceCollection AddLocationServices(this IServiceCollection services)
     {
         // Register HttpClient for Overpass API with custom resilience pipeline
-        // that includes retry, circuit breaker, timeout, and fallback
+        // that includes retry, circuit breaker, timeout
         services.AddHttpClient<OverpassLocationService>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
@@ -30,33 +30,7 @@ public static class LocationServiceCollectionExtensions
         })
         .AddResilienceHandler("overpass-pipeline", (ResiliencePipelineBuilder<HttpResponseMessage> builder) =>
         {
-            // 1. Fallback (outer layer - executed last if all else fails)
-            //builder.AddFallback(new FallbackStrategyOptions<HttpResponseMessage>
-            //{
-            //    ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-            //        .Handle<HttpRequestException>()
-            //        .Handle<TimeoutException>()
-            //        .Handle<BrokenCircuitException>()
-            //        .HandleResult(response => !response.IsSuccessStatusCode),
-            //    FallbackAction = args =>
-            //    {
-            //        // Return an empty JSON response that the service will interpret as no results
-            //        var fallbackResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
-            //        {
-            //            Content = new StringContent(@"{""elements"":[]}", System.Text.Encoding.UTF8, "application/json")
-            //        };
-                    
-            //        return Outcome.FromResultAsValueTask(fallbackResponse);
-            //    },
-            //    OnFallback = args =>
-            //    {
-            //        // Log when fallback is triggered
-            //        Console.WriteLine($"Fallback triggered for Overpass API: {args.Outcome.Exception?.Message}");
-            //        return default;
-            //    }
-            //});
-            
-            // 2. Circuit breaker (prevents cascading failures)
+            // 1. Circuit breaker (prevents cascading failures)
             builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage>
             {
                 SamplingDuration = TimeSpan.FromSeconds(30),
@@ -161,8 +135,7 @@ public static class LocationServiceCollectionExtensions
                 },
                 OnFallback = args =>
                 {
-                    // Log when fallback is triggered
-                    Console.WriteLine($"Fallback triggered for Overpass API: {args.Outcome.Exception?.Message}");
+                    // Fallback triggered - return empty result set
                     return default;
                 }
             });
