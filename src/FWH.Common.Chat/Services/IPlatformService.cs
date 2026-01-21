@@ -29,6 +29,14 @@ public interface IPlatformService
     /// Checks if the current platform is Browser/WASM
     /// </summary>
     bool IsBrowser { get; }
+    
+    /// <summary>
+    /// Gets the platform-specific database directory path.
+    /// Returns the appropriate directory for persistent storage on each platform.
+    /// </summary>
+    /// <param name="databaseName">The name of the database file (e.g., "notes.db")</param>
+    /// <returns>Full path to the database file</returns>
+    string GetDatabasePath(string databaseName);
 }
 
 /// <summary>

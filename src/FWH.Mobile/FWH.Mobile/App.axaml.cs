@@ -42,12 +42,12 @@ public partial class App : Application
     {
         // Build configuration
         var configuration = BuildConfiguration();
-        
+
         var services = new ServiceCollection();
 
         // Register configuration
         services.AddSingleton<IConfiguration>(configuration);
-        
+
         // Register API settings
         var apiSettings = configuration.GetSection("ApiSettings").Get<ApiSettings>() ?? new ApiSettings();
         services.AddSingleton(apiSettings);
@@ -66,8 +66,16 @@ public partial class App : Application
         // For now, using direct URL configuration for mobile app
         // services.AddServiceDiscovery();
 
-        // Register data services (includes configuration repository)
-        services.AddDataServices();
+        // Register platform service first (needed for database path)
+        services.AddSingleton<IPlatformService, PlatformService>();
+
+        // Get the platform-specific database path
+        var platformService = new PlatformService();
+        var databasePath = platformService.GetDatabasePath("fwh_mobile.db");
+        var connectionString = $"DataSource={databasePath}";
+
+        // Register data services with persistent database
+        services.AddDataServices(connectionString);
 
         // Register workflow services using extension method
         services.AddWorkflowServices();
@@ -98,17 +106,11 @@ public partial class App : Application
             locationApiBaseAddress = locationEnvVar;
             marketingApiBaseAddress = marketingEnvVar;
         }
-        else if (OperatingSystem.IsAndroid())
-        {
-            // On Android, use configured IP address from appsettings
-            locationApiBaseAddress = apiSettings.GetLocationApiBaseUrl();
-            marketingApiBaseAddress = apiSettings.GetMarketingApiBaseUrl();
-        }
         else
         {
-            // Desktop/iOS: Use HTTPS with localhost
-            locationApiBaseAddress = "https://localhost:4747/";
-            marketingApiBaseAddress = "https://localhost:4749/";
+            // Use configured URLs from appsettings (supports both full URLs for staging and IP/port for development)
+            locationApiBaseAddress = apiSettings.GetLocationApiBaseUrl();
+            marketingApiBaseAddress = apiSettings.GetMarketingApiBaseUrl();
         }
 
         services.AddApiHttpClients(options =>
@@ -149,6 +151,9 @@ public partial class App : Application
         // Register movement state logger (for demonstration)
         services.AddSingleton<MovementStateLogger>();
 
+        // Register movement state ViewModel
+        services.AddSingleton<MovementStateViewModel>();
+
         // Register imaging services
         services.AddImagingServices();
 
@@ -187,6 +192,11 @@ public partial class App : Application
     {
         var builder = new ConfigurationBuilder();
 
+        // Get environment name (Staging, Development, Production, etc.)
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+            ?? "Development";
+
         if (OperatingSystem.IsAndroid())
         {
             // On Android, read from assets
@@ -195,11 +205,12 @@ public partial class App : Application
             {
                 builder.AddJsonStream(appSettingsStream);
             }
-            
-            var devSettingsStream = LoadAndroidAsset("appsettings.Development.json");
-            if (devSettingsStream != null)
+
+            // Load environment-specific appsettings file
+            var envSettingsStream = LoadAndroidAsset($"appsettings.{environment}.json");
+            if (envSettingsStream != null)
             {
-                builder.AddJsonStream(devSettingsStream);
+                builder.AddJsonStream(envSettingsStream);
             }
         }
         else
@@ -208,7 +219,7 @@ public partial class App : Application
             builder
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile("appsettings.Development.json", optional: true, reloadOnChange: true);
+                .AddJsonFile($"appsettings.{environment}.json", optional: true, reloadOnChange: true);
         }
 
         builder.AddEnvironmentVariables();
@@ -262,7 +273,7 @@ public partial class App : Application
     private static string? GetHostIpAddress(IConfiguration configuration)
     {
         var hostIp = configuration["ApiSettings:HostIpAddress"];
-        
+
         if (string.IsNullOrEmpty(hostIp) || hostIp == "HOST_IP_PLACEHOLDER")
         {
             return null;
@@ -364,11 +375,25 @@ public partial class App : Application
 
             using var scope = ServiceProvider.CreateScope();
             var migrationService = scope.ServiceProvider.GetRequiredService<FWH.Mobile.Data.Services.MobileDatabaseMigrationService>();
+            var logger = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<App>>();
+
+            // Log database connection info for debugging
+            var connectionInfo = migrationService.GetConnectionInfo();
+            logger.LogInformation("Initializing database at: {ConnectionInfo}", connectionInfo);
 
             // Ensure database exists and apply any pending migrations
             await migrationService.EnsureDatabaseAsync();
 
+            logger.LogInformation("Database initialization completed successfully");
+
             _isDatabaseInitialized = true;
+        }
+        catch (Exception ex)
+        {
+            using var scope = ServiceProvider.CreateScope();
+            var logger = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<App>>();
+            logger.LogError(ex, "Failed to initialize database: {Message}", ex.Message);
+            throw;
         }
         finally
         {

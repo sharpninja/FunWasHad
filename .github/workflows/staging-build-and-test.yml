@@ -1,0 +1,72 @@
+name: Build and Test (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      dotnet_version:
+        required: true
+        type: string
+      build_configuration:
+        required: false
+        type: string
+        default: 'Release'
+        description: 'Build configuration (Release, Debug, Staging, etc.)'
+
+jobs:
+  build_and_test:
+    name: Build and Test
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+
+      - name: Cache .NET environment
+        uses: ./.github/actions/cache-dotnet
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+          build-outputs-key-suffix: -${{ github.sha }}
+
+      - name: Restore dependencies
+        run: |
+          dotnet restore FunWasHad.sln
+          dotnet restore src/FWH.Location.Api/FWH.Location.Api.csproj
+          dotnet restore src/FWH.MarketingApi/FWH.MarketingApi.csproj
+
+      - name: Build solution
+        run: |
+          dotnet build src/FWH.Location.Api/FWH.Location.Api.csproj --no-restore --configuration ${{ inputs.build_configuration }}
+          dotnet build src/FWH.MarketingApi/FWH.MarketingApi.csproj --no-restore --configuration ${{ inputs.build_configuration }}
+
+      - name: Run tests
+        run: |
+          dotnet test tests/FWH.Common.Location.Tests/FWH.Common.Location.Tests.csproj --configuration ${{ inputs.build_configuration }} --verbosity normal
+          dotnet test tests/FWH.MarketingApi.Tests/FWH.MarketingApi.Tests.csproj --configuration ${{ inputs.build_configuration }} --verbosity normal
+        continue-on-error: true
+
+      - name: Publish Location API
+        run: dotnet publish src/FWH.Location.Api/FWH.Location.Api.csproj --configuration ${{ inputs.build_configuration }} --output ./publish/location-api --no-restore
+
+      - name: Publish Marketing API
+        run: dotnet publish src/FWH.MarketingApi/FWH.MarketingApi.csproj --configuration ${{ inputs.build_configuration }} --output ./publish/marketing-api --no-restore
+
+      - name: Upload Location API artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: location-api
+          path: ./publish/location-api
+          retention-days: 1
+
+      - name: Upload Marketing API artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketing-api
+          path: ./publish/marketing-api
+          retention-days: 1

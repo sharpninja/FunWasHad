@@ -1,0 +1,95 @@
+name: Create Android Release (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      mobile_changed:
+        required: true
+        type: string
+      artifact_name:
+        required: false
+        type: string
+        default: 'android-apk-staging'
+      location_api_url:
+        required: false
+        type: string
+        default: 'https://staging-location-api-production.up.railway.app'
+      marketing_api_url:
+        required: false
+        type: string
+        default: 'https://staging-marketing-api-production.up.railway.app'
+
+jobs:
+  release_android:
+    name: Create Android Release Candidate
+    runs-on: ubuntu-latest
+    if: inputs.mobile_changed == 'true'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ./artifacts
+
+      - name: Generate release candidate tag
+        id: tag
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          BRANCH_NAME=$(echo "${{ github.ref }}" | sed 's/refs\/heads\///')
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          TAG_NAME="staging-rc-${BRANCH_NAME}-${TIMESTAMP}-${SHORT_SHA}"
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "Generated release candidate tag: ${TAG_NAME}"
+
+      - name: Find APK file
+        id: find_apk
+        run: |
+          APK_FILE=$(find ./artifacts -name "*.apk" -type f | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            echo "APK file not found"
+            exit 1
+          fi
+          echo "APK_PATH=$APK_FILE" >> $GITHUB_OUTPUT
+          echo "APK_NAME=$(basename $APK_FILE)" >> $GITHUB_OUTPUT
+          echo "Found APK: $APK_FILE"
+
+      - name: Create GitHub Release Candidate
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+          name: Staging Release Candidate - ${{ steps.tag.outputs.TAG_NAME }}
+          body: |
+            ## Android APK Release Candidate (Staging)
+
+            **Version:** ${{ steps.tag.outputs.TAG_NAME }}
+            **Branch:** ${{ github.ref_name }}
+            **Build Date:** ${{ github.event.head_commit.timestamp }}
+            **Commit:** ${{ github.sha }}
+            **Commit Message:** ${{ github.event.head_commit.message }}
+
+            ### Downloads
+            - **APK:** ${{ steps.find_apk.outputs.APK_NAME }}
+
+            ### Installation
+            1. Download the APK file
+            2. Enable "Install from Unknown Sources" on your Android device
+            3. Install the APK file
+
+            ### Staging Environment
+            This release candidate is built against the **Staging** environment:
+            - **Location API:** ${{ inputs.location_api_url }}
+            - **Marketing API:** ${{ inputs.marketing_api_url }}
+
+            ### Changes
+            See the [commit history](https://github.com/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}) for details.
+
+            ⚠️ **Note:** This is a release candidate for testing purposes only.
+          files: ${{ steps.find_apk.outputs.APK_PATH }}
+          draft: false
+          prerelease: true

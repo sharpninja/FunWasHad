@@ -1,0 +1,114 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for Location API
+  postgres-location:
+    image: postgres:16-alpine
+    container_name: fwh-postgres-location
+    environment:
+      POSTGRES_DB: funwashad
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-location-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fwh-network
+
+  # PostgreSQL database for Marketing API
+  postgres-marketing:
+    image: postgres:16-alpine
+    container_name: fwh-postgres-marketing
+    environment:
+      POSTGRES_DB: marketing
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-marketing-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fwh-network
+
+  # Location API
+  location-api:
+    build:
+      context: .
+      dockerfile: src/FWH.Location.Api/Dockerfile
+      args:
+        BUILD_CONFIGURATION: Release
+    container_name: fwh-location-api
+    ports:
+      - "4747:8080"
+      - "4748:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__funwashad=Host=postgres-location;Port=5432;Database=funwashad;Username=postgres;Password=postgres
+      - LocationService__DefaultRadiusMeters=1000
+      - LocationService__MaxRadiusMeters=10000
+      - LocationService__MinRadiusMeters=100
+      - LocationService__TimeoutSeconds=30
+      - LocationService__OverpassApiUrl=https://overpass-api.de/api/interpreter
+    depends_on:
+      postgres-location:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - fwh-network
+    restart: unless-stopped
+
+  # Marketing API
+  marketing-api:
+    build:
+      context: .
+      dockerfile: src/FWH.MarketingApi/Dockerfile
+      args:
+        BUILD_CONFIGURATION: Release
+    container_name: fwh-marketing-api
+    ports:
+      - "4749:8080"
+      - "4750:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__marketing=Host=postgres-marketing;Port=5432;Database=marketing;Username=postgres;Password=postgres
+    depends_on:
+      postgres-marketing:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - fwh-network
+    restart: unless-stopped
+
+volumes:
+  postgres-location-data:
+    name: fwh-postgres-location-data
+  postgres-marketing-data:
+    name: fwh-postgres-marketing-data
+
+networks:
+  fwh-network:
+    name: fwh-network
+    driver: bridge

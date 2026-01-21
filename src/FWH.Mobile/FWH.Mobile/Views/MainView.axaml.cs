@@ -18,6 +18,13 @@ public partial class MainView : UserControl
             {
                 logViewer.DataContext = App.ServiceProvider.GetRequiredService<LogViewerViewModel>();
             }
+
+            // Set DataContext for MovementStateControl
+            var movementStateControl = this.FindControl<MovementStateControl>("MovementState");
+            if (movementStateControl != null)
+            {
+                movementStateControl.DataContext = App.ServiceProvider.GetRequiredService<MovementStateViewModel>();
+            }
         };
     }
 

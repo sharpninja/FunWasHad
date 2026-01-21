@@ -1,0 +1,88 @@
+name: Notify Deployment Status (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      location_api_changed:
+        required: true
+        type: string
+      marketing_api_changed:
+        required: true
+        type: string
+      mobile_changed:
+        required: true
+        type: string
+      railway_project_id:
+        required: false
+        type: string
+        default: ''
+      deploy_railway_result:
+        required: false
+        type: string
+        default: 'success'
+      release_android_result:
+        required: false
+        type: string
+        default: 'success'
+
+jobs:
+  notify_deployment:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check for skipped deployments
+        id: skipped
+        run: |
+          SKIPPED_APIS=""
+          if [ "${{ inputs.location_api_changed }}" == "false" ]; then
+            SKIPPED_APIS="${SKIPPED_APIS}Location API "
+          fi
+          if [ "${{ inputs.marketing_api_changed }}" == "false" ]; then
+            SKIPPED_APIS="${SKIPPED_APIS}Marketing API "
+          fi
+          if [ "${{ inputs.mobile_changed }}" == "false" ]; then
+            SKIPPED_APIS="${SKIPPED_APIS}Mobile "
+          fi
+          if [ -n "$SKIPPED_APIS" ]; then
+            echo "⏭️  Skipped (no changes): $SKIPPED_APIS"
+            echo "skipped=true" >> $GITHUB_OUTPUT
+          else
+            echo "skipped=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deployment Success
+        if: |
+          steps.skipped.outputs.skipped == 'false' &&
+          (inputs.deploy_railway_result == 'success' || inputs.deploy_railway_result == 'skipped') &&
+          (inputs.release_android_result == 'success' || inputs.release_android_result == 'skipped')
+        run: |
+          echo "✅ Staging deployment successful!"
+          if [ "${{ inputs.location_api_changed }}" == "true" ] || [ "${{ inputs.marketing_api_changed }}" == "true" ]; then
+            if [ -n "${{ inputs.railway_project_id }}" ]; then
+              echo "🚂 Railway Project: https://railway.com/project/${{ inputs.railway_project_id }}"
+            fi
+          fi
+          if [ "${{ inputs.mobile_changed }}" == "true" ]; then
+            echo "📱 Android Release Candidate created successfully!"
+          fi
+
+      - name: Deployment Skipped
+        if: steps.skipped.outputs.skipped == 'true'
+        run: |
+          echo "⏭️  Deployment skipped - no relevant files changed"
+          echo "✅ All checks passed, but no deployment needed"
+
+      - name: Deployment Failed
+        if: |
+          steps.skipped.outputs.skipped == 'false' &&
+          (inputs.deploy_railway_result == 'failure' || inputs.release_android_result == 'failure')
+        run: |
+          echo "❌ Staging deployment failed!"
+          if [ "${{ inputs.deploy_railway_result }}" == "failure" ]; then
+            echo "  - Railway deployment failed"
+          fi
+          if [ "${{ inputs.release_android_result }}" == "failure" ]; then
+            echo "  - Android release candidate creation failed"
+          fi
+          exit 1

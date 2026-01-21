@@ -1,7 +1,7 @@
 # .NET Aspire Quick Reference
 
-**Status:** ✅ Integrated and Working  
-**Version:** 9.0.0  
+**Status:** ✅ Integrated and Working
+**Version:** 9.0.0
 **Test Date:** 2026-01-08
 
 ---
@@ -54,7 +54,7 @@ dotnet test
 dotnet run --project FWH.Location.Api
 
 # Just the Mobile app
-dotnet run --project FWH.Mobile\FWH.Mobile.Desktop
+dotnet run --project FWH.Mobile/FWH.Mobile.Desktop
 ```
 
 ---
@@ -209,6 +209,6 @@ dotnet run --project FWH.AppHost
 
 ---
 
-**Status:** ✅ READY TO USE  
-**Last Updated:** 2026-01-08  
+**Status:** ✅ READY TO USE
+**Last Updated:** 2026-01-08
 **Version:** 1.0

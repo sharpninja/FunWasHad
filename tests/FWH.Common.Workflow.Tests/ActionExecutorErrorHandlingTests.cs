@@ -18,7 +18,6 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System;
 using System.Collections.Generic;
-using FWH.Common.Workflow.Actions;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -95,7 +94,7 @@ public class ActionExecutorErrorHandlingTests
             services.AddWorkflowActionHandler("NonExistentAction", (ctx, p, ct) =>
             {
                 // Dummy handler to simulate action execution
-                return Task.FromResult<IDictionary<string, string>>(new Dictionary<string, string>());
+                return Task.FromResult<IDictionary<string, string>?>(new Dictionary<string, string>());
             });
         });
         
@@ -125,7 +124,7 @@ public class ActionExecutorErrorHandlingTests
             {
                 handlerCalled = true;
                 receivedParams = p;
-                return Task.FromResult<IDictionary<string, string>>(new Dictionary<string, string>());
+                return Task.FromResult<IDictionary<string, string>?>(new Dictionary<string, string>());
             });
         });
 
@@ -294,10 +293,10 @@ public class ActionExecutorErrorHandlingTests
         // Arrange
         var svc = BuildWithInMemoryRepo(out var sp, services =>
         {
-            services.AddWorkflowActionHandler("NullReturn", (ctx, p, ct) =>
-            {
-                return Task.FromResult<IDictionary<string, string>>(null!);
-            });
+        services.AddWorkflowActionHandler("NullReturn", (ctx, p, ct) =>
+        {
+            return Task.FromResult<IDictionary<string, string>?>(null);
+        });
         });
 
         var plant = "@startuml\n[*] --> A\n:A\nnote right: {\"action\": \"NullReturn\", \"params\": {}}\nA --> B\n:B\n@enduml";

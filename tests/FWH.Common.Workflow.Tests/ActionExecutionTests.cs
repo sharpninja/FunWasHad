@@ -20,7 +20,6 @@ using System.Threading;
 using FWH.Common.Workflow.Extensions;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
-using FWH.Common.Workflow.Actions;
 using FWH.Orchestrix.Contracts.Mediator;
 using FWH.Orchestrix.Mediator.Remote.Mediator;
 
@@ -112,7 +111,7 @@ public class ActionExecutionTests
     }
 
     [Fact]
-    public async Task ParameterResolution_ReplacesMultipleTemplates()
+    public Task ParameterResolution_ReplacesMultipleTemplates()
     {
         var parameters = new System.Collections.Generic.Dictionary<string,string>
         {
@@ -134,5 +133,6 @@ public class ActionExecutionTests
         Assert.NotNull(resolved);
         Assert.Equal("Hi Jane Doe", resolved["text"]);
         Assert.Equal("id:42", resolved["meta"]);
+        return Task.CompletedTask;
     }
 }

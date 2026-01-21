@@ -208,7 +208,7 @@ public class ChatServiceErrorHandlingTests
     }
 
     [Fact]
-    public async Task ChatViewModel_PropertyChanged_FiresForChatList()
+    public Task ChatViewModel_PropertyChanged_FiresForChatList()
     {
         // Arrange
         var sp = BuildServices();
@@ -228,6 +228,7 @@ public class ChatServiceErrorHandlingTests
         // Assert - ChatViewModel should notify of changes
         // Note: This depends on how ChatViewModel observes ChatListViewModel
         // If they're connected, property change should fire
+        return Task.CompletedTask;
     }
 
     [Fact]

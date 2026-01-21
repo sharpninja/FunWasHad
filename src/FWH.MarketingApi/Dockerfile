@@ -1,32 +1,69 @@
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Copy project files
-COPY ["FWH.MarketingApi/FWH.MarketingApi.csproj", "FWH.MarketingApi/"]
-COPY ["FWH.ServiceDefaults/FWH.ServiceDefaults.csproj", "FWH.ServiceDefaults/"]
-COPY ["Directory.Packages.props", "./"]
+# Copy global configuration files
+COPY ["Directory.Packages.props", "."]
+COPY ["global.json", "."]
+COPY ["NuGet.config", "."]
 
-# Restore dependencies
-RUN dotnet restore "FWH.MarketingApi/FWH.MarketingApi.csproj"
+# Copy all project files for restore
+COPY ["src/FWH.MarketingApi/FWH.MarketingApi.csproj", "src/FWH.MarketingApi/"]
+COPY ["src/FWH.ServiceDefaults/FWH.ServiceDefaults.csproj", "src/FWH.ServiceDefaults/"]
 
-# Copy source code
-COPY FWH.MarketingApi/ FWH.MarketingApi/
-COPY FWH.ServiceDefaults/ FWH.ServiceDefaults/
+# Restore dependencies with explicit timeout
+RUN dotnet restore "src/FWH.MarketingApi/FWH.MarketingApi.csproj" \
+    --configfile NuGet.config \
+    --verbosity normal
 
-# Build
-WORKDIR /src/FWH.MarketingApi
-RUN dotnet build "FWH.MarketingApi.csproj" -c Release -o /app/build
+# Copy all source code
+COPY src/ src/
+
+# Build the application
+WORKDIR "/src/src/FWH.MarketingApi"
+RUN dotnet build "FWH.MarketingApi.csproj" -c $BUILD_CONFIGURATION -o /app/build --no-restore
 
 # Publish stage
 FROM build AS publish
-RUN dotnet publish "FWH.MarketingApi.csproj" -c Release -o /app/publish /p:UseAppHost=false
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "FWH.MarketingApi.csproj" \
+    -c $BUILD_CONFIGURATION \
+    -o /app/publish \
+    /p:UseAppHost=false \
+    --no-restore
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+
+# Create non-root user for security
+RUN addgroup --system --gid 1001 appuser \
+    && adduser --system --uid 1001 --ingroup appuser appuser
+
 WORKDIR /app
+
+# Copy published files
+COPY --from=publish /app/publish .
+
+# Change ownership to non-root user
+RUN chown -R appuser:appuser /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose ports
 EXPOSE 8080
 EXPOSE 8081
 
-COPY --from=publish /app/publish .
+# Configure ASP.NET Core
+ENV ASPNETCORE_URLS=http://+:8080 \
+    ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_RUNNING_IN_CONTAINER=true \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl --fail http://localhost:8080/health || exit 1
+
 ENTRYPOINT ["dotnet", "FWH.MarketingApi.dll"]
+

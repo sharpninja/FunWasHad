@@ -1,0 +1,50 @@
+version: '3.8'
+
+# Development overrides for docker-compose.yml
+# This file is automatically applied when running docker-compose up
+# Use for development-specific settings like volume mounts, debug ports, etc.
+
+services:
+  location-api:
+    build:
+      args:
+        BUILD_CONFIGURATION: Debug
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - Logging__LogLevel__Default=Debug
+      - Logging__LogLevel__Microsoft.AspNetCore=Information
+    volumes:
+      # Mount source code for hot reload (optional, requires watch mode)
+      - ./src/FWH.Location.Api:/src/FWH.Location.Api:ro
+    labels:
+      - "com.funwashad.description=Location API - Development"
+      - "com.funwashad.service=location-api"
+
+  marketing-api:
+    build:
+      args:
+        BUILD_CONFIGURATION: Debug
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - Logging__LogLevel__Default=Debug
+      - Logging__LogLevel__Microsoft.AspNetCore=Information
+    volumes:
+      # Mount source code for hot reload (optional, requires watch mode)
+      - ./src/FWH.MarketingApi:/src/FWH.MarketingApi:ro
+    labels:
+      - "com.funwashad.description=Marketing API - Development"
+      - "com.funwashad.service=marketing-api"
+
+  postgres-location:
+    environment:
+      - POSTGRES_PASSWORD=dev_password_change_in_production
+    labels:
+      - "com.funwashad.description=PostgreSQL for Location API - Development"
+
+  postgres-marketing:
+    environment:
+      - POSTGRES_PASSWORD=dev_password_change_in_production
+    labels:
+      - "com.funwashad.description=PostgreSQL for Marketing API - Development"

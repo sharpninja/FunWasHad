@@ -2,7 +2,6 @@ using FWH.MarketingApi.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -35,16 +34,17 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         builder.ConfigureServices(services =>
         {
-            // Remove DbContext pool registrations (singleton) that conflict with scoped DbContext
-            services.RemoveAll(typeof(IDbContextPool<MarketingDbContext>));
-            services.RemoveAll(typeof(IScopedDbContextLease<MarketingDbContext>));
-            
             // Replace database with PostgreSQL test container
+            // Remove ALL existing DbContext registrations including pooling
             services.RemoveAll<DbContextOptions<MarketingDbContext>>();
             services.RemoveAll<MarketingDbContext>();
+            services.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Internal.IDbContextPool<>));
+            services.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Internal.IDbContextPool<MarketingDbContext>));
+            services.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Internal.IScopedDbContextLease<>));
+            services.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Internal.IScopedDbContextLease<MarketingDbContext>));
             
-            // Register DbContext options first
-            services.AddDbContext<MarketingDbContext>(options =>
+            // Register DbContext WITHOUT pooling for tests
+            services.AddDbContext<MarketingDbContext>((sp, options) =>
             {
                 options.UseNpgsql(_connectionString ?? throw new InvalidOperationException("PostgreSQL container not started"), npgsqlOptions =>
                 {
@@ -53,7 +53,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 // Enable sensitive data logging for debugging
                 options.EnableSensitiveDataLogging();
                 options.EnableDetailedErrors();
-            });
+            }, ServiceLifetime.Scoped, ServiceLifetime.Scoped); // Explicitly set to Scoped, not Singleton
             
             // Replace the implementation with test-specific one
             services.RemoveAll<MarketingDbContext>();

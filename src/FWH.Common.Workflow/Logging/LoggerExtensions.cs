@@ -38,7 +38,7 @@ public static class LoggerExtensions
             }
         }
 
-        return logger.BeginScope(properties);
+        return logger.BeginScope(properties) ?? new NullDisposable();
     }
 
     /// <summary>
@@ -139,5 +139,10 @@ public static class LoggerExtensions
         {
             logger.LogError(exception, "Operation failed: {Operation}", operation);
         }
+    }
+
+    private sealed class NullDisposable : IDisposable
+    {
+        public void Dispose() { }
     }
 }

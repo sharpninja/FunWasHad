@@ -11,10 +11,19 @@
     <NoWarn>$(NoWarn);1591</NoWarn> <!-- Suppress warnings for missing XML docs (will enable after full audit) -->
   </PropertyGroup>
 
+  <!-- Staging configuration: based on Debug (unoptimized, with debug symbols) -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Staging'">
+    <Optimize>false</Optimize>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
+    <!-- Explicit reference to resolve version conflict between ServiceDefaults and Aspire -->
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
   </ItemGroup>
 
   <ItemGroup>

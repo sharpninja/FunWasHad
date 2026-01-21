@@ -109,7 +109,7 @@ public class HandlerRegistryEdgeCaseTests
     }
 
     [Fact]
-    public void HandlerRegistry_ConcurrentRegistration_ThreadSafe()
+    public async Task HandlerRegistry_ConcurrentRegistration_ThreadSafe()
     {
         // Arrange
         var registry = new WorkflowActionHandlerRegistry();
@@ -126,7 +126,7 @@ public class HandlerRegistryEdgeCaseTests
             }));
         }
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks);
 
         // Assert - All handlers should be registered
         for (int i = 0; i < 100; i++)
@@ -138,7 +138,7 @@ public class HandlerRegistryEdgeCaseTests
     }
 
     [Fact]
-    public void HandlerRegistry_ConcurrentGetAndRegister_ThreadSafe()
+    public async Task HandlerRegistry_ConcurrentGetAndRegister_ThreadSafe()
     {
         // Arrange
         var registry = new WorkflowActionHandlerRegistry();
@@ -181,7 +181,7 @@ public class HandlerRegistryEdgeCaseTests
             }));
         }
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks);
 
         // Assert - No exceptions should have occurred
         Assert.Empty(exceptions);

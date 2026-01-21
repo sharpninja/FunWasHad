@@ -9,13 +9,40 @@
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+
+    <!-- Java SDK Directory Configuration -->
+    <!-- Priority: 1. Explicitly set JavaSdkDirectory, 2. JAVA_HOME env var, 3. Common JDK locations -->
+    <JavaSdkDirectory Condition="'$(JavaSdkDirectory)' == '' and '$(JAVA_HOME)' != ''">$(JAVA_HOME)</JavaSdkDirectory>
+    <JavaSdkDirectory Condition="'$(JavaSdkDirectory)' == '' and Exists('C:\Program Files\Microsoft\jdk-11.0.29.7-hotspot')">C:\Program Files\Microsoft\jdk-11.0.29.7-hotspot</JavaSdkDirectory>
+    <JavaSdkDirectory Condition="'$(JavaSdkDirectory)' == '' and Exists('C:\Program Files\Eclipse Adoptium\jdk-11.0.29.7-hotspot')">C:\Program Files\Eclipse Adoptium\jdk-11.0.29.7-hotspot</JavaSdkDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <DefineConstants>$(DefineConstants);ANDROID</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Staging|AnyCPU'">
     <DefineConstants>$(DefineConstants);ANDROID</DefineConstants>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>$(DefineConstants);ANDROID</DefineConstants>
+    <!-- Prevent Windows assemblies from being included in publish -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+  </PropertyGroup>
+
+  <!-- Skip Windows-specific assemblies during Android linking -->
+  <PropertyGroup>
+    <AndroidLinkSkip>System.Private.Windows.Core;System.Private.Windows.GdiPlus;System.Runtime.WindowsRuntime;System.Runtime.WindowsRuntime.UI.Xaml</AndroidLinkSkip>
+    <!-- Exclude Windows assemblies from runtime pack -->
+    <RuntimePackExclude>System.Private.Windows.Core;System.Private.Windows.GdiPlus;System.Runtime.WindowsRuntime;System.Runtime.WindowsRuntime.UI.Xaml</RuntimePackExclude>
+  </PropertyGroup>
+
+  <!-- Explicitly exclude Windows assemblies from runtime pack -->
+  <ItemGroup>
+    <RuntimePackExclude Include="System.Private.Windows.Core" />
+    <RuntimePackExclude Include="System.Private.Windows.GdiPlus" />
+    <RuntimePackExclude Include="System.Runtime.WindowsRuntime" />
+    <RuntimePackExclude Include="System.Runtime.WindowsRuntime.UI.Xaml" />
+  </ItemGroup>
 
   <ItemGroup>
     <AndroidResource Include="Icon.png">
@@ -35,27 +62,27 @@
     <AndroidAsset Include="..\FWH.Mobile\appsettings.json" Link="appsettings.json" />
   </ItemGroup>
 
-  <!-- MSBuild target to detect host IP and process config for DEBUG builds -->
-  <Target Name="DetectHostIpAddress" BeforeTargets="BeforeBuild" Condition="'$(Configuration)' == 'Debug'">
-    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DetectHostIp.ps1&quot; &quot;$(ProjectDir)&quot;" 
+  <!-- MSBuild target to detect host IP and process config for DEBUG and STAGING builds -->
+  <Target Name="DetectHostIpAddress" BeforeTargets="BeforeBuild" Condition="'$(Configuration)' == 'Debug' or '$(Configuration)' == 'Staging'">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(ProjectDir)DetectHostIp.ps1&quot; &quot;$(ProjectDir)&quot;"
           ConsoleToMSBuild="true"
           IgnoreExitCode="false" />
   </Target>
-  
-  <!-- Use the processed config file for Android assets in DEBUG builds -->
-  <ItemGroup Condition="'$(Configuration)' == 'Debug' and Exists('obj\appsettings.Development.processed.json')">
+
+  <!-- Use the processed config file for Android assets in DEBUG and STAGING builds -->
+  <ItemGroup Condition="('$(Configuration)' == 'Debug' or '$(Configuration)' == 'Staging') and Exists('obj\appsettings.Development.processed.json')">
     <AndroidAsset Include="obj\appsettings.Development.processed.json">
       <Link>appsettings.Development.json</Link>
     </AndroidAsset>
   </ItemGroup>
   
   <!-- Fallback to original file if processed doesn't exist -->
-  <ItemGroup Condition="'$(Configuration)' == 'Debug' and !Exists('obj\appsettings.Development.processed.json')">
+  <ItemGroup Condition="('$(Configuration)' == 'Debug' or '$(Configuration)' == 'Staging') and !Exists('obj\appsettings.Development.processed.json')">
     <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />
   </ItemGroup>
   
   <!-- In Release, always use original (with placeholder/default) -->
-  <ItemGroup Condition="'$(Configuration)' != 'Debug'">
+  <ItemGroup Condition="'$(Configuration)' != 'Debug' and '$(Configuration)' != 'Staging'">
     <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />
   </ItemGroup>
 
@@ -72,4 +99,106 @@
   <ItemGroup>
     <ProjectReference Include="..\FWH.Mobile\FWH.Mobile.csproj" />
   </ItemGroup>
+
+  <!-- Exclude Windows-specific assemblies from Android build -->
+  <ItemGroup>
+    <!-- Exclude Windows-specific assemblies from AOT compilation and trimming -->
+    <TrimmerRootAssembly Remove="System.Private.Windows.Core" />
+    <TrimmerRootAssembly Remove="System.Private.Windows.GdiPlus" />
+    <TrimmerRootAssembly Remove="System.Runtime.WindowsRuntime" />
+    <TrimmerRootAssembly Remove="System.Runtime.WindowsRuntime.UI.Xaml" />
+    <TrimmerRootAssembly Remove="WindowsBase" />
+    <TrimmerRootAssembly Remove="PresentationCore" />
+    <TrimmerRootAssembly Remove="PresentationFramework" />
+    <!-- Explicitly exclude from publish -->
+    <TrimmerRootAssembly Remove="System.Formats.Nrbf" Condition="'$(TargetFramework)' == 'net9.0-android'" />
+  </ItemGroup>
+
+  <!-- Exclude Windows assemblies from being resolved as dependencies -->
+  <ItemGroup>
+    <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                          Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Private.Windows'))" />
+    <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                          Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Runtime.Windows'))" />
+  </ItemGroup>
+
+  <!-- Additional exclusion for Windows assemblies during linking -->
+  <Target Name="ExcludeWindowsAssemblies" BeforeTargets="_ComputeResolvedFilesToPublish">
+    <ItemGroup>
+      <_ResolvedFileToPublish Remove="@(_ResolvedFileToPublish)"
+                               Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Private.Windows'))" />
+      <_ResolvedFileToPublish Remove="@(_ResolvedFileToPublish)"
+                               Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Runtime.Windows'))" />
+      <_ResolvedFileToPublish Remove="@(_ResolvedFileToPublish)"
+                               Condition="$([System.String]::Copy('%(Filename)').Contains('WindowsRuntime'))" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Exclude Windows assemblies from linking process (before AOT) -->
+  <Target Name="ExcludeWindowsAssembliesFromLinking" BeforeTargets="_LinkAssemblies;_ComputeResolvedFilesToPublish">
+    <ItemGroup>
+      <!-- Exclude from resolved files -->
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                              Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Private.Windows'))" />
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                              Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Runtime.Windows'))" />
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                              Condition="$([System.String]::Copy('%(Filename)').Contains('WindowsRuntime'))" />
+      <!-- Exclude from linked assemblies -->
+      <_LinkedAssemblies Remove="@(_LinkedAssemblies)"
+                          Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Private.Windows'))" />
+      <_LinkedAssemblies Remove="@(_LinkedAssemblies)"
+                          Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Runtime.Windows'))" />
+      <_LinkedAssemblies Remove="@(_LinkedAssemblies)"
+                          Condition="$([System.String]::Copy('%(Filename)').Contains('WindowsRuntime'))" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Remove Windows assemblies from linked folder before AOT compilation -->
+  <Target Name="RemoveWindowsAssembliesFromLinkedFolder" AfterTargets="_LinkAssemblies" BeforeTargets="_AndroidAotCompile">
+    <!-- Use PowerShell to find and delete Windows assemblies (works on Windows and Linux with pwsh) -->
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$files = Get-ChildItem -Path '$(IntermediateOutputPath)' -Recurse -Include 'System.Private.Windows.*.dll','System.Runtime.Windows*.dll' -ErrorAction SilentlyContinue | Where-Object { $_.DirectoryName -match '\\linked\\' }; if ($files) { $files | Remove-Item -Force -ErrorAction SilentlyContinue; Write-Host 'Removed' $files.Count 'Windows assemblies' }&quot;"
+          ContinueOnError="true"
+          IgnoreExitCode="true" />
+    <Message Text="Removed Windows assemblies from linked folders in $(IntermediateOutputPath)" Importance="normal" />
+
+    <!-- Also remove using RemoveItem to ensure they're not in any item groups -->
+    <ItemGroup>
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)"
+                           Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Private.Windows'))" />
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)"
+                           Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Runtime.Windows'))" />
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)"
+                           Condition="$([System.String]::Copy('%(Filename)').Contains('WindowsRuntime'))" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Exclude Windows assemblies from AOT compilation - runs before AOT to filter input assemblies -->
+  <Target Name="ExcludeWindowsAssembliesFromAot" BeforeTargets="_AndroidAotCompile">
+    <ItemGroup>
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)"
+                           Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Private.Windows'))" />
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)"
+                           Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Runtime.Windows'))" />
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)"
+                           Condition="$([System.String]::Copy('%(Filename)').Contains('WindowsRuntime'))" />
+      <!-- Also remove by full path pattern -->
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)"
+                           Condition="$([System.String]::Copy('%(FullPath)').Contains('System.Private.Windows'))" />
+      <_AotInputAssemblies Remove="@(_AotInputAssemblies)"
+                           Condition="$([System.String]::Copy('%(FullPath)').Contains('System.Runtime.Windows'))" />
+    </ItemGroup>
+    <Message Text="Excluded Windows assemblies from AOT: @(_AotInputAssemblies->WithMetadataValue('Filename', 'System.Private.Windows'))" Importance="normal" Condition="'@(_AotInputAssemblies->WithMetadataValue('Filename', 'System.Private.Windows'))' != ''" />
+  </Target>
+
+  <!-- Additional safety: Remove Windows assemblies from publish output -->
+  <Target Name="RemoveWindowsAssembliesFromPublish" AfterTargets="Publish" BeforeTargets="_AndroidAotCompile">
+    <ItemGroup>
+      <_PublishFilesToRemove Include="@(ResolvedFileToPublish)"
+                            Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Private.Windows'))" />
+      <_PublishFilesToRemove Include="@(ResolvedFileToPublish)"
+                            Condition="$([System.String]::Copy('%(Filename)').StartsWith('System.Runtime.Windows'))" />
+    </ItemGroup>
+    <Delete Files="@(_PublishFilesToRemove)" ContinueOnError="true" />
+  </Target>
 </Project>
