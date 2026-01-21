@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>FWH.Mobile</string>
+	<string>#FunWasHad</string>
 	<key>CFBundleIdentifier</key>
-	<string>companyName.FWH.Mobile</string>
+	<string>app.funwashad</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
 	<key>CFBundleVersion</key>

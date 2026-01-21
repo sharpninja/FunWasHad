@@ -4,6 +4,7 @@
     <TargetFramework>net9.0-ios</TargetFramework>
     <SupportedOSPlatformVersion>13.0</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
+    <ApplicationId>app.funwashad</ApplicationId>
   </PropertyGroup>
 
   <!-- Staging configuration: based on Debug (unoptimized, with debug symbols) -->
