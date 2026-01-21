@@ -67,6 +67,63 @@
                 "panel": "dedicated",
                 "focus": false
             }
+        },
+        {
+            "label": "android-logs-monitor",
+            "command": "adb",
+            "type": "process",
+            "args": [
+                "logcat",
+                "*:E",
+                "*:W",
+                "FunWasHad:*",
+                "dotnet:*",
+                "mono:*",
+                "MonoDroid:*"
+            ],
+            "problemMatcher": [],
+            "isBackground": true,
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false,
+                "clear": true
+            },
+            "runOptions": {
+                "runOn": "folderOpen"
+            }
+        },
+        {
+            "label": "android-logs-clear",
+            "command": "adb",
+            "type": "process",
+            "args": [
+                "logcat",
+                "-c"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "android-logs-recent",
+            "command": "powershell",
+            "type": "process",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "adb logcat -d -t 200 | Select-String -Pattern 'app\\.funwashad|FunWasHad|dotnet|Exception|Error|Fatal|Warning' -CaseSensitive:`$false | Select-Object -Last 50"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false
+            }
         }
     ]
 }

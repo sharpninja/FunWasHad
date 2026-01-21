@@ -223,12 +223,12 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                     IDictionary<string,string>? updates = null;
                     try
                     {
-                        _logger.LogInformation("Invoking handler {HandlerName} for workflow {WorkflowId} node {NodeId}", handler.Name, workflowId, node.Id);
+                        _logger.LogDebug("Invoking handler {HandlerName} for workflow {WorkflowId} node {NodeId}", handler.Name, workflowId, node.Id);
                         updates = await handler.HandleAsync(ctx, resolved, cancellationToken).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
                     {
-                        _logger.LogInformation("Action {ActionName} execution cancelled", actionName);
+                        _logger.LogDebug("Action {ActionName} execution cancelled", actionName);
                         throw; // Re-throw to be caught by outer try-catch
                     }
 

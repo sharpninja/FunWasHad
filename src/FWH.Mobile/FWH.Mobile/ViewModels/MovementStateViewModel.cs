@@ -38,7 +38,7 @@ public partial class MovementStateViewModel : ObservableObject
     private string _coordinatesText = "--";
 
     [ObservableProperty]
-    private string _currentAddress = "Address: --";
+    private string _currentAddress = "--";
 
     [ObservableProperty]
     private bool _hasAddress = false;
@@ -60,6 +60,7 @@ public partial class MovementStateViewModel : ObservableObject
         UpdateSpeed();
         UpdateTrackingStatus();
         UpdateCoordinates();
+        UpdateAddress();
     }
 
     private void OnMovementStateChanged(object? sender, MovementStateChangedEventArgs e)
@@ -84,6 +85,21 @@ public partial class MovementStateViewModel : ObservableObject
         _logger.LogInformation("Address changed to: {Address}", e.CurrentAddress);
         CurrentAddress = e.CurrentAddress;
         HasAddress = !string.IsNullOrEmpty(e.CurrentAddress);
+    }
+
+    private void UpdateAddress()
+    {
+        var address = _locationTrackingService.CurrentAddress;
+        if (!string.IsNullOrEmpty(address))
+        {
+            CurrentAddress = address;
+            HasAddress = true;
+        }
+        else
+        {
+            CurrentAddress = "--";
+            HasAddress = false;
+        }
     }
 
     private void UpdateMovementState(MovementState state)
@@ -158,5 +174,6 @@ public partial class MovementStateViewModel : ObservableObject
         UpdateSpeed();
         UpdateTrackingStatus();
         UpdateCoordinates();
+        UpdateAddress();
     }
 }

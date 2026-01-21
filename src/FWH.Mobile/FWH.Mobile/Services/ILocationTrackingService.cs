@@ -49,6 +49,12 @@ public interface ILocationTrackingService
     double? CurrentSpeedKmh { get; }
 
     /// <summary>
+    /// Gets the current address (if available).
+    /// This is determined when the device remains stationary and the location is resolved to an address.
+    /// </summary>
+    string? CurrentAddress { get; }
+
+    /// <summary>
     /// Gets or sets the minimum distance in meters that triggers a location update.
     /// Default: 50 meters.
     /// </summary>

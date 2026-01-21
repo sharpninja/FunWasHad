@@ -1,0 +1,11 @@
+{
+  "workbench.editorAssociations": {
+    "*.md": "default"
+  },
+  "terminal.integrated.shellArgs.windows": [
+    "-NoProfile"
+  ],
+  "powershell.integratedConsole.shellArgs": [
+    "-NoProfile"
+  ]
+}

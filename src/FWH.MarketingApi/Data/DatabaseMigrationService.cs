@@ -82,7 +82,7 @@ public class DatabaseMigrationService
 
     public async Task ApplyMigrationsAsync()
     {
-        _logger.LogInformation("Starting database migration process");
+        _logger.LogDebug("Starting database migration process");
 
         try
         {
@@ -107,11 +107,11 @@ public class DatabaseMigrationService
 
             if (migrationFiles.Count == 0)
             {
-                _logger.LogInformation("No migration files found");
+                _logger.LogDebug("No migration files found");
                 return;
             }
 
-            _logger.LogInformation("Found {Count} migration files", migrationFiles.Count);
+            _logger.LogDebug("Found {Count} migration files", migrationFiles.Count);
 
             // Apply each migration
             foreach (var migrationFile in migrationFiles)

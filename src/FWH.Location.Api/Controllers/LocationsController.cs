@@ -122,7 +122,7 @@ public sealed class LocationsController : ControllerBase
 
         if (result == null)
         {
-            _logger.LogInformation("No business found within {MaxDistance}m of ({Latitude}, {Longitude})", maxDistanceMeters, latitude, longitude);
+            _logger.LogDebug("No business found within {MaxDistance}m of ({Latitude}, {Longitude})", maxDistanceMeters, latitude, longitude);
             return NotFound();
         }
 

@@ -7,6 +7,7 @@ namespace FWH.Mobile.Logging;
 
 public sealed class AvaloniaLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
+    private static long _logEntryIdCounter = 0;
     private readonly AvaloniaLogStore _store;
     private readonly ConcurrentDictionary<string, AvaloniaLogger> _loggers = new(StringComparer.Ordinal);
 
@@ -74,7 +75,9 @@ public sealed class AvaloniaLoggerProvider : ILoggerProvider, ISupportExternalSc
                 }, state: (object?)null);
             }
 
+            var logId = Interlocked.Increment(ref _logEntryIdCounter);
             _store.Add(new AvaloniaLogEntry(
+                Id: logId,
                 TimestampUtc: DateTimeOffset.UtcNow,
                 Level: logLevel,
                 Category: _category,

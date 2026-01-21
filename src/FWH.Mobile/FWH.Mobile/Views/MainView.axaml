@@ -14,10 +14,17 @@
         <vm:ChatViewModel />
     </Design.DataContext>
 
-    <DockPanel>
-        <views:LogViewerControl DockPanel.Dock="Bottom" Height="200" Name="LogViewer" />
-        <mobile:ChatInputControl DockPanel.Dock="Bottom" />
-        <views:MovementStateControl DockPanel.Dock="Top" Margin="8" Name="MovementState" />
-        <mobile:ChatListControl />
-    </DockPanel>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="4*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="6*" />
+        </Grid.RowDefinitions>
+
+        <views:MovementStateControl Grid.Row="0" Margin="8" Name="MovementState" />
+        <mobile:ChatListControl Grid.Row="1" />
+        <mobile:ChatInputControl Grid.Row="2" />
+        <views:LogViewerControl Grid.Row="3" Name="LogViewer" />
+    </Grid>
 </UserControl>

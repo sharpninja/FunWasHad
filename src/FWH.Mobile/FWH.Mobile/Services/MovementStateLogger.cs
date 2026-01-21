@@ -29,7 +29,7 @@ public class MovementStateLogger
         _locationTrackingService.MovementStateChanged += OnMovementStateChanged;
         _locationTrackingService.LocationUpdated += OnLocationUpdated;
         
-        _logger.LogInformation("Movement state logging started");
+        _logger.LogDebug("Movement state logging started");
         LogCurrentState();
     }
 
@@ -41,7 +41,7 @@ public class MovementStateLogger
         _locationTrackingService.MovementStateChanged -= OnMovementStateChanged;
         _locationTrackingService.LocationUpdated -= OnLocationUpdated;
         
-        _logger.LogInformation("Movement state logging stopped");
+        _logger.LogDebug("Movement state logging stopped");
     }
 
     private void OnMovementStateChanged(object? sender, MovementStateChangedEventArgs e)

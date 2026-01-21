@@ -37,7 +37,7 @@
             "request": "launch",
             "preLaunchTask": "run-android",
             // Note: Android apps deploy to device/emulator via the preLaunchTask
-            // This program path is a placeholder - the actual deployment happens in the task
+            // The app runs on the device - view logs with: adb logcat | Select-String -Pattern "FunWasHad"
             "program": "dotnet",
             "args": [
                 "--version"
@@ -45,7 +45,7 @@
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",
             "stopAtEntry": false,
-            "noDebug": true
+            "noDebug": false
         },
         {
             "name": ".NET Core Attach",

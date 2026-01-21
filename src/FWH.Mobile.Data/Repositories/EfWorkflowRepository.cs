@@ -22,10 +22,26 @@ public class EfWorkflowRepository : IWorkflowRepository
         try
         {
             _logger.LogDebug("Creating workflow {WorkflowId}", def.Id);
+
+            // Check if workflow already exists before attempting to create
+            var existing = await _context.WorkflowDefinitions
+                .FirstOrDefaultAsync(w => w.Id == def.Id, cancellationToken);
+
+            if (existing != null)
+            {
+                _logger.LogWarning("Workflow {WorkflowId} already exists, cannot create. Use UpdateAsync instead.", def.Id);
+                throw new InvalidOperationException($"Workflow '{def.Id}' already exists. Use UpdateAsync to modify it.");
+            }
+
             var entry = await _context.WorkflowDefinitions.AddAsync(def, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
             _logger.LogInformation("Created workflow {WorkflowId}", def.Id);
             return entry.Entity;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("UNIQUE constraint") == true)
+        {
+            _logger.LogWarning(ex, "Unique constraint violation when creating workflow {WorkflowId}. Workflow already exists.", def?.Id);
+            throw new InvalidOperationException($"Workflow '{def?.Id}' already exists. Use UpdateAsync to modify it.", ex);
         }
         catch (Exception ex)
         {
@@ -73,21 +89,21 @@ public class EfWorkflowRepository : IWorkflowRepository
     }
 
     public async Task<IEnumerable<WorkflowDefinitionEntity>> FindByNamePatternAsync(
-        string namePattern, 
-        DateTimeOffset since, 
+        string namePattern,
+        DateTimeOffset since,
         CancellationToken cancellationToken = default)
     {
-        using var scope = _logger.BeginScope(new Dictionary<string, object> 
-        { 
-            ["Operation"] = "FindByNamePattern", 
+        using var scope = _logger.BeginScope(new Dictionary<string, object>
+        {
+            ["Operation"] = "FindByNamePattern",
             ["Pattern"] = namePattern,
             ["Since"] = since
         });
-        
+
         try
         {
             _logger.LogDebug("Finding workflows matching pattern {Pattern} since {Since}", namePattern, since);
-            
+
             return await _context.WorkflowDefinitions
                 .Include(w => w.Nodes)
                 .Include(w => w.Transitions)
@@ -106,10 +122,10 @@ public class EfWorkflowRepository : IWorkflowRepository
     public async Task<WorkflowDefinitionEntity> UpdateAsync(WorkflowDefinitionEntity def, CancellationToken cancellationToken = default)
     {
         using var scope = _logger.BeginScope(new Dictionary<string, object> { ["Operation"] = "UpdateWorkflow", ["WorkflowId"] = def.Id });
-        
+
         int retryCount = 0;
         const int maxRetries = 3;
-        
+
         while (retryCount < maxRetries)
         {
             try
@@ -185,23 +201,23 @@ public class EfWorkflowRepository : IWorkflowRepository
             catch (DbUpdateConcurrencyException ex)
             {
                 retryCount++;
-                _logger.LogWarning(ex, "Concurrency conflict updating workflow {WorkflowId}, attempt {RetryCount}/{MaxRetries}", 
+                _logger.LogWarning(ex, "Concurrency conflict updating workflow {WorkflowId}, attempt {RetryCount}/{MaxRetries}",
                     def.Id, retryCount, maxRetries);
-                
+
                 if (retryCount >= maxRetries)
                 {
                     _logger.LogError("Max retries exceeded for workflow {WorkflowId} due to concurrency conflicts", def.Id);
                     throw new InvalidOperationException(
-                        $"Unable to update workflow '{def.Id}' after {maxRetries} attempts due to concurrent modifications. Please retry.", 
+                        $"Unable to update workflow '{def.Id}' after {maxRetries} attempts due to concurrent modifications. Please retry.",
                         ex);
                 }
-                
+
                 // Refresh the context to get latest data
                 foreach (var entry in _context.ChangeTracker.Entries())
                 {
                     await entry.ReloadAsync(cancellationToken);
                 }
-                
+
                 // Small delay before retry with exponential backoff
                 await Task.Delay(100 * retryCount, cancellationToken);
             }
@@ -211,7 +227,7 @@ public class EfWorkflowRepository : IWorkflowRepository
                 throw;
             }
         }
-        
+
         throw new InvalidOperationException($"Unexpected state: exceeded retry loop for workflow '{def.Id}'");
     }
 
@@ -238,53 +254,53 @@ public class EfWorkflowRepository : IWorkflowRepository
     public async Task<bool> UpdateCurrentNodeIdAsync(string workflowDefinitionId, string? currentNodeId = null, CancellationToken cancellationToken = default)
     {
         using var scope = _logger.BeginScope(new Dictionary<string, object> { ["Operation"] = "UpdateCurrentNodeId", ["WorkflowId"] = workflowDefinitionId, ["NodeId"] = currentNodeId ?? "null" });
-        
+
         int retryCount = 0;
         const int maxRetries = 3;
-        
+
         while (retryCount < maxRetries)
         {
             try
             {
-                _logger.LogDebug("Updating CurrentNodeId for {WorkflowId} to {NodeId} (attempt {RetryCount})", 
+                _logger.LogDebug("Updating CurrentNodeId for {WorkflowId} to {NodeId} (attempt {RetryCount})",
                     workflowDefinitionId, currentNodeId, retryCount + 1);
-                
+
                 var existing = await _context.WorkflowDefinitions.FirstOrDefaultAsync(
-                    w => w.Id == workflowDefinitionId, 
+                    w => w.Id == workflowDefinitionId,
                     cancellationToken);
-                
+
                 if (existing == null)
                 {
                     _logger.LogWarning("Workflow {WorkflowId} not found when updating CurrentNodeId", workflowDefinitionId);
                     return false;
                 }
-                
+
                 existing.CurrentNodeId = currentNodeId;
                 _context.WorkflowDefinitions.Update(existing);
                 await _context.SaveChangesAsync(cancellationToken);
-                
+
                 _logger.LogInformation("Updated CurrentNodeId for {WorkflowId} to {NodeId}", workflowDefinitionId, currentNodeId);
                 return true;
             }
             catch (DbUpdateConcurrencyException ex)
             {
                 retryCount++;
-                _logger.LogWarning(ex, "Concurrency conflict updating CurrentNodeId for {WorkflowId}, attempt {RetryCount}/{MaxRetries}", 
+                _logger.LogWarning(ex, "Concurrency conflict updating CurrentNodeId for {WorkflowId}, attempt {RetryCount}/{MaxRetries}",
                     workflowDefinitionId, retryCount, maxRetries);
-                
+
                 if (retryCount >= maxRetries)
                 {
-                    _logger.LogError("Max retries exceeded for workflow {WorkflowId} CurrentNodeId update due to concurrency conflicts", 
+                    _logger.LogError("Max retries exceeded for workflow {WorkflowId} CurrentNodeId update due to concurrency conflicts",
                         workflowDefinitionId);
                     return false; // Return false instead of throwing for this simpler operation
                 }
-                
+
                 // Refresh the context to get latest data
                 foreach (var entry in _context.ChangeTracker.Entries())
                 {
                     await entry.ReloadAsync(cancellationToken);
                 }
-                
+
                 // Small delay before retry with exponential backoff
                 await Task.Delay(100 * retryCount, cancellationToken);
             }
@@ -294,7 +310,7 @@ public class EfWorkflowRepository : IWorkflowRepository
                 throw;
             }
         }
-        
+
         return false;
     }
 }

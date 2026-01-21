@@ -22,7 +22,11 @@ public class LocationWorkflowService
     private readonly ILogger<LocationWorkflowService> _logger;
     private const string LocationWorkflowFileKey = "new-location.puml";
     private const int AddressTimeWindowHours = 24;
-    
+
+    // Cache for workflow file content to avoid repeated file I/O
+    private static string? _cachedWorkflowContent;
+    private static readonly object _cacheLock = new object();
+
     public LocationWorkflowService(
         IWorkflowService workflowService,
         IWorkflowRepository workflowRepository,
@@ -50,7 +54,7 @@ public class LocationWorkflowService
             // Check for existing workflow within 24-hour window
             var since = DateTimeOffset.UtcNow.AddHours(-AddressTimeWindowHours);
             var existingWorkflows = await _workflowRepository.FindByNamePatternAsync(
-                workflowId, 
+                workflowId,
                 since);
 
             var existingWorkflow = existingWorkflows.FirstOrDefault();
@@ -135,15 +139,28 @@ public class LocationWorkflowService
         // - previous_address: eventArgs.PreviousAddress
         // - timestamp: eventArgs.Timestamp
         // - is_first_visit: (eventArgs.PreviousAddress == null)
-        
+
         await Task.CompletedTask;
     }
 
     /// <summary>
     /// Loads the new-location.puml file from platform-specific location.
+    /// Uses caching to avoid repeated file I/O operations.
     /// </summary>
     private async Task<string?> LoadLocationWorkflowFileAsync()
     {
+        // Return cached content if available
+        lock (_cacheLock)
+        {
+            if (_cachedWorkflowContent != null)
+            {
+                _logger.LogDebug("Using cached workflow file content");
+                return _cachedWorkflowContent;
+            }
+        }
+
+        string? content = null;
+
         // For Android, try loading from assets first
         if (OperatingSystem.IsAndroid())
         {
@@ -152,19 +169,19 @@ public class LocationWorkflowService
                 var contextType = Type.GetType("Android.App.Application, Mono.Android");
                 var contextProperty = contextType?.GetProperty("Context");
                 var context = contextProperty?.GetValue(null);
-                
+
                 var assetsProperty = context?.GetType().GetProperty("Assets");
                 var assets = assetsProperty?.GetValue(context);
-                
+
                 var openMethod = assets?.GetType().GetMethod("Open", new[] { typeof(string) });
                 var stream = openMethod?.Invoke(assets, new object[] { LocationWorkflowFileKey }) as Stream;
-                
+
                 if (stream != null)
                 {
                     using (stream)
                     using (var reader = new StreamReader(stream))
                     {
-                        return await reader.ReadToEndAsync();
+                        content = await reader.ReadToEndAsync();
                     }
                 }
             }
@@ -174,28 +191,41 @@ public class LocationWorkflowService
             }
         }
 
-        // For other platforms, try file system
-        try
+        // For other platforms, try file system if not loaded from assets
+        if (content == null)
         {
-            var currentDir = Directory.GetCurrentDirectory();
-            var pumlPath = Path.Combine(currentDir, LocationWorkflowFileKey);
-
-            if (!File.Exists(pumlPath))
+            try
             {
-                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                pumlPath = Path.Combine(baseDir, LocationWorkflowFileKey);
+                var currentDir = Directory.GetCurrentDirectory();
+                var pumlPath = Path.Combine(currentDir, LocationWorkflowFileKey);
+
+                if (!File.Exists(pumlPath))
+                {
+                    var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                    pumlPath = Path.Combine(baseDir, LocationWorkflowFileKey);
+                }
+
+                if (File.Exists(pumlPath))
+                {
+                    content = await File.ReadAllTextAsync(pumlPath);
+                }
             }
-
-            if (File.Exists(pumlPath))
+            catch (Exception ex)
             {
-                return await File.ReadAllTextAsync(pumlPath);
+                _logger.LogWarning(ex, "Failed to load {FileName} from file system", LocationWorkflowFileKey);
             }
         }
-        catch (Exception ex)
+
+        // Cache the content if successfully loaded
+        if (content != null)
         {
-            _logger.LogWarning(ex, "Failed to load {FileName} from file system", LocationWorkflowFileKey);
+            lock (_cacheLock)
+            {
+                _cachedWorkflowContent = content;
+                _logger.LogDebug("Cached workflow file content (length: {Length} chars)", content.Length);
+            }
         }
 
-        return null;
+        return content;
     }
 }

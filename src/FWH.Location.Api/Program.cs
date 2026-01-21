@@ -108,7 +108,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
 
     try
     {
-        logger.LogInformation("Checking for database migrations...");
+        logger.LogDebug("Checking for database migrations...");
 
         // Get connection string from configuration
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
@@ -156,7 +156,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
             : connectionString;
         var isUriFormat = connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
                           connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase);
-        logger.LogInformation("Connection string found (length: {Length} characters, format: {Format})",
+        logger.LogDebug("Connection string found (length: {Length} characters, format: {Format})",
             connectionString.Length,
             isUriFormat ? "URI" : "Connection String");
 

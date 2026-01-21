@@ -192,6 +192,7 @@ This project is private and proprietary.
 - **Repository**: https://github.com/sharpninja/FunWasHad
 - **Issues**: https://github.com/sharpninja/FunWasHad/issues
 - **Documentation**: [docs/README.md](docs/README.md)
+- **Documentation Site**: https://sharpninja.github.io/FunWasHad
 
 ## 📞 Support
 

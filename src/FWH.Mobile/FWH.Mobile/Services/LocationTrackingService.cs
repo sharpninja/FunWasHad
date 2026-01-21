@@ -82,6 +82,7 @@ public class LocationTrackingService : ILocationTrackingService
     public double? CurrentSpeedKmh => _currentSpeedMetersPerSecond.HasValue
         ? GpsCalculator.MetersPerSecondToKmh(_currentSpeedMetersPerSecond.Value)
         : null;
+    public string? CurrentAddress => _lastKnownAddress;
     public double MinimumDistanceMeters { get; set; }
     public TimeSpan PollingInterval { get; set; }
     public TimeSpan StationaryThresholdDuration { get; set; }
@@ -113,8 +114,33 @@ public class LocationTrackingService : ILocationTrackingService
             }
         }
 
-        _logger.LogInformation("Starting location tracking with {Distance}m threshold and {Speed} mph walking/riding threshold",
+        _logger.LogDebug("Starting location tracking with {Distance}m threshold and {Speed} mph walking/riding threshold",
             MinimumDistanceMeters, WalkingRidingSpeedThresholdMph);
+
+        // Initialize with current location immediately
+        try
+        {
+            var initialLocation = await _gpsService.GetCurrentLocationAsync(cancellationToken);
+            if (initialLocation != null && initialLocation.IsValid())
+            {
+                _lastKnownLocation = initialLocation;
+                _lastReportedLocation = initialLocation;
+                _lastLocationTime = initialLocation.Timestamp;
+                _logger.LogInformation("Location tracking initialized with current location: {Latitude:F6}, {Longitude:F6}",
+                    initialLocation.Latitude, initialLocation.Longitude);
+
+                // Trigger location updated event for initial location
+                LocationUpdated?.Invoke(this, initialLocation);
+            }
+            else
+            {
+                _logger.LogWarning("Could not get initial location, will start tracking loop");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get initial location, will start tracking loop");
+        }
 
         _trackingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _trackingTask = TrackLocationLoopAsync(_trackingCts.Token);
@@ -127,7 +153,7 @@ public class LocationTrackingService : ILocationTrackingService
             return;
         }
 
-        _logger.LogInformation("Stopping location tracking");
+        _logger.LogDebug("Stopping location tracking");
 
         ResetStationaryCountdown();
 
@@ -149,7 +175,7 @@ public class LocationTrackingService : ILocationTrackingService
         _trackingCts = null;
         _trackingTask = null;
 
-        _logger.LogInformation("Location tracking stopped");
+        _logger.LogDebug("Location tracking stopped");
     }
 
     private async Task TrackLocationLoopAsync(CancellationToken cancellationToken)
@@ -321,7 +347,7 @@ public class LocationTrackingService : ILocationTrackingService
         if (_lastKnownLocation == null)
             return;
 
-        _logger.LogInformation("Device became stationary, starting {Delay} countdown for address change check",
+        _logger.LogDebug("Device became stationary, starting {Delay} countdown for address change check",
             StationaryAddressCheckDelay);
 
         _stationaryLocationForAddressCheck = _lastKnownLocation;
@@ -547,7 +573,7 @@ public class LocationTrackingService : ILocationTrackingService
             await _dbContext.DeviceLocationHistory.AddAsync(locationEntity, cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Location stored locally (ID: {LocationId})", locationEntity.Id);
+            _logger.LogDebug("Location stored locally (ID: {LocationId})", locationEntity.Id);
             _lastReportedLocation = location;
             LocationUpdated?.Invoke(this, location);
         }
@@ -562,7 +588,7 @@ public class LocationTrackingService : ILocationTrackingService
     {
         try
         {
-            _logger.LogInformation("NewLocationAddress event: {Address}", e.CurrentAddress);
+            _logger.LogDebug("NewLocationAddress event: {Address}", e.CurrentAddress);
 
             if (_locationWorkflowService != null)
             {

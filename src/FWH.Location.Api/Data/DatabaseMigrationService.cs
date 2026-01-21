@@ -92,7 +92,7 @@ public class DatabaseMigrationService
     {
         try
         {
-            _logger.LogInformation("Starting database migration process");
+            _logger.LogDebug("Starting database migration process");
 
             // Ensure database exists
             await EnsureDatabaseExistsAsync(cancellationToken);
@@ -102,11 +102,11 @@ public class DatabaseMigrationService
 
             // Get applied migrations
             var appliedMigrations = await GetAppliedMigrationsAsync(cancellationToken);
-            _logger.LogInformation("Found {Count} previously applied migrations", appliedMigrations.Count);
+            _logger.LogDebug("Found {Count} previously applied migrations", appliedMigrations.Count);
 
             // Get migration scripts from embedded resources or files
             var migrationScripts = GetMigrationScripts();
-            _logger.LogInformation("Found {Count} migration script(s)", migrationScripts.Count);
+            _logger.LogDebug("Found {Count} migration script(s)", migrationScripts.Count);
 
             // Apply pending migrations
             var pendingMigrations = migrationScripts
@@ -116,7 +116,7 @@ public class DatabaseMigrationService
 
             if (!pendingMigrations.Any())
             {
-                _logger.LogInformation("No pending migrations to apply");
+                _logger.LogDebug("No pending migrations to apply");
                 return;
             }
 

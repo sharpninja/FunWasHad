@@ -63,7 +63,7 @@ public class MarketingController : ControllerBase
             NewsItems = business.NewsItems.OrderByDescending(n => n.PublishedAt).Take(10).ToList()
         };
 
-        _logger.LogInformation("Retrieved marketing data for business {BusinessId}", businessId);
+        _logger.LogDebug("Retrieved marketing data for business {BusinessId}", businessId);
         return Ok(response);
     }
 
@@ -114,7 +114,7 @@ public class MarketingController : ControllerBase
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
 
-        _logger.LogInformation("Retrieved {Count} coupons for business {BusinessId}", coupons.Count, businessId);
+        _logger.LogDebug("Retrieved {Count} coupons for business {BusinessId}", coupons.Count, businessId);
         return Ok(coupons);
     }
 
@@ -144,7 +144,7 @@ public class MarketingController : ControllerBase
             .ThenBy(m => m.Name)
             .ToListAsync();
 
-        _logger.LogInformation("Retrieved {Count} menu items for business {BusinessId}", menuItems.Count, businessId);
+        _logger.LogDebug("Retrieved {Count} menu items for business {BusinessId}", menuItems.Count, businessId);
         return Ok(menuItems);
     }
 
@@ -193,7 +193,7 @@ public class MarketingController : ControllerBase
             .Take(Math.Min(limit, 50))
             .ToListAsync();
 
-        _logger.LogInformation("Retrieved {Count} news items for business {BusinessId}", newsItems.Count, businessId);
+        _logger.LogDebug("Retrieved {Count} news items for business {BusinessId}", newsItems.Count, businessId);
         return Ok(newsItems);
     }
 
@@ -253,7 +253,7 @@ public class MarketingController : ControllerBase
             .Select(x => x.Business)
             .ToList();
 
-        _logger.LogInformation("Found {Count} businesses within {Radius}m of ({Lat}, {Lon})",
+        _logger.LogDebug("Found {Count} businesses within {Radius}m of ({Lat}, {Lon})",
             nearbyBusinesses.Count, radiusMeters, latitude, longitude);
 
         return Ok(nearbyBusinesses);

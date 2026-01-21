@@ -95,7 +95,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
 
     try
     {
-        logger.LogInformation("Checking for database migrations...");
+        logger.LogDebug("Checking for database migrations...");
 
         // Get connection string from configuration
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();

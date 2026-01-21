@@ -59,6 +59,7 @@ public partial class App : Application
         services.AddLogging(builder =>
         {
             builder.AddConfiguration(configuration.GetSection("Logging"));
+            builder.AddConsole(); // Enable console logging for Android logcat
             builder.AddProvider(new FWH.Mobile.Logging.AvaloniaLoggerProvider(logStore));
         });
 
@@ -379,7 +380,7 @@ public partial class App : Application
 
             // Log database connection info for debugging
             var connectionInfo = migrationService.GetConnectionInfo();
-            logger.LogInformation("Initializing database at: {ConnectionInfo}", connectionInfo);
+            logger.LogDebug("Initializing database at: {ConnectionInfo}", connectionInfo);
 
             // Ensure database exists and apply any pending migrations
             await migrationService.EnsureDatabaseAsync();

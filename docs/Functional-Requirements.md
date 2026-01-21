@@ -14,6 +14,9 @@ FunWasHad is a mobile application that combines location-based activity tracking
 
 ## 2. Functional Requirements (Business Rules)
 
+App Name (all platforms): #FunWasHad
+App Identifier (all platforms): `app.funwashad`
+
 ### 2.1 Location Tracking and Address Change
 
 #### FR-LOC-001: Monitor device location
@@ -117,4 +120,3 @@ Business records SHALL include a name and address.
 
 #### FR-DATA-002: Cascading deletes
 When a business is deleted, the system SHALL delete dependent marketing and feedback data associated with that business.
-

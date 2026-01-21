@@ -6,37 +6,37 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="150"
              x:Class="FWH.Mobile.Views.MovementStateControl"
              x:DataType="vm:MovementStateViewModel">
-    
-    <Border BorderBrush="#E0E0E0" 
-            BorderThickness="1" 
-            CornerRadius="8" 
+
+    <Border BorderBrush="#E0E0E0"
+            BorderThickness="1"
+            CornerRadius="8"
             Padding="12"
             Background="#FAFAFA">
         <Grid RowDefinitions="Auto,Auto,Auto,Auto">
-            
+
             <!-- Row 0: Movement State & Tracking Status -->
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                 <!-- Movement State -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                     <!-- Status Indicator Circle -->
-                    <Ellipse Width="16" Height="16" 
-                             Fill="{Binding MovementStateColor}" 
+                    <Ellipse Width="16" Height="16"
+                             Fill="{Binding MovementStateColor}"
                              VerticalAlignment="Center"/>
-                    
+
                     <!-- Movement State Text -->
-                    <TextBlock Text="{Binding MovementStateText}" 
-                               FontSize="16" 
+                    <TextBlock Text="{Binding MovementStateText}"
+                               FontSize="16"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Tracking Status -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                    <Ellipse Width="10" Height="10" 
-                             Fill="{Binding TrackingStatusColor}" 
+                    <Ellipse Width="10" Height="10"
+                             Fill="{Binding TrackingStatusColor}"
                              VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding TrackingStatusText}" 
-                               FontSize="12" 
+                    <TextBlock Text="{Binding TrackingStatusText}"
+                               FontSize="12"
                                Foreground="#6C757D"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -44,38 +44,37 @@
 
             <!-- Row 1: Speed -->
             <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
-                <TextBlock Text="Speed:" 
-                           FontSize="13" 
+                <TextBlock Text="Speed:"
+                           FontSize="13"
                            FontWeight="Medium"
                            Foreground="#495057"/>
-                <TextBlock Text="{Binding SpeedText}" 
-                           FontSize="13" 
+                <TextBlock Text="{Binding SpeedText}"
+                           FontSize="13"
                            Foreground="#212529"/>
             </StackPanel>
 
             <!-- Row 2: Coordinates -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
-                <TextBlock Text="Location:" 
-                           FontSize="13" 
+                <TextBlock Text="Location:"
+                           FontSize="13"
                            FontWeight="Medium"
                            Foreground="#495057"/>
-                <TextBlock Text="{Binding CoordinatesText}" 
-                           FontSize="13" 
+                <TextBlock Text="{Binding CoordinatesText}"
+                           FontSize="13"
                            FontFamily="Consolas"
                            Foreground="#212529"/>
             </StackPanel>
 
             <!-- Row 3: Address -->
-            <StackPanel Grid.Row="3" 
-                        Orientation="Horizontal" 
-                        Spacing="6"
-                        IsVisible="{Binding HasAddress}">
-                <TextBlock Text="Address:" 
-                           FontSize="13" 
+            <StackPanel Grid.Row="3"
+                        Orientation="Horizontal"
+                        Spacing="6">
+                <TextBlock Text="Address:"
+                           FontSize="13"
                            FontWeight="Medium"
                            Foreground="#495057"/>
-                <TextBlock Text="{Binding CurrentAddress}" 
-                           FontSize="13" 
+                <TextBlock Text="{Binding CurrentAddress}"
+                           FontSize="13"
                            Foreground="#212529"
                            TextWrapping="Wrap"
                            MaxWidth="600"/>
@@ -83,4 +82,3 @@
         </Grid>
     </Border>
 </UserControl>
-
