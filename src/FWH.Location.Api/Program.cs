@@ -71,8 +71,11 @@ builder.Services.AddLocationServicesWithInMemoryConfig(options =>
 
 var app = builder.Build();
 
-// Apply database migrations on startup
-await ApplyDatabaseMigrationsAsync(app);
+// Apply database migrations on startup (skip in Test environment)
+if (!app.Environment.IsEnvironment("Test"))
+{
+    await ApplyDatabaseMigrationsAsync(app);
+}
 
 // Map Aspire default endpoints (health checks, metrics)
 app.MapDefaultEndpoints();
