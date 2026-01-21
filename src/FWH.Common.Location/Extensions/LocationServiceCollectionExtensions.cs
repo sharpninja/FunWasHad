@@ -42,7 +42,7 @@ public static class LocationServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode)
             });
-            
+
             // 3. Retry with exponential backoff
             builder.AddRetry(new Polly.Retry.RetryStrategyOptions<HttpResponseMessage>
             {
@@ -55,7 +55,7 @@ public static class LocationServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NotFound)
             });
-            
+
             // 4. Timeout per attempt (inner layer - wraps each individual request)
             builder.AddTimeout(TimeSpan.FromSeconds(Timeout_Seconds));
         });
@@ -78,7 +78,7 @@ public static class LocationServiceCollectionExtensions
 
         // Register the base service
         services.AddSingleton<OverpassLocationService>();
-        
+
         // Register rate-limited decorator as the main ILocationService
         services.AddSingleton<ILocationService>(sp =>
         {
@@ -130,7 +130,7 @@ public static class LocationServiceCollectionExtensions
                     {
                         Content = new StringContent(@"{""elements"":[]}", System.Text.Encoding.UTF8, "application/json")
                     };
-                    
+
                     return Outcome.FromResultAsValueTask(fallbackResponse);
                 },
                 OnFallback = args =>
@@ -139,7 +139,7 @@ public static class LocationServiceCollectionExtensions
                     return default;
                 }
             });
-            
+
             // 2. Circuit breaker (prevents cascading failures)
             builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage>
             {
@@ -152,7 +152,7 @@ public static class LocationServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode)
             });
-            
+
             // 3. Retry with exponential backoff
             builder.AddRetry(new Polly.Retry.RetryStrategyOptions<HttpResponseMessage>
             {
@@ -165,7 +165,7 @@ public static class LocationServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NotFound)
             });
-            
+
             // 4. Timeout per attempt (inner layer - wraps each individual request)
             builder.AddTimeout(TimeSpan.FromSeconds(10));
         });
@@ -175,7 +175,7 @@ public static class LocationServiceCollectionExtensions
 
         // Register the base service
         services.AddSingleton<OverpassLocationService>();
-        
+
         // Register rate-limited decorator
         services.AddSingleton<ILocationService>(sp =>
         {

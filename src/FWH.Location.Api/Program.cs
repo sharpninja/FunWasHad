@@ -41,7 +41,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "FunWasHad Location API",
         Version = "v1",
-        Description = "REST API for location tracking and business discovery. Implements TR-API-005: Location API Endpoints."
+        Description = "REST API for business discovery and location confirmations. Implements TR-API-005: Location API Endpoints."
     });
 
     // Include XML comments in Swagger documentation

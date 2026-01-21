@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:local="clr-namespace:FWH.Common.Chat.ViewModels;assembly=FWH.Common.Chat"
              xmlns:conv="clr-namespace:FWH.Mobile.ViewModels;assembly=FWH.Mobile"
-             mc:Ignorable="d" 
+             mc:Ignorable="d"
              d:DesignWidth="800" d:DesignHeight="600"
              x:Class="FWH.Mobile.ChatListControl"
              x:DataType="local:ChatListViewModel">
@@ -13,6 +13,7 @@
     <UserControl.Resources>
         <conv:AuthorToAlignmentConverter x:Key="AuthorToAlignment"/>
         <conv:AuthorToBrushConverter x:Key="AuthorToBackground"/>
+        <conv:ByteArrayToImageConverter x:Key="ByteArrayToImage"/>
     </UserControl.Resources>
 
     <Design.DataContext>
@@ -73,8 +74,8 @@
                         BoxShadow="0 2 8 0 #44000000"
                         Margin="4">
                     <StackPanel Spacing="4">
-                        <TextBlock Text="Captured Image Preview" 
-                                   FontWeight="Bold" 
+                        <TextBlock Text="Captured Image Preview"
+                                   FontWeight="Bold"
                                    FontSize="14"
                                    Foreground="White"
                                    IsVisible="{Binding Image, Converter={x:Static ObjectConverters.IsNotNull}}"/>
@@ -96,7 +97,7 @@
                 <StackPanel MaxWidth="500"
                             Spacing="8"
                             Margin="4">
-                    
+
                     <!-- Optional prompt/title -->
                     <TextBlock Text="{Binding Prompt}"
                                FontWeight="SemiBold"
