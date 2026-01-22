@@ -119,10 +119,6 @@
 ### Code Reviews
 - name: Code Reviews
   items:
-    - name: Latest Code Review (2025-01-09)
-      href: reviews/Code-Review-Report-2025-01-09.md
-    - name: Code Review Report (2025-01-08)
-      href: reviews/Code-Review-Report-2025-01-08.md
     - name: Recommendations Implementation
       href: reviews/Code-Review-Recommendations-Implementation-Summary.md
     - name: Documentation Cleanup

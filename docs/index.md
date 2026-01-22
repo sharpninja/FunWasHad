@@ -65,7 +65,6 @@ FunWasHad is a location-based mobile application built with:
 - [Test Coverage](testing/TestCoverageRecommendations.md) - Coverage recommendations
 
 ### 📝 Code Reviews
-- [Code Review Report](reviews/Code-Review-Report-2025-01-08.md) - Comprehensive code review
 - [Recommendations Implementation](reviews/Code-Review-Recommendations-Implementation-Summary.md) - Implementation summary
 
 ## Key Features
