@@ -4,9 +4,19 @@ This document tracks pending tasks, improvements, and future work for the FunWas
 
 ## High Priority
 
+- [ ] Create API Security for ensuring only genuine builds of the App can call the API
+- [ ] Add blob storage for staging in Railway
+- [ ] Resolve Potential SQL Injection in Overpass Query Building
+- [ ] Remove Hardcoded Database Credentials in appsettings.json
+- [ ] Eliminate ALL Resource Disposal Issues
+
 ## Medium Priority
 
 - [ ] Perform code review
+- [ ] Resolve N+1 Query Problem Potential
+- [ ] Reduce Generic Exception Handling by handling more known cases. Ensure all async methods have appropriate exception handling and logging
+- [ ] Add all missing null checks and ensure nullable annotations are correct and appropriate
+- [ ] Fix Inconsistent Error Handling
 
 ## Low Priority
 
