@@ -76,6 +76,16 @@ public class GetNearbyBusinessesActionHandlerTests
                 _mockLogger));
     }
 
+    /// <summary>
+    /// Tests that the GetNearbyBusinessesActionHandler returns the correct action name.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The IWorkflowActionHandler.Name property's return value for GetNearbyBusinessesActionHandler.</para>
+    /// <para><strong>Data involved:</strong> The handler instance created in the test constructor. The expected action name is "get_nearby_businesses", which is used to register and identify this handler in the workflow action registry.</para>
+    /// <para><strong>Why the data matters:</strong> The action name is the identifier used in workflow definitions to reference this handler. Workflows specify actions like {"action": "get_nearby_businesses", "params": {...}}, and the registry uses the name to find the corresponding handler. If the name is incorrect, workflows won't be able to find and execute this handler.</para>
+    /// <para><strong>Expected outcome:</strong> The Name property should return exactly "get_nearby_businesses".</para>
+    /// <para><strong>Reason for expectation:</strong> The action name must match exactly what workflows use in their JSON action definitions. The underscore-separated lowercase format ("get_nearby_businesses") is a common convention for action names. The exact match ensures workflows can successfully resolve and execute this handler.</para>
+    /// </remarks>
     [Fact]
     public void Name_ReturnsCorrectActionName()
     {

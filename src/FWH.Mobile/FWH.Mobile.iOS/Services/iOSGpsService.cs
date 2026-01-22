@@ -1,6 +1,7 @@
 using CoreLocation;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -14,10 +15,11 @@ namespace FWH.Mobile.iOS.Services;
 public class iOSGpsService : IGpsService
 {
     private readonly CLLocationManager _locationManager;
+    private readonly ILogger<iOSGpsService>? _logger;
     private TaskCompletionSource<GpsCoordinates?>? _locationTcs;
     private const int LocationTimeoutSeconds = 30;
 
-    public iOSGpsService()
+    public iOSGpsService(ILogger<iOSGpsService>? logger = null)
     {
         _locationManager = new CLLocationManager
         {
@@ -27,6 +29,7 @@ public class iOSGpsService : IGpsService
 
         _locationManager.LocationsUpdated += OnLocationsUpdated;
         _locationManager.Failed += OnLocationFailed;
+        _logger = logger;
     }
 
     public bool IsLocationAvailable
@@ -210,7 +213,7 @@ public class iOSGpsService : IGpsService
 
     private void OnLocationFailed(object? sender, NSErrorEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine($"Location manager failed: {e.Error}");
+        _logger?.LogError("Location manager failed: {Error}", e.Error);
         // Set result to null - the calling method will throw LocationServicesException
         _locationTcs?.TrySetResult(null);
     }

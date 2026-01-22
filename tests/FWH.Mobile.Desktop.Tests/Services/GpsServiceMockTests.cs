@@ -14,6 +14,16 @@ namespace FWH.Mobile.Desktop.Tests.Services;
 /// </summary>
 public class GpsServiceFactoryTests
 {
+    /// <summary>
+    /// Tests that NoGpsService.IsLocationAvailable returns false, indicating location services are not available.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The NoGpsService.IsLocationAvailable property's return value when location services are not available (fallback implementation).</para>
+    /// <para><strong>Data involved:</strong> A NoGpsService instance, which is a fallback implementation used when no platform-specific GPS service is available (e.g., on platforms without location support or in test environments).</para>
+    /// <para><strong>Why the data matters:</strong> NoGpsService provides a safe fallback when location services cannot be used. It must correctly report that location is not available so the application can handle this gracefully (e.g., show appropriate UI, skip location-dependent features). This prevents null reference exceptions and allows the app to function even without GPS capabilities.</para>
+    /// <para><strong>Expected outcome:</strong> IsLocationAvailable should return false.</para>
+    /// <para><strong>Reason for expectation:</strong> NoGpsService represents the absence of location capabilities, so it should always return false for IsLocationAvailable. This allows calling code to check availability before attempting to get location, preventing errors and enabling graceful degradation of location-dependent features.</para>
+    /// </remarks>
     [Fact]
     public void NoGpsService_IsLocationAvailable_ReturnsFalse()
     {

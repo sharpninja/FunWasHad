@@ -1,41 +1,8 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace FWH.Common.Chat.ViewModels;
-
-public enum ChatInputModes
-{
-    Text,
-    Choice,
-    Image
-}
-
-public enum PayloadTypes { Text, Image, Choice, Xaml }
-
-public interface IPayload
-{
-    PayloadTypes PayloadType { get; }
-}
-
-public partial class TextPayload(string message = "Empty Message")
-    : ObservableObject, IPayload
-{
-    public PayloadTypes PayloadType => PayloadTypes.Text;
-
-    [ObservableProperty]
-    public string text = message;
-}
-
-public partial class ImagePayload : ObservableObject, IPayload
-{
-    public PayloadTypes PayloadType => PayloadTypes.Image;
-
-    [ObservableProperty]
-    public byte[]? image; 
-
-    [ObservableProperty]
-    public bool showBorder = false;
-}
 
 public partial class ChoicePayload(IEnumerable<ChoicesItem> choiceItems)
     : ObservableObject, IPayload

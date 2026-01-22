@@ -8,6 +8,16 @@ namespace FWH.Common.Imaging.Tests.Imaging;
 
 public class ImagingServiceTests
 {
+    /// <summary>
+    /// Tests that RenderSvgOverlay correctly composites an SVG overlay onto a base bitmap at the specified pixel coordinates.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The IImagingService.RenderSvgOverlay method's ability to render an SVG overlay onto a base bitmap at specific coordinates.</para>
+    /// <para><strong>Data involved:</strong> A 100x100 pixel red base bitmap (RGB 255,0,0) and a 10x10 pixel blue SVG square (RGB 0,0,255) positioned at coordinates (20.5, 30.25). The fractional coordinates test that the service correctly rounds to pixel boundaries.</para>
+    /// <para><strong>Why the data matters:</strong> SVG overlays are used to add annotations, markers, or UI elements to images (e.g., location markers on maps, badges on photos). The overlay must be positioned accurately at the specified coordinates, and fractional coordinates must be handled correctly (rounded to nearest pixel). The color verification ensures the overlay is rendered correctly and doesn't affect pixels outside the overlay area.</para>
+    /// <para><strong>Expected outcome:</strong> The pixel at (20, 30) - the rounded overlay origin - should be blue (RGB 0,0,255), and the pixel at (5, 5) - outside the overlay - should remain red (RGB 255,0,0).</para>
+    /// <para><strong>Reason for expectation:</strong> The RenderSvgOverlay method should render the SVG at the specified coordinates, rounding fractional coordinates to the nearest pixel. Pixels within the overlay area (20-29, 30-39) should be blue, while pixels outside should retain the base bitmap color (red). The specific pixel checks confirm accurate positioning and that the overlay doesn't affect unrelated areas of the image.</para>
+    /// </remarks>
     [Fact]
     public void RenderSvgOverlay_CompositesSvgOverBaseBitmap_AtCorrectPixel()
     {

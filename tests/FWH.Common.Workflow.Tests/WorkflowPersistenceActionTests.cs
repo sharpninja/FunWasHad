@@ -23,6 +23,16 @@ namespace FWH.Common.Workflow.Tests;
 
 public class WorkflowPersistenceActionTests
 {
+    /// <summary>
+    /// Tests that workflow state (CurrentNodeId) is persisted to the database after action execution and automatic workflow advancement.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The workflow persistence mechanism's ability to save the current node ID to the database after action execution causes automatic workflow advancement.</para>
+    /// <para><strong>Data involved:</strong> A PlantUML workflow with nodes A (containing SendMessage action) and B. The workflow is imported, which triggers action execution and auto-advancement from A to B. The test uses an in-memory SQLite database to verify persistence.</para>
+    /// <para><strong>Why the data matters:</strong> Workflow state must be persisted so it survives application restarts. When actions execute and workflows auto-advance (e.g., single outgoing transition), the new current node must be saved to the database. This test validates that the persistence layer correctly captures state changes from action execution.</para>
+    /// <para><strong>Expected outcome:</strong> After importing the workflow and waiting for action execution (500ms delay), querying the persisted workflow from the database should show CurrentNodeId="B", indicating the workflow advanced and the state was saved.</para>
+    /// <para><strong>Reason for expectation:</strong> ImportWorkflowAsync should trigger workflow execution, which executes the action at node A and then auto-advances to B (since A has a single outgoing transition). The WorkflowController should persist the new CurrentNodeId to the database. Querying the repository confirms that the state change was successfully saved, ensuring workflow state survives restarts.</para>
+    /// </remarks>
     [Fact]
     public async Task ActionExecution_PersistsStateAfterAutoAdvance()
     {

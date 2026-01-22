@@ -12,6 +12,16 @@ namespace FWH.Common.Workflow.Tests;
 
 public class ActionCancellationTests
 {
+    /// <summary>
+    /// Tests that workflow action handlers can be cancelled via CancellationToken and execution stops gracefully.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The IWorkflowActionExecutor.ExecuteAsync method's cancellation support when a CancellationToken is cancelled during handler execution.</para>
+    /// <para><strong>Data involved:</strong> A WorkflowActionHandlerAdapter for "LongRunning" action that performs a 5-second delay, honoring the CancellationToken. A CancellationTokenSource with a 100ms timeout is used to cancel the execution before the delay completes. The workflow definition contains a single node with the LongRunning action.</para>
+    /// <para><strong>Why the data matters:</strong> Long-running actions (e.g., API calls, file operations) may need to be cancelled if the user navigates away or the workflow is stopped. The handler must respect cancellation tokens to allow graceful termination. The 100ms timeout ensures cancellation happens before the 5-second delay completes, testing that cancellation is actually honored.</para>
+    /// <para><strong>Expected outcome:</strong> ExecuteAsync should return false (indicating execution was cancelled) when the CancellationToken is cancelled before the handler completes.</para>
+    /// <para><strong>Reason for expectation:</strong> When a CancellationToken is cancelled, the handler's Task.Delay should throw OperationCanceledException, causing ExecuteAsync to return false. This allows the workflow system to detect cancelled executions and handle them appropriately (e.g., not updating workflow state, logging cancellation). The false return value indicates the action did not complete successfully.</para>
+    /// </remarks>
     [Fact]
     public async Task Handler_CanBeCancelled()
     {

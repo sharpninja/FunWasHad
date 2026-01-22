@@ -57,6 +57,16 @@ public class ErrorFlowTests : IClassFixture<SqliteTestFixture>
         public Task<bool> UpdateCurrentNodeIdAsync(string workflowDefinitionId, string? currentNodeId, CancellationToken cancellationToken = default) => _inner.UpdateCurrentNodeIdAsync(workflowDefinitionId, currentNodeId, cancellationToken);
     }
 
+    /// <summary>
+    /// Tests that when the workflow repository throws an exception during UpdateCurrentNodeIdAsync, the error is logged with proper scopes (Operation, WorkflowId) and the exception is captured.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The error handling and logging behavior when workflow state persistence fails due to repository exceptions.</para>
+    /// <para><strong>Data involved:</strong> A ThrowOnUpdateRepository wrapper that throws InvalidOperationException when UpdateCurrentNodeIdAsync is called. A workflow with branching node A is imported, rendered to chat, and a choice is selected, which triggers workflow advancement and attempts to update the current node ID, causing the exception.</para>
+    /// <para><strong>Why the data matters:</strong> Database failures, connection issues, or constraint violations can cause repository operations to throw exceptions. The workflow system must handle these gracefully by logging errors with sufficient context (operation name, workflow ID) for debugging. This test validates that exceptions are caught, logged with proper scopes, and don't crash the application.</para>
+    /// <para><strong>Expected outcome:</strong> After selecting a choice, a log entry should be captured with Level=Error or Warning, containing scopes with Operation="UpdateCurrentNodeId" and WorkflowId matching the workflow definition ID, and the Exception property should not be null.</para>
+    /// <para><strong>Reason for expectation:</strong> The workflow controller should catch exceptions from UpdateCurrentNodeIdAsync, create a logging scope with Operation="UpdateCurrentNodeId" and WorkflowId, and log the error. The scopes allow filtering logs by operation and workflow, and the exception details enable debugging. The presence of the exception in the log confirms error details are preserved for troubleshooting.</para>
+    /// </remarks>
     [Fact]
     public async Task Advance_WhenRepoThrows_UpdateLogsExceptionAndContainsCorrelationAndWorkflowScope()
     {

@@ -90,6 +90,16 @@ public class WorkflowExecutorOptionsTests
         return sp.GetRequiredService<IWorkflowActionExecutor>();
     }
 
+    /// <summary>
+    /// Tests that when CreateScopeForHandlers is true, each handler execution receives a new scoped dependency instance.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The WorkflowActionExecutor's scoping behavior when CreateScopeForHandlers option is enabled, ensuring handlers get fresh scoped dependencies per execution.</para>
+    /// <para><strong>Data involved:</strong> A HandlerUsingDep handler that depends on ScopedDep (registered as scoped). The handler stores the dependency's unique ID in workflow variables. The workflow is executed twice with CreateScopeForHandlers=true. Each execution should create a new service scope, resulting in different ScopedDep instances.</para>
+    /// <para><strong>Why the data matters:</strong> Scoped dependencies (e.g., database contexts) should be created fresh for each handler execution to ensure proper isolation and disposal. When CreateScopeForHandlers=true, the executor creates a new service scope per execution, allowing scoped services to be properly resolved and disposed. This prevents state leakage between executions and ensures proper resource cleanup.</para>
+    /// <para><strong>Expected outcome:</strong> Both executions should succeed (ok1=true, ok2=true), and the workflow variables should contain different depId values (id1 != id2), confirming different ScopedDep instances were used.</para>
+    /// <para><strong>Reason for expectation:</strong> With CreateScopeForHandlers=true, the executor should create a new service scope for each ExecuteAsync call. Each scope resolves a new ScopedDep instance (since it's registered as scoped), resulting in different IDs. The different IDs confirm that scoping works correctly and handlers receive fresh dependencies per execution, which is critical for proper resource management and isolation.</para>
+    /// </remarks>
     [Fact]
     public async Task When_CreateScopeForHandlers_True_Then_HandlerGetsNewScopedInstancesPerExecution()
     {

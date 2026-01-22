@@ -10,6 +10,16 @@ namespace FWH.Mobile.Data.Tests;
 
 public class WorkflowServiceImportTests : DataTestBase
 {
+    /// <summary>
+    /// Tests that ImportWorkflowAsync correctly parses a basic PlantUML workflow and persists all components (nodes, transitions, start points) to the database.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The IWorkflowService.ImportWorkflowAsync method's ability to parse PlantUML, create a workflow definition, and persist it to the repository with all components.</para>
+    /// <para><strong>Data involved:</strong> A simple PlantUML workflow with a start state [*] transitioning to "Start" node, and "Start" transitioning to "End" node. The workflow is imported with Id="wf_basic" and Name="Basic".</para>
+    /// <para><strong>Why the data matters:</strong> ImportWorkflowAsync is the primary method for creating workflows from PlantUML definitions. It must correctly parse the PlantUML syntax, extract all workflow components (nodes, transitions, start points), and persist them to the database. This test validates the complete import-to-persistence flow works correctly for a basic workflow structure.</para>
+    /// <para><strong>Expected outcome:</strong> The returned workflow definition should have Id="wf_basic", Name="Basic", 2 nodes (Start and End), 1 start point (pointing to Start), and transitions matching the PlantUML. Querying the repository should return the same workflow with all components persisted correctly.</para>
+    /// <para><strong>Reason for expectation:</strong> ImportWorkflowAsync should parse the PlantUML, create a WorkflowDefinition with all components, persist it via the repository, and return the definition. The repository should store all nodes, transitions, and start points with correct relationships. The exact counts and content matches confirm that parsing and persistence work correctly together, ensuring workflows can be imported and later retrieved with full fidelity.</para>
+    /// </remarks>
     [Fact]
     public async Task ImportWorkflow_Basic_PersistsNodesAndStartPoints()
     {

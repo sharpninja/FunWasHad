@@ -1,5 +1,6 @@
 using Foundation;
 using FWH.Common.Chat.Services;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -12,7 +13,13 @@ namespace FWH.Mobile.iOS.Services;
 /// </summary>
 public class iOSCameraService : ICameraService
 {
+    private readonly ILogger<iOSCameraService>? _logger;
     private TaskCompletionSource<byte[]?>? _photoTcs;
+
+    public iOSCameraService(ILogger<iOSCameraService>? logger = null)
+    {
+        _logger = logger;
+    }
 
     public bool IsCameraAvailable => UIImagePickerController.IsSourceTypeAvailable(UIImagePickerControllerSourceType.Camera);
 
@@ -68,7 +75,7 @@ public class iOSCameraService : ICameraService
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error processing camera result: {ex}");
+                _logger?.LogError(ex, "Error processing camera result");
                 _photoTcs?.TrySetResult(null);
             }
             finally

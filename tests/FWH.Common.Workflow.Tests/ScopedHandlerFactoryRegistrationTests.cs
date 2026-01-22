@@ -41,6 +41,16 @@ public class ScopedHandlerFactoryRegistrationTests
         }
     }
 
+    /// <summary>
+    /// Tests that AddWorkflowActionHandler generic method correctly registers a scoped handler factory and the executor creates a service scope to resolve scoped dependencies.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The AddWorkflowActionHandler extension method's ability to register handler types as scoped services and the executor's scoping behavior when resolving them.</para>
+    /// <para><strong>Data involved:</strong> A HandlerWithDep handler class that depends on Dep (registered as scoped). The handler is registered using AddWorkflowActionHandler&lt;HandlerWithDep&gt;(), which should create a factory that resolves the handler from the service provider. The handler stores the dependency's value in workflow variables.</para>
+    /// <para><strong>Why the data matters:</strong> The generic AddWorkflowActionHandler method provides a convenient way to register handler classes (rather than inline functions) while ensuring they can resolve scoped dependencies. The executor must create service scopes to properly resolve scoped handlers and their dependencies. This tests the complete registration-to-execution flow for typed handlers.</para>
+    /// <para><strong>Expected outcome:</strong> ExecuteAsync should return true, and the workflow variable "dep" should be set to "dep-value", confirming the handler resolved its scoped dependency and executed successfully.</para>
+    /// <para><strong>Reason for expectation:</strong> AddWorkflowActionHandler should register a factory that resolves HandlerWithDep from the service provider. When the executor executes the action, it should create a scope, resolve HandlerWithDep (which resolves Dep), and execute the handler. The workflow variable being set to "dep-value" confirms the dependency was resolved and the handler executed correctly. This validates that the generic registration method works correctly with scoped dependencies.</para>
+    /// </remarks>
     [Fact]
     public async Task AddWorkflowActionHandler_THandler_RegistersScopedHandlerFactory_AndExecutorCreatesScope()
     {

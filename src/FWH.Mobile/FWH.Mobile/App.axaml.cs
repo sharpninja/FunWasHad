@@ -177,8 +177,19 @@ public partial class App : Application
         // Register log viewer ViewModel
         services.AddSingleton<LogViewerViewModel>();
 
-        ServiceProvider = services.BuildServiceProvider();
-        ServiceProvider.InitializeWorkflowActionHandlers();
+        try
+        {
+            ServiceProvider = services.BuildServiceProvider();
+            ServiceProvider.InitializeWorkflowActionHandlers();
+        }
+        catch (Exception ex)
+        {
+            // Log to Android log if possible, but don't crash
+            System.Diagnostics.Debug.WriteLine($"CRITICAL: Failed to build service provider: {ex}");
+            System.Diagnostics.Debug.WriteLine($"Exception details: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            throw; // Re-throw to prevent app from starting in broken state
+        }
 
         // Database initialization deferred to OnFrameworkInitializationCompleted
         // to avoid blocking the UI thread during app startup
@@ -254,13 +265,15 @@ public partial class App : Application
 
             if (stream != null)
             {
-                System.Diagnostics.Debug.WriteLine($"Loaded Android asset: {fileName}");
+                var logger = ServiceProvider?.GetService<ILogger<App>>();
+                logger?.LogDebug("Loaded Android asset: {FileName}", fileName);
                 return stream;
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load Android asset '{fileName}': {ex.Message}");
+            var logger = ServiceProvider?.GetService<ILogger<App>>();
+            logger?.LogWarning(ex, "Failed to load Android asset '{FileName}'", fileName);
         }
 
         return null;
@@ -449,11 +462,13 @@ public partial class App : Application
                 }
                 catch (OperationCanceledException)
                 {
-                    System.Diagnostics.Debug.WriteLine("Background initialization timed out");
+                    var logger = ServiceProvider?.GetService<ILogger<App>>();
+                    logger?.LogWarning("Background initialization timed out");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Background initialization error: {ex.Message}");
+                    var logger = ServiceProvider?.GetService<ILogger<App>>();
+                    logger?.LogError(ex, "Background initialization error");
                 }
             });
         }
@@ -486,11 +501,13 @@ public partial class App : Application
                 }
                 catch (OperationCanceledException)
                 {
-                    System.Diagnostics.Debug.WriteLine("Background initialization timed out - app will continue");
+                    var logger = ServiceProvider?.GetService<ILogger<App>>();
+                    logger?.LogWarning("Background initialization timed out - app will continue");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Background initialization error: {ex.Message}");
+                    var logger = ServiceProvider?.GetService<ILogger<App>>();
+                    logger?.LogError(ex, "Background initialization error");
                 }
             });
         }
@@ -507,24 +524,26 @@ public partial class App : Application
             // Start tracking with default settings (50m threshold, 30s interval)
             await trackingService.StartTrackingAsync();
 
-            System.Diagnostics.Debug.WriteLine("Location tracking started successfully");
+            var logger = ServiceProvider.GetRequiredService<ILogger<App>>();
+            logger.LogInformation("Location tracking started successfully");
 
             // Start activity tracking service
             var activityTracking = ServiceProvider.GetRequiredService<ActivityTrackingService>();
             activityTracking.StartMonitoring();
 
-            System.Diagnostics.Debug.WriteLine("Activity tracking started successfully");
+            logger.LogInformation("Activity tracking started successfully");
 
             // Start movement state logger for demonstration
             var stateLogger = ServiceProvider.GetRequiredService<MovementStateLogger>();
             stateLogger.StartLogging();
 
-            System.Diagnostics.Debug.WriteLine("Movement state logging started successfully");
+            logger.LogInformation("Movement state logging started successfully");
         }
         catch (Exception ex)
         {
             // Don't fail app startup if location tracking fails
-            System.Diagnostics.Debug.WriteLine($"Failed to start location tracking: {ex.Message}");
+            var logger = ServiceProvider?.GetService<ILogger<App>>();
+            logger?.LogError(ex, "Failed to start location tracking");
         }
     }
 
@@ -595,7 +614,8 @@ public partial class App : Application
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to load workflow.puml from Android assets: {ex.Message}");
+                var logger = ServiceProvider?.GetService<ILogger<App>>();
+                logger?.LogWarning(ex, "Failed to load workflow.puml from Android assets");
             }
         }
 
@@ -619,7 +639,8 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load workflow.puml from file system: {ex.Message}");
+            var logger = ServiceProvider?.GetService<ILogger<App>>();
+            logger?.LogWarning(ex, "Failed to load workflow.puml from file system");
         }
 
         return null;

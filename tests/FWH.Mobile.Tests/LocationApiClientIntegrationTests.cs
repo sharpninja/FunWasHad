@@ -37,6 +37,13 @@ public class LocationApiClientIntegrationTests
     /// <summary>
     /// Test that LocationApiClient can be instantiated with valid configuration.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The LocationApiClient constructor's ability to create an instance when provided with valid configuration options.</para>
+    /// <para><strong>Data involved:</strong> An HttpClient instance, LocationApiClientOptions with BaseAddress set to the test API URL and Timeout set to 30 seconds, and a logger instance. These represent the minimum required dependencies for constructing the client.</para>
+    /// <para><strong>Why the data matters:</strong> The LocationApiClient requires valid configuration to function correctly. The BaseAddress must be a valid URL for the client to make HTTP requests, and the Timeout prevents requests from hanging indefinitely. This test validates that the constructor accepts valid input and doesn't throw exceptions, ensuring the client can be properly instantiated in dependency injection scenarios.</para>
+    /// <para><strong>Expected outcome:</strong> The constructor should complete without throwing exceptions, and the returned client instance should not be null.</para>
+    /// <para><strong>Reason for expectation:</strong> With valid options (non-empty BaseAddress, positive Timeout), the constructor should successfully create the client instance. The non-null assertion confirms that object creation succeeded and the client is ready to use. This is a basic sanity check to ensure the constructor works correctly with valid input.</para>
+    /// </remarks>
     [Fact]
     public void LocationApiClient_Constructor_WithValidOptions_Succeeds()
     {
@@ -56,8 +63,15 @@ public class LocationApiClientIntegrationTests
     }
 
     /// <summary>
-    /// Test that LocationApiClient throws when BaseAddress is null or empty.
+    /// Tests that LocationApiClient constructor throws InvalidOperationException when BaseAddress is empty, ensuring input validation.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The LocationApiClient constructor's input validation for empty BaseAddress values.</para>
+    /// <para><strong>Data involved:</strong> An HttpClient instance and LocationApiClientOptions with BaseAddress set to an empty string and Timeout set to 30 seconds. This simulates a configuration error where the API base address is not provided.</para>
+    /// <para><strong>Why the data matters:</strong> Empty base addresses are invalid - the client cannot make HTTP requests without a valid base URL. The constructor must validate input and reject empty addresses immediately to provide clear error messages. This prevents subtle bugs where the client is created but fails when making requests.</para>
+    /// <para><strong>Expected outcome:</strong> The constructor should throw InvalidOperationException when called with an empty BaseAddress.</para>
+    /// <para><strong>Reason for expectation:</strong> Input validation is critical for API correctness. Empty base addresses cannot be used to construct HTTP requests and would cause errors when the client tries to make API calls. Throwing InvalidOperationException immediately provides clear feedback about the invalid configuration and follows .NET Framework Design Guidelines for parameter validation.</para>
+    /// </remarks>
     [Fact]
     public void LocationApiClient_Constructor_WithEmptyBaseAddress_Throws()
     {
@@ -151,8 +165,15 @@ public class LocationApiClientIntegrationTests
     }
 
     /// <summary>
-    /// Test that LocationApiClient handles invalid coordinates gracefully.
+    /// Tests that LocationApiClient handles invalid coordinates gracefully by returning an empty collection rather than throwing exceptions.
     /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The LocationApiClient.GetNearbyBusinessesAsync method's error handling when invalid coordinates (out of valid range) are provided.</para>
+    /// <para><strong>Data involved:</strong> Invalid coordinates: latitude=999, longitude=999 (both well outside the valid ranges of -90 to 90 for latitude and -180 to 180 for longitude). These represent impossible coordinate values that would result in invalid API requests.</para>
+    /// <para><strong>Why the data matters:</strong> Invalid coordinates may be provided due to programming errors, data corruption, or edge cases. The client should handle them gracefully (e.g., return empty results, validate and reject) rather than throwing exceptions that crash the application. This ensures robust error handling and good user experience.</para>
+    /// <para><strong>Expected outcome:</strong> GetNearbyBusinessesAsync should return a non-null, empty collection rather than throwing exceptions, confirming that invalid coordinates are handled gracefully.</para>
+    /// <para><strong>Reason for expectation:</strong> The client should either validate coordinates before making API calls (returning empty results for invalid coordinates) or the API should return empty results for invalid requests. Returning an empty collection is preferable to throwing exceptions as it allows the application to continue operating. The non-null, empty collection confirms that the client handled the invalid input gracefully and didn't crash.</para>
+    /// </remarks>
     [Fact]
     public async Task GetNearbyBusinessesAsync_WithInvalidCoordinates_HandlesGracefully()
     {

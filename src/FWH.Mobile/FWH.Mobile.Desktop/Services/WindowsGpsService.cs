@@ -1,6 +1,7 @@
 using Windows.Devices.Geolocation;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -15,9 +16,10 @@ namespace FWH.Mobile.Desktop.Services;
 public class WindowsGpsService : IGpsService
 {
     private readonly Geolocator _geolocator;
+    private readonly ILogger<WindowsGpsService>? _logger;
     private const int LocationTimeoutSeconds = 30;
 
-    public WindowsGpsService()
+    public WindowsGpsService(ILogger<WindowsGpsService>? logger = null)
     {
         _geolocator = new Geolocator
         {
@@ -25,6 +27,7 @@ public class WindowsGpsService : IGpsService
             MovementThreshold = 0, // Report all changes
             ReportInterval = 0 // Fastest possible updates
         };
+        _logger = logger;
     }
 
     public bool IsLocationAvailable
@@ -44,7 +47,7 @@ public class WindowsGpsService : IGpsService
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error checking location availability: {ex}");
+                _logger?.LogError(ex, "Error checking location availability");
                 return false;
             }
         }
@@ -59,12 +62,12 @@ public class WindowsGpsService : IGpsService
         }
         catch (UnauthorizedAccessException ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Location permission denied: {ex}");
+            _logger?.LogWarning(ex, "Location permission denied");
             return false;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error requesting location permission: {ex}");
+            _logger?.LogError(ex, "Error requesting location permission");
             return false;
         }
     }
@@ -236,7 +239,7 @@ public class WindowsGpsService : IGpsService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error getting last known location: {ex}");
+            _logger?.LogError(ex, "Error getting last known location");
             return null;
         }
     }

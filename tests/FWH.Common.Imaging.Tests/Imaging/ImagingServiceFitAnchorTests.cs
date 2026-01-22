@@ -21,6 +21,16 @@ public class ImagingServiceFitAnchorTests
         }
     }
 
+    /// <summary>
+    /// Tests that RenderSvgOverlay correctly applies FitMode and Anchor options to scale and position SVG overlays according to the specified fitting and anchoring behavior.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The IImagingService.RenderSvgOverlay method's handling of ImagingOptions with different FitMode (BestFit, Fill, Stretch) and Anchor (Center, TopLeft, TopRight, BottomLeft, BottomRight) combinations.</para>
+    /// <para><strong>Data involved:</strong> A 100x100 red base bitmap and a 20x10 blue SVG rectangle. The test uses all combinations of FitMode and Anchor enums (15 total combinations). Each combination should scale and position the overlay differently: BestFit maintains aspect ratio, Fill fills the area (may crop), Stretch distorts to fill, and Anchor determines placement (center, corners).</para>
+    /// <para><strong>Why the data matters:</strong> FitMode and Anchor options allow flexible overlay positioning and sizing for different use cases (e.g., centered watermarks, corner badges, full-screen overlays). The renderer must correctly interpret these options and apply the appropriate scaling and positioning. This test validates all option combinations work correctly.</para>
+    /// <para><strong>Expected outcome:</strong> For each FitMode/Anchor combination, the overlay should be rendered such that: (1) the overlay intersects the output (is visible), (2) a pixel at the calculated center of the overlay is blue, and (3) a pixel at the calculated top-left corner (based on anchor) is blue.</para>
+    /// <para><strong>Reason for expectation:</strong> The renderer should calculate the desired size based on FitMode (scaling the 20x10 SVG to fit the 100x100 area), then calculate the offset based on Anchor (positioning the scaled overlay). The blue pixels at the calculated positions confirm the scaling and positioning calculations are correct. The intersection check ensures the overlay is actually rendered (not positioned completely outside the image).</para>
+    /// </remarks>
     [Theory]
     [MemberData(nameof(FitAnchorData))]
     public void RenderSvgOverlay_FitModeAnchor_ComposesOverlay(FitMode fitMode, Anchor anchor)
@@ -125,6 +135,16 @@ public class ImagingServiceFitAnchorTests
         Assert.Equal(255, topLeftColor.Blue);
     }
 
+    /// <summary>
+    /// Tests that RenderSvgOverlay correctly applies padding and background color options when rendering overlays.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The IImagingService.RenderSvgOverlay method's handling of ImagingOptions with Padding and BackgroundColor settings.</para>
+    /// <para><strong>Data involved:</strong> A 120x80 gray base bitmap (RGB 200,200,200) and a 20x10 blue SVG rectangle. ImagingOptions specifies Padding=10 and BackgroundColor=green (RGB 0,255,0). The padding creates a 10-pixel border around the overlay area, and the background color should fill areas outside the padded overlay region.</para>
+    /// <para><strong>Why the data matters:</strong> Padding and background colors are useful for creating visual spacing and backgrounds around overlays (e.g., badges with borders, watermarks with backgrounds). The renderer must correctly apply padding (reducing the available area for the overlay) and fill the padding area with the background color. This test validates that these styling options work correctly.</para>
+    /// <para><strong>Expected outcome:</strong> Pixel (0,0) at the corner (outside the padded area) should be green (the background color). Pixel (11,11) inside the padded area should not be green (should be either the base bitmap color or overlay color).</para>
+    /// <para><strong>Reason for expectation:</strong> The renderer should apply 10 pixels of padding, reducing the available area from 120x80 to 100x60. The padding area (0-10 pixels from edges) should be filled with the background color (green). The overlay should be rendered within the padded area (starting at pixel 10,10). The corner pixel being green confirms padding and background are applied, and the inside pixel not being green confirms the overlay/base bitmap is rendered within the padded area.</para>
+    /// </remarks>
     [Fact]
     public void RenderSvgOverlay_PaddingAndBackground_AppliedCorrectly()
     {

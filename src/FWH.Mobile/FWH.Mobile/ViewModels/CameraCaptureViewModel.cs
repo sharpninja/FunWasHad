@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FWH.Common.Chat.Services;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -14,6 +15,7 @@ namespace FWH.Mobile.ViewModels;
 public partial class CameraCaptureViewModel : ObservableObject
 {
     private readonly ICameraService _cameraService;
+    private readonly ILogger<CameraCaptureViewModel>? _logger;
 
     [ObservableProperty]
     private byte[]? _capturedImage;
@@ -30,15 +32,32 @@ public partial class CameraCaptureViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "Tap to capture photo";
 
-    public CameraCaptureViewModel(ICameraService cameraService)
+    public CameraCaptureViewModel(ICameraService cameraService, ILogger<CameraCaptureViewModel>? logger = null)
     {
         _cameraService = cameraService ?? throw new ArgumentNullException(nameof(cameraService));
-        IsCameraAvailable = _cameraService.IsCameraAvailable;
+        _logger = logger;
+        // Defer IsCameraAvailable check until Activity is available
+        // Initialize to false - will be updated when actually needed
+        IsCameraAvailable = false;
     }
 
     [RelayCommand]
     private async Task CapturePhotoAsync()
     {
+        // Check camera availability when actually needed (Activity should be available by now)
+        if (!IsCameraAvailable)
+        {
+            try
+            {
+                IsCameraAvailable = _cameraService.IsCameraAvailable;
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Failed to check camera availability");
+                IsCameraAvailable = false;
+            }
+        }
+
         if (IsCapturing || !IsCameraAvailable)
             return;
 
@@ -63,7 +82,7 @@ public partial class CameraCaptureViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"Error: {ex.Message}";
-            System.Diagnostics.Debug.WriteLine($"Camera capture error: {ex}");
+            _logger?.LogError(ex, "Camera capture error");
         }
         finally
         {

@@ -54,6 +54,16 @@ public class ScopedHandler : IWorkflowActionHandler
 
 public class ScopedHandlerTests
 {
+    /// <summary>
+    /// Tests that workflow action handlers registered as scoped services can correctly resolve scoped dependencies when the executor creates a service scope.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The WorkflowActionExecutor's ability to create service scopes and resolve scoped action handlers with scoped dependencies.</para>
+    /// <para><strong>Data involved:</strong> A ScopedHandler registered as a scoped service that depends on IScopedDep (also scoped). The handler sets a workflow variable "fromScoped" to the value returned by the dependency ("scoped-value"). A workflow with action "ScopedAction" is executed.</para>
+    /// <para><strong>Why the data matters:</strong> Action handlers may need scoped dependencies (e.g., database contexts, per-request services) that should be disposed after handler execution. The executor must create a service scope for each handler execution to properly resolve and dispose scoped dependencies. This tests dependency injection scoping works correctly in the workflow execution context.</para>
+    /// <para><strong>Expected outcome:</strong> ExecuteAsync should return true, and the workflow variable "fromScoped" should be set to "scoped-value", confirming the handler resolved its scoped dependency correctly.</para>
+    /// <para><strong>Reason for expectation:</strong> The executor should create a service scope before resolving the handler, allowing scoped services to be resolved. The handler should receive its IScopedDep dependency and be able to call its methods. The workflow variable being set to "scoped-value" confirms the dependency was resolved and the handler executed successfully. This validates that scoped service resolution works correctly in the workflow execution pipeline.</para>
+    /// </remarks>
     [Fact]
     public async Task ScopedHandler_ResolvesScopedService_WhenExecutorCreatesScope()
     {

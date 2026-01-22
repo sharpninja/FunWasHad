@@ -34,7 +34,7 @@ public partial class ChatInputViewModel : ViewModelBase
             if (e.PropertyName == nameof(ChatListViewModel.Current))
             {
                 var current = listViewModel.Current;
-                
+
                 if (current != null)
                 {
                     switch (current.Payload.PayloadType)
@@ -116,7 +116,9 @@ public partial class ChatInputViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenCameraAsync()
     {
+        System.Diagnostics.Debug.WriteLine("ChatInputViewModel: OpenCameraAsync called - invoking CameraRequested event");
         CameraRequested?.Invoke(this, EventArgs.Empty);
+        System.Diagnostics.Debug.WriteLine("ChatInputViewModel: CameraRequested event invoked");
         await Task.CompletedTask;
     }
 

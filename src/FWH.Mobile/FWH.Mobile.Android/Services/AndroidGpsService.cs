@@ -4,6 +4,7 @@ using Android.OS;
 using AndroidX.Core.Content;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,13 +20,17 @@ namespace FWH.Mobile.Android.Services;
 public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListener
 {
     private readonly LocationManager? _locationManager;
+    private readonly Handler _mainHandler;
+    private readonly ILogger<AndroidGpsService>? _logger;
     private TaskCompletionSource<GpsCoordinates?>? _locationTcs;
     private const int LocationTimeoutSeconds = 30;
 
-    public AndroidGpsService()
+    public AndroidGpsService(ILogger<AndroidGpsService>? logger = null)
     {
         var context = global::Android.App.Application.Context;
         _locationManager = context.GetSystemService(Context.LocationService) as LocationManager;
+        _mainHandler = new Handler(Looper.MainLooper!);
+        _logger = logger;
     }
 
     public bool IsLocationAvailable
@@ -55,19 +60,19 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
         }
     }
 
-    public async Task<bool> RequestLocationPermissionAsync()
+    public Task<bool> RequestLocationPermissionAsync()
     {
         var context = global::Android.App.Application.Context;
 
         // Check if permission is already granted
         var permission = ContextCompat.CheckSelfPermission(context, global::Android.Manifest.Permission.AccessFineLocation);
         if (permission == Permission.Granted)
-            return true;
+            return Task.FromResult(true);
 
         // Note: Actual permission request must be done from an Activity
         // This method just checks current status
         // The MainActivity should handle permission requests
-        return false;
+        return Task.FromResult(false);
     }
 
     public async Task<GpsCoordinates?> GetCurrentLocationAsync(CancellationToken cancellationToken = default)
@@ -148,11 +153,27 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
             diagnostics["SelectedProvider"] = provider;
             diagnostics["TimeoutSeconds"] = LocationTimeoutSeconds;
 
-            _locationManager.RequestLocationUpdates(
-                provider,
-                minTimeMs: 0,
-                minDistanceM: 0,
-                listener: this);
+            // RequestLocationUpdates must be called on a thread with a Looper (main thread)
+            var requestLocationTcs = new TaskCompletionSource<bool>();
+            _mainHandler.Post(() =>
+            {
+                try
+                {
+                    _locationManager.RequestLocationUpdates(
+                        provider,
+                        minTimeMs: 0,
+                        minDistanceM: 0,
+                        listener: this);
+                    requestLocationTcs.SetResult(true);
+                }
+                catch (Exception ex)
+                {
+                    requestLocationTcs.SetException(ex);
+                }
+            });
+
+            // Wait for the request to be posted (should be immediate)
+            await requestLocationTcs.Task;
 
             // Set up timeout
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(LocationTimeoutSeconds));
@@ -170,15 +191,24 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
 
             var result = await _locationTcs.Task;
 
-            // Clean up
-            try
+            // Clean up - RemoveUpdates must also be called on a thread with a Looper
+            var removeUpdatesTcs = new TaskCompletionSource<bool>();
+            _mainHandler.Post(() =>
             {
-                _locationManager.RemoveUpdates(this);
-            }
-            catch (Exception cleanupEx)
-            {
-                diagnostics["CleanupError"] = cleanupEx.Message;
-            }
+                try
+                {
+                    _locationManager.RemoveUpdates(this);
+                    removeUpdatesTcs.SetResult(true);
+                }
+                catch (Exception cleanupEx)
+                {
+                    diagnostics["CleanupError"] = cleanupEx.Message;
+                    removeUpdatesTcs.SetResult(false);
+                }
+            });
+
+            // Wait for cleanup to complete (should be immediate)
+            await removeUpdatesTcs.Task;
 
             if (result == null)
             {
@@ -252,7 +282,7 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error getting last known location: {ex}");
+            _logger?.LogError(ex, "Error getting last known location");
             return null;
         }
     }
@@ -283,16 +313,16 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
 
     public void OnProviderDisabled(string provider)
     {
-        System.Diagnostics.Debug.WriteLine($"Location provider disabled: {provider}");
+        _logger?.LogInformation("Location provider disabled: {Provider}", provider);
     }
 
     public void OnProviderEnabled(string provider)
     {
-        System.Diagnostics.Debug.WriteLine($"Location provider enabled: {provider}");
+        _logger?.LogInformation("Location provider enabled: {Provider}", provider);
     }
 
     public void OnStatusChanged(string? provider, Availability status, Bundle? extras)
     {
-        System.Diagnostics.Debug.WriteLine($"Location provider status changed: {provider} - {status}");
+        _logger?.LogDebug("Location provider status changed: {Provider} - {Status}", provider, status);
     }
 }

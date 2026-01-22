@@ -15,6 +15,16 @@ public class ScopeUserTenantTests : IClassFixture<SqliteTestFixture>
     private readonly SqliteTestFixture _fixture;
     public ScopeUserTenantTests(SqliteTestFixture fixture) => _fixture = fixture;
 
+    /// <summary>
+    /// Tests that UserId and TenantId are correctly propagated through logging scopes in the end-to-end workflow execution flow.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The logging scope propagation mechanism's ability to carry UserId and TenantId through the workflow execution pipeline from ChatService through to repository operations.</para>
+    /// <para><strong>Data involved:</strong> A workflow with branching node A, userId="user-7", tenantId="tenant-x". The workflow is rendered, a choice is selected, which triggers workflow advancement and repository updates. A logger provider captures log entries with their scopes.</para>
+    /// <para><strong>Why the data matters:</strong> Multi-tenant applications need to track which user and tenant initiated operations for auditing, debugging, and data isolation. Logging scopes allow this context to flow through the entire call stack without explicitly passing parameters. This test validates that UserId and TenantId are correctly propagated from the ChatService entry point through to repository operations, ensuring logs can be filtered by user/tenant.</para>
+    /// <para><strong>Expected outcome:</strong> After selecting a choice and triggering workflow advancement, a log entry should be captured that contains scopes with UserId="user-7", TenantId="tenant-x", and WorkflowId matching the workflow definition ID.</para>
+    /// <para><strong>Reason for expectation:</strong> The ChatService should create logging scopes with UserId and TenantId when RenderWorkflowStateAsync is called. These scopes should propagate through the workflow controller, action executor, and repository operations. The logger provider should capture log entries with these scopes intact. The presence of all three scope keys (UserId, TenantId, WorkflowId) confirms that scope propagation works correctly throughout the execution pipeline, enabling proper audit trails and multi-tenant logging.</para>
+    /// </remarks>
     [Fact]
     public async Task UserIdAndTenantId_AppearInScopes_EndToEnd()
     {

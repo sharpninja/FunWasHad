@@ -58,6 +58,16 @@ public class WorkflowServiceTests
         return sp.GetRequiredService<IWorkflowService>();
     }
 
+    /// <summary>
+    /// Tests that GetCurrentStatePayloadAsync returns a choice payload when the workflow is at a branching decision node.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The IWorkflowService.GetCurrentStatePayloadAsync method's ability to detect branching nodes and return choice-based payloads.</para>
+    /// <para><strong>Data involved:</strong> A PlantUML workflow definition with a start node, followed by an if-else decision node (condition "cond" with branches "y" and "n"), leading to "Then" and "Else" action nodes, both converging to an "End" node. The workflow is imported and started, placing it at the decision node.</para>
+    /// <para><strong>Why the data matters:</strong> Branching nodes require user input to determine which path to take. The service must detect when the workflow is at such a node and return a choice payload (IsChoice=true) with multiple options. This enables the UI to present choices to users. The test validates that decision nodes are correctly identified and converted to choice payloads.</para>
+    /// <para><strong>Expected outcome:</strong> After importing and starting the workflow, GetCurrentStatePayloadAsync should return a payload with IsChoice=true and Choices.Count >= 2 (representing the "y" and "n" branches).</para>
+    /// <para><strong>Reason for expectation:</strong> When the workflow reaches a decision node with multiple outgoing transitions (if-else), the service should recognize it as a choice point and return a choice payload. The payload should contain at least 2 choices corresponding to the decision branches. This allows the UI to display options and wait for user selection before advancing.</para>
+    /// </remarks>
     [Fact]
     public async Task GetCurrentStatePayload_ReturnsChoiceForBranchingNode()
     {
@@ -80,6 +90,16 @@ endif
         Assert.True(payload.Choices.Count >= 2);
     }
 
+    /// <summary>
+    /// Tests that AdvanceByChoiceValueAsync advances the workflow to the selected branch and persists the state change to the database.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The IWorkflowService.AdvanceByChoiceValueAsync method's ability to advance workflow execution based on user choice and persist the new state.</para>
+    /// <para><strong>Data involved:</strong> A PlantUML workflow with node A having two outgoing transitions (to B and C), creating a choice point. The workflow is imported and started at node A. Choice index 1 is selected (the second outgoing transition, to C). The service uses an in-memory SQLite database for persistence.</para>
+    /// <para><strong>Why the data matters:</strong> When users make choices in branching workflows, the workflow must advance to the selected branch and persist the new current node. This test validates that: (1) the choice index correctly maps to the corresponding transition, (2) the workflow advances to the target node, and (3) the state change is persisted to the database so it survives service restarts. The in-memory database ensures test isolation while validating real persistence.</para>
+    /// <para><strong>Expected outcome:</strong> After calling AdvanceByChoiceValueAsync with index 1, the method should return true (indicating success), and querying the persisted workflow from the database should show CurrentNodeId matching the target node of choice index 1 (node C).</para>
+    /// <para><strong>Reason for expectation:</strong> The AdvanceByChoiceValueAsync method should map the choice index to the corresponding transition, advance the workflow controller to the target node, and persist the new CurrentNodeId to the database. When the workflow is reloaded from the database, it should reflect the advanced state, confirming that persistence works correctly. This ensures workflow state survives application restarts.</para>
+    /// </remarks>
     [Fact]
     public async Task AdvanceByChoiceValue_AdvancesAndPersists()
     {

@@ -57,5 +57,7 @@
     <PackageVersion Include="Microsoft.DocAsCode.Dotnet" Version="2.78.0" />
     <!-- Security fix: Override KubernetesClient to fix NU1902 vulnerability (CVE-2025-9708) -->
     <PackageVersion Include="KubernetesClient" Version="17.0.14" />
+    <!-- Mapsui for native map control in Avalonia -->
+    <PackageVersion Include="Mapsui.Avalonia" Version="4.3.0" />
   </ItemGroup>
 </Project>

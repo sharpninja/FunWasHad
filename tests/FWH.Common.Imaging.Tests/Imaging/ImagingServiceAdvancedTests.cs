@@ -27,6 +27,16 @@ public class ImagingServiceAdvancedTests
         };
     }
 
+    /// <summary>
+    /// Tests that RenderSvgOverlay correctly renders SVG overlays at different positions and sizes, with pixels inside the overlay having the SVG color and pixels outside retaining the base bitmap color.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The IImagingService.RenderSvgOverlay method's ability to correctly position and render SVG overlays of varying sizes at different coordinates on a base bitmap.</para>
+    /// <para><strong>Data involved:</strong> A 100x100 red base bitmap, an SVG overlay (20x20 green rectangle) positioned at coordinates (10.2, 10.7) with fractional positioning. Test checks pixel (15,15) which should be inside the overlay (green) and pixel (9,9) which should be outside (red).</para>
+    /// <para><strong>Why the data matters:</strong> SVG overlays must be positioned accurately regardless of size or position. Fractional coordinates test that the renderer correctly rounds to pixel boundaries. Different overlay sizes test that scaling works correctly. This validates the overlay rendering works for various use cases (e.g., markers on maps, badges on photos).</para>
+    /// <para><strong>Expected outcome:</strong> Pixel (15,15) should be green (RGB 0,255,0) since it's inside the overlay, and pixel (9,9) should be red (RGB 255,0,0) since it's outside the overlay area.</para>
+    /// <para><strong>Reason for expectation:</strong> The renderer should composite the SVG overlay onto the base bitmap at the specified coordinates, rounding fractional coordinates to the nearest pixel. Pixels within the overlay bounds should have the SVG color, while pixels outside should retain the base bitmap color. The specific pixel checks confirm accurate positioning and that the overlay doesn't affect unrelated areas of the image.</para>
+    /// </remarks>
     [Theory]
     [InlineData(10.2f, 10.7f, 15, 15, 9, 9, 20, 20, 0, 255, 0)] // Green SVG 20x20
     public void RenderSvgOverlay_WithDifferentPositionsAndSizes_RendersCorrectly(
@@ -69,6 +79,16 @@ public class ImagingServiceAdvancedTests
         Assert.Equal(0, outside.Blue);
     }
 
+    /// <summary>
+    /// Tests that RenderSvgOverlay correctly blends transparent SVG overlays with the base bitmap using alpha compositing.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The IImagingService.RenderSvgOverlay method's alpha blending when rendering SVG overlays with transparency (alpha channel) onto a base bitmap.</para>
+    /// <para><strong>Data involved:</strong> A 100x100 red base bitmap and a 10x10 SVG rectangle with fill="rgba(0,0,255,0.5)" (50% opaque blue) positioned at (40.5, 40.5). The expected blended color is purple (RGB 128,0,128) representing 50% blue over 50% red.</para>
+    /// <para><strong>Why the data matters:</strong> Transparent overlays are common in image processing (e.g., watermarks, semi-transparent markers, UI overlays). The renderer must correctly apply alpha blending to composite transparent colors with the base image. This test validates that the alpha channel is properly interpreted and blended using standard compositing algorithms.</para>
+    /// <para><strong>Expected outcome:</strong> The pixel at the overlay position should be approximately purple (RGB 128,0,128) with a tolerance of ±3, representing the blended result of 50% blue over red.</para>
+    /// <para><strong>Reason for expectation:</strong> Alpha blending should use the formula: result = overlay_alpha * overlay_color + (1 - overlay_alpha) * base_color. For 50% blue (0,0,255) over red (255,0,0): R = 0.5*0 + 0.5*255 = 127.5 ≈ 128, G = 0, B = 0.5*255 + 0.5*0 = 127.5 ≈ 128. The tolerance accounts for rounding and color space conversions. This confirms alpha compositing works correctly for transparent overlays.</para>
+    /// </remarks>
     [Theory]
     [InlineData("rgba(0,0,255,0.5)", 128, 0, 128, 40.5f, 40.5f)] // 50% blue over red = purple
     public void RenderSvgOverlay_WithTransparency_BlendsCorrectly(

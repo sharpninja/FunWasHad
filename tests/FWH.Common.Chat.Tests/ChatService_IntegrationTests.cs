@@ -31,6 +31,16 @@ public class ChatServiceIntegrationTests : IClassFixture<SqliteTestFixture>
         _fixture = fixture;
     }
 
+    /// <summary>
+    /// Tests the end-to-end integration of ChatService rendering workflow state, appending entries to the chat list, and persisting workflow state changes.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The complete integration flow from workflow import through ChatService rendering to chat list updates and workflow state persistence.</para>
+    /// <para><strong>Data involved:</strong> A PlantUML workflow with nodes A (action node) and B, C (branching targets). The workflow is imported, then ChatService.RenderWorkflowStateAsync is called to render the current state. The test uses a SQLite database for persistence and a logger provider to capture log entries.</para>
+    /// <para><strong>Why the data matters:</strong> This is an integration test that validates the entire workflow-to-chat pipeline works correctly. It ensures that workflow definitions can be imported, rendered to the chat UI, and that user interactions (choice selections) properly advance workflows and persist state. This tests the real-world usage scenario where users interact with workflows through the chat interface.</para>
+    /// <para><strong>Expected outcome:</strong> After rendering, the chat list should contain exactly one entry (a ChoiceChatEntry) with 2 choices (corresponding to transitions A→B and A→C).</para>
+    /// <para><strong>Reason for expectation:</strong> RenderWorkflowStateAsync should query the workflow's current state, detect that node A has multiple outgoing transitions (making it a choice point), convert it to a ChoiceChatEntry, and append it to the chat list. The 2 choices correspond to the two transitions from A. This validates that the workflow-to-chat conversion works correctly and the UI is updated with the workflow state.</para>
+    /// </remarks>
     [Fact]
     public async Task RenderWorkflowStateAsync_EndToEndAppendsEntriesAndPersists()
     {

@@ -12,25 +12,21 @@ using FWH.Common.Chat.ViewModels;
 using FWH.Common.Chat;
 using FWH.Common.Chat.Conversion;
 using FWH.Common.Chat.Duplicate;
-using System.Collections.Generic;
 
 namespace FWH.Common.Chat.Tests;
 
-class TestWorkflowController : IWorkflowController
-{
-    private readonly Queue<WorkflowStatePayload> _responses = new();
-    public void EnqueueResponse(WorkflowStatePayload p) => _responses.Enqueue(p);
-    public Task<WorkflowDefinition> ImportWorkflowAsync(string plantUmlText, string? id = null, string? name = null) => Task.FromResult<WorkflowDefinition>(null!);
-    public Task StartInstanceAsync(string workflowId) => Task.CompletedTask;
-    public Task RestartInstanceAsync(string workflowId) => Task.CompletedTask;
-    public Task<WorkflowStatePayload> GetCurrentStatePayloadAsync(string workflowId) => Task.FromResult(_responses.Count > 0 ? _responses.Dequeue() : new WorkflowStatePayload(false, "", System.Array.Empty<WorkflowChoiceOption>()));
-    public Task<bool> AdvanceByChoiceValueAsync(string workflowId, object? choiceValue) => Task.FromResult(true);
-    public string? GetCurrentNodeId(string workflowId) => null;
-    public bool WorkflowExists(string workflowId) => true;
-}
-
 public class ChatServiceRenderTests
 {
+    /// <summary>
+    /// Tests that RenderWorkflowStateAsync appends a TextChatEntry to the chat list when the workflow state is not a choice (IsChoice=false).
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The ChatService.RenderWorkflowStateAsync method's behavior when the workflow state payload represents a text message rather than a choice.</para>
+    /// <para><strong>Data involved:</strong> A TestWorkflowController that returns a WorkflowStatePayload with IsChoice=false and Text="Hello from node". The ChatService renders this state to the chat list. The test uses a mock controller to control the workflow state response.</para>
+    /// <para><strong>Why the data matters:</strong> Workflows can output text messages (e.g., informational messages, prompts) that should be displayed as bot messages in the chat. When IsChoice=false, the state represents a simple text message, not a choice point. The ChatService must correctly convert this to a TextChatEntry and append it to the chat list so users can see the workflow's output.</para>
+    /// <para><strong>Expected outcome:</strong> After RenderWorkflowStateAsync completes, the chat list should contain exactly one entry with Author=Bot, representing the text message from the workflow.</para>
+    /// <para><strong>Reason for expectation:</strong> The WorkflowToChatConverter should detect that IsChoice=false and create a TextChatEntry with the payload's Text content. The entry should have Author=Bot (since it's from the workflow, not the user). The single entry confirms that the text was correctly converted and added to the chat list, enabling users to see workflow messages.</para>
+    /// </remarks>
     [Fact]
     public async Task RenderWorkflowStateAsync_AppendsTextEntryWhenNotChoice()
     {
@@ -65,6 +61,16 @@ public class ChatServiceRenderTests
         Assert.Equal(FWH.Common.Chat.ViewModels.ChatAuthors.Bot, entry.Author);
     }
 
+    /// <summary>
+    /// Tests that RenderWorkflowStateAsync appends a ChoiceChatEntry when the workflow state is a choice (IsChoice=true), and that selecting a choice automatically advances the workflow and renders the next state.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The ChatService.RenderWorkflowStateAsync method's behavior when the workflow state is a choice, and the automatic workflow advancement and re-rendering that occurs when a user selects a choice.</para>
+    /// <para><strong>Data involved:</strong> A TestWorkflowController that returns two WorkflowStatePayload responses: first a choice payload (IsChoice=true, Text="Choose:", with two options "To B" and "To C"), then a text payload (IsChoice=false, Text="Arrived at B"). The ChatService renders the choice, then the test simulates selecting the first choice, which should trigger automatic advancement and re-rendering.</para>
+    /// <para><strong>Why the data matters:</strong> Workflows often present choices to users (e.g., "Yes/No", "Option A/B/C"). When a choice is rendered, it should appear as a ChoiceChatEntry with selectable options. When a user selects a choice, the workflow should automatically advance to the next node and render the resulting state. This test validates the complete flow: choice rendering → user selection → automatic advancement → next state rendering.</para>
+    /// <para><strong>Expected outcome:</strong> After initial render, the chat list should contain one ChoiceChatEntry with 2 choices. After selecting the first choice, the chat list should contain 2 entries (the choice entry and a new TextChatEntry with text "Arrived at B"), confirming that the workflow advanced and rendered the next state.</para>
+    /// <para><strong>Reason for expectation:</strong> The WorkflowToChatConverter should detect IsChoice=true and create a ChoiceChatEntry with the provided options. When SelectChoiceCommand is executed, it should call AdvanceByChoiceValueAsync on the controller, which advances the workflow. The ChatService should then automatically call RenderWorkflowStateAsync again to render the new state, which should be the text payload "Arrived at B". The presence of both entries confirms the complete choice selection and advancement flow works correctly.</para>
+    /// </remarks>
     [Fact]
     public async Task RenderWorkflowStateAsync_AppendsChoiceAndAdvancesOnSelection()
     {
