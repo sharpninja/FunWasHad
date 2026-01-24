@@ -387,6 +387,8 @@ The Marketing API SHALL expose endpoints equivalent to:
 - Filtering for active/published content
 - EF Core with Include queries
 - Response models defined
+- **Pagination:** All list endpoints support pagination (page, pageSize parameters)
+- **PostGIS Spatial Queries:** Nearby businesses endpoint uses PostGIS for efficient spatial queries with automatic fallback
 
 ### TR-API-003: Feedback endpoints
 
@@ -967,10 +969,17 @@ Database connection strings SHALL be stored securely:
 ---
 
 **Document Version:** 2.0
-**Last Updated:** 2025-01-08
+**Last Updated:** 2025-01-27
 **Status:** Current
 **Total Requirements:** 81
 **Completion Rate:** 100%
+
+**Recent Enhancements (2025-01-27):**
+- PostGIS spatial queries for efficient nearby business searches
+- Pagination on all list endpoints
+- Enhanced API security with HMAC-SHA256 signing
+- Blob storage for file uploads
+- Comprehensive test coverage (245+ tests)
 
 ---
 
@@ -1020,11 +1029,13 @@ Database connection strings SHALL be stored securely:
 
 ### Quality & Testing (7 requirements)
 
-✅ 84+ automated tests
+✅ 245+ automated tests (increased from 84+)
 ✅ Integration test suite
 ✅ Comprehensive logging
 ✅ Error handling
 ✅ Performance optimization
+✅ PostGIS spatial query optimization
+✅ Pagination on all list endpoints
 
 ### Documentation (10 requirements)
 

@@ -8,9 +8,18 @@ FunWasHad is a location-based mobile application built with:
 - **.NET 9** - Target framework
 - **AvaloniaUI** - Cross-platform mobile UI
 - **ASP.NET Core** - Backend REST APIs
-- **PostgreSQL** - Backend database
+- **PostgreSQL with PostGIS** - Backend database with spatial query support
 - **SQLite** - Mobile local storage
 - **.NET Aspire** - Service orchestration
+
+## Recent Updates (2025-01-27)
+
+- ✅ **PostGIS Spatial Queries:** Efficient nearby business queries using spatial GIST indexes
+- ✅ **Pagination:** All list endpoints now support pagination with metadata
+- ✅ **API Security:** API key authentication with HMAC-SHA256 request signing
+- ✅ **Blob Storage:** File upload storage with persistent volumes
+- ✅ **Resource Management:** Proper disposal patterns implemented throughout
+- ✅ **Test Coverage:** 245+ tests, all passing
 
 ## Quick Start
 

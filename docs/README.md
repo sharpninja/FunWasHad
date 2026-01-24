@@ -4,6 +4,14 @@
 **Total Documents:** 49 (organized into 8 folders)
 **Guidelines:** See [DOCUMENTATION-GUIDELINES.md](DOCUMENTATION-GUIDELINES.md) for where to place new documentation
 
+## 🆕 Recent Updates (2025-01-27)
+
+- ✅ **PostGIS Spatial Queries:** Efficient nearby business queries with spatial GIST indexes
+- ✅ **Pagination:** All list endpoints support pagination (page, pageSize parameters)
+- ✅ **API Security:** API key authentication with HMAC-SHA256 signing
+- ✅ **Blob Storage:** File upload storage with persistent volumes
+- ✅ **Test Coverage:** 245+ tests, all passing
+
 ---
 
 ## Quick Links

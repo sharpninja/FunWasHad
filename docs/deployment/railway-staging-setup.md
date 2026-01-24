@@ -48,6 +48,10 @@ Complete guide for configuring Railway staging environment for FunWasHad APIs.
 
 1. Click **"+ New"**
 2. Select **"Database"**
+3. Select **"PostgreSQL"**
+
+**⚠️ PostGIS Extension:**
+The Marketing API uses PostGIS for efficient spatial queries. Railway's PostgreSQL service includes PostGIS by default. The migration will automatically enable PostGIS when available. If PostGIS is not available (e.g., in test environments), the API will gracefully fall back to bounding box queries.
 3. Choose **"Add PostgreSQL"**
 4. Wait for provisioning (~30 seconds)
 5. **Note the service name** (usually `Postgres` or `postgres`)

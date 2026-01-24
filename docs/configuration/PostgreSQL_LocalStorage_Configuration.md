@@ -78,6 +78,24 @@ When you run the Aspire application:
 
 ---
 
+## PostGIS Extension
+
+The Marketing API uses **PostGIS** for efficient spatial queries on business locations. PostGIS is automatically enabled by the migration `002_add_postgis_spatial_index.sql` when available.
+
+### Features:
+- **Spatial GIST Index:** Efficient spatial queries using `location_geometry` column
+- **Automatic Geometry Maintenance:** Database trigger keeps geometry in sync with latitude/longitude
+- **Graceful Fallback:** API automatically falls back to bounding box queries if PostGIS is unavailable (e.g., test environments)
+
+### Migration:
+The PostGIS migration (`002_add_postgis_spatial_index.sql`) will:
+1. Enable PostGIS extension (if available)
+2. Add `location_geometry` column to `businesses` table
+3. Create spatial GIST index for optimal query performance
+4. Set up trigger to auto-update geometry from lat/lon
+
+**Note:** Railway PostgreSQL includes PostGIS by default. For local development, ensure PostGIS is installed in your PostgreSQL instance.
+
 ## Benefits
 
 ### ✅ Data Persistence

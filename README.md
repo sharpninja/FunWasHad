@@ -93,8 +93,11 @@ FunWasHad/
 ### Marketing API
 - Business information management
 - Customer feedback & ratings
-- Photo attachments
-- PostgreSQL persistence
+- Photo and video attachments
+- PostgreSQL persistence with PostGIS spatial indexing
+- **Pagination:** All list endpoints support pagination (page, pageSize)
+- **Spatial Queries:** Nearby businesses use PostGIS ST_DWithin for efficient queries
+- Blob storage for file uploads with persistent volumes
 
 ### Mobile App
 - Cross-platform UI with Avalonia
