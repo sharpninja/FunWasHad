@@ -24,14 +24,17 @@ namespace FWH.Common.Workflow.Tests;
 /// <summary>
 /// Tests for error handling scenarios in WorkflowActionExecutor
 /// </summary>
-public class ActionExecutorErrorHandlingTests
+public class ActionExecutorErrorHandlingTests : IDisposable
 {
+    private readonly List<IDisposable> _disposables = new();
+
     private IWorkflowService BuildWithInMemoryRepo(out ServiceProvider sp, Action<IServiceCollection>? configure = null)
     {
         var services = new ServiceCollection();
 
         var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
+        _disposables.Add(connection); // Track for disposal
 
         services.AddDbContext<NotesDbContext>(options => options.UseSqlite(connection));
         services.AddScoped<IWorkflowRepository, EfWorkflowRepository>();
@@ -42,6 +45,7 @@ public class ActionExecutorErrorHandlingTests
         configure?.Invoke(services);
 
         sp = services.BuildServiceProvider();
+        _disposables.Add(sp); // Track ServiceProvider for disposal
 
         // Manually ensure registrar picked up handlers
         _ = sp.GetService<WorkflowActionHandlerRegistrar>();
@@ -53,6 +57,22 @@ public class ActionExecutorErrorHandlingTests
         }
 
         return sp.GetRequiredService<IWorkflowService>();
+    }
+
+    public void Dispose()
+    {
+        foreach (var disposable in _disposables)
+        {
+            try
+            {
+                disposable.Dispose();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
+        _disposables.Clear();
     }
 
     /// <summary>

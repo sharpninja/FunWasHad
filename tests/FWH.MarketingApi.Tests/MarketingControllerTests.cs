@@ -209,10 +209,12 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
         var response = await client.GetAsync("/api/marketing/1/coupons");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<List<Coupon>>();
+        var result = await response.Content.ReadFromJsonAsync<PagedResult<Coupon>>();
         Assert.NotNull(result);
-        Assert.Single(result!);
-        Assert.Equal("Test Coupon", result[0].Title);
+        Assert.Single(result!.Items);
+        Assert.Equal("Test Coupon", result.Items[0].Title);
+        Assert.Equal(1, result.TotalCount);
+        Assert.Equal(1, result.Page);
     }
 
     /// <summary>
@@ -274,10 +276,12 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
         var response = await client.GetAsync("/api/marketing/1/news");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<List<NewsItem>>();
+        var result = await response.Content.ReadFromJsonAsync<PagedResult<NewsItem>>();
         Assert.NotNull(result);
-        Assert.Single(result!);
-        Assert.Equal("Test News", result[0].Title);
+        Assert.Single(result!.Items);
+        Assert.Equal("Test News", result.Items[0].Title);
+        Assert.Equal(1, result.TotalCount);
+        Assert.Equal(1, result.Page);
     }
 
     /// <summary>

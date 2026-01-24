@@ -274,6 +274,7 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
                     bestLocation.Accuracy)
                 {
                     AltitudeMeters = bestLocation.HasAltitude ? bestLocation.Altitude : null,
+                    SpeedMetersPerSecond = bestLocation.HasSpeed ? bestLocation.Speed : null,
                     Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(bestLocation.Time)
                 };
             }
@@ -304,6 +305,7 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
                 location.Accuracy)
             {
                 AltitudeMeters = location.HasAltitude ? location.Altitude : null,
+                SpeedMetersPerSecond = location.HasSpeed ? location.Speed : null,
                 Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(location.Time)
             };
 

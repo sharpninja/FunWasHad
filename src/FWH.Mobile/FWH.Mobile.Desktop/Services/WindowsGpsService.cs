@@ -167,6 +167,7 @@ public class WindowsGpsService : IGpsService
                 coordinate.Accuracy)
             {
                 AltitudeMeters = coordinate.Point.Position.Altitude,
+                SpeedMetersPerSecond = coordinate.Speed.HasValue && coordinate.Speed.Value >= 0 ? coordinate.Speed.Value : null,
                 Timestamp = coordinate.Timestamp
             };
         }
@@ -234,6 +235,7 @@ public class WindowsGpsService : IGpsService
                 coordinate.Accuracy)
             {
                 AltitudeMeters = coordinate.Point.Position.Altitude,
+                SpeedMetersPerSecond = coordinate.Speed.HasValue && coordinate.Speed.Value >= 0 ? coordinate.Speed.Value : null,
                 Timestamp = coordinate.Timestamp
             };
         }

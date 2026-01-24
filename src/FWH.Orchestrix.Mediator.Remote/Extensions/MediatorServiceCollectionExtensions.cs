@@ -4,6 +4,9 @@ using FWH.Orchestrix.Mediator.Remote.Location;
 using FWH.Orchestrix.Mediator.Remote.Marketing;
 using FWH.Orchestrix.Mediator.Remote.Mediator;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Reflection;
+using System.Text;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Fallback;
@@ -54,6 +57,8 @@ public static class MediatorServiceCollectionExtensions
             client.BaseAddress = new Uri(options.LocationApiBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(30);
         })
+        .AddHttpMessageHandler(serviceProvider =>
+            new ApiAuthenticationMessageHandler(serviceProvider))
         .AddResilienceHandler("location-api-pipeline", (ResiliencePipelineBuilder<HttpResponseMessage> builder) =>
         {
             // 1. Fallback (outer layer - executed last if all else fails)
@@ -71,11 +76,11 @@ public static class MediatorServiceCollectionExtensions
             //        {
             //            Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json")
             //        };
-                    
+
             //        return Outcome.FromResultAsValueTask(fallbackResponse);
             //    }
             //});
-            
+
             // 2. Circuit breaker (prevents cascading failures)
             builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage>
             {
@@ -88,7 +93,7 @@ public static class MediatorServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode)
             });
-            
+
             // 3. Retry with exponential backoff
             builder.AddRetry(new Polly.Retry.RetryStrategyOptions<HttpResponseMessage>
             {
@@ -101,7 +106,7 @@ public static class MediatorServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NotFound)
             });
-            
+
             // 4. Timeout per attempt (inner layer - wraps each individual request)
             builder.AddTimeout(TimeSpan.FromSeconds(30));
         });
@@ -112,6 +117,8 @@ public static class MediatorServiceCollectionExtensions
             client.BaseAddress = new Uri(options.MarketingApiBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(30);
         })
+        .AddHttpMessageHandler(serviceProvider =>
+            new ApiAuthenticationMessageHandler(serviceProvider))
         .AddResilienceHandler("marketing-api-pipeline", (ResiliencePipelineBuilder<HttpResponseMessage> builder) =>
         {
             // 1. Fallback (outer layer - executed last if all else fails)
@@ -129,11 +136,11 @@ public static class MediatorServiceCollectionExtensions
             //        {
             //            Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json")
             //        };
-                    
+
             //        return Outcome.FromResultAsValueTask(fallbackResponse);
             //    }
             //});
-            
+
             // 2. Circuit breaker (prevents cascading failures)
             builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage>
             {
@@ -146,7 +153,7 @@ public static class MediatorServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode)
             });
-            
+
             // 3. Retry with exponential backoff
             builder.AddRetry(new Polly.Retry.RetryStrategyOptions<HttpResponseMessage>
             {
@@ -159,7 +166,7 @@ public static class MediatorServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NotFound)
             });
-            
+
             // 4. Timeout per attempt (inner layer - wraps each individual request)
             builder.AddTimeout(TimeSpan.FromSeconds(10));
         });
@@ -177,3 +184,50 @@ public class ApiClientOptions
     public string MarketingApiBaseUrl { get; set; } = "https://localhost:4749";
 }
 
+/// <summary>
+/// HTTP message handler that adds API authentication headers to requests.
+/// Uses reflection to access IApiAuthenticationService from Mobile project if available.
+/// </summary>
+internal class ApiAuthenticationMessageHandler : DelegatingHandler
+{
+    private readonly IServiceProvider _serviceProvider;
+
+    public ApiAuthenticationMessageHandler(IServiceProvider serviceProvider)
+    {
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        // Try to get IApiAuthenticationService from service provider using reflection
+        // This avoids a direct dependency on FWH.Mobile project
+        var authServiceType = Type.GetType("FWH.Mobile.Services.IApiAuthenticationService, FWH.Mobile");
+        if (authServiceType != null)
+        {
+            var authService = _serviceProvider.GetService(authServiceType);
+            if (authService != null)
+            {
+                // Get request body if present for signing
+                string? requestBody = null;
+                if (request.Content != null)
+                {
+                    requestBody = await request.Content.ReadAsStringAsync(cancellationToken);
+                    // Reset the content stream position
+                    var contentType = request.Content.Headers.ContentType ?? new MediaTypeHeaderValue("application/json");
+                    request.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, contentType);
+                }
+
+                // Call AddAuthenticationHeaders via reflection
+                var method = authServiceType.GetMethod("AddAuthenticationHeaders");
+                if (method != null)
+                {
+                    method.Invoke(authService, new object[] { request, requestBody! });
+                }
+            }
+        }
+
+        return await base.SendAsync(request, cancellationToken);
+    }
+}

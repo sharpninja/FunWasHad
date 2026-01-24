@@ -83,6 +83,30 @@ public sealed class LocationApiClient : ILocationService
         }
     }
 
+    public async Task<string?> GetAddressAsync(
+        double latitude,
+        double longitude,
+        int maxDistanceMeters = 500,
+        CancellationToken cancellationToken = default)
+    {
+        // Try to get address from closest business first
+        var closestBusiness = await GetClosestBusinessAsync(
+            latitude,
+            longitude,
+            maxDistanceMeters,
+            cancellationToken);
+
+        if (closestBusiness != null && !string.IsNullOrEmpty(closestBusiness.Address))
+        {
+            return closestBusiness.Address;
+        }
+
+        // Location API doesn't have a dedicated reverse geocoding endpoint yet
+        // Return null to indicate address could not be determined
+        // The OverpassLocationService implementation handles actual reverse geocoding
+        return null;
+    }
+
     /// <summary>
     /// Updates the device location on the server.
     /// </summary>

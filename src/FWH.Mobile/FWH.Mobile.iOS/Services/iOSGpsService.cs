@@ -204,6 +204,7 @@ public class iOSGpsService : IGpsService
                 location.HorizontalAccuracy)
             {
                 AltitudeMeters = location.Altitude,
+                SpeedMetersPerSecond = location.Speed >= 0 ? location.Speed : null,
                 Timestamp = DateTimeOffset.FromUnixTimeSeconds((long)location.Timestamp.SecondsSinceReferenceDate)
             };
 

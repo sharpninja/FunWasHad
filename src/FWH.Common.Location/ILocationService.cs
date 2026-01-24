@@ -37,4 +37,18 @@ public interface ILocationService
         double longitude,
         int maxDistanceMeters = 1000,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reverse geocodes GPS coordinates to get a human-readable address.
+    /// </summary>
+    /// <param name="latitude">The latitude of the location.</param>
+    /// <param name="longitude">The longitude of the location.</param>
+    /// <param name="maxDistanceMeters">Maximum distance to search for address data in meters.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The address string, or null if no address could be determined.</returns>
+    Task<string?> GetAddressAsync(
+        double latitude,
+        double longitude,
+        int maxDistanceMeters = 500,
+        CancellationToken cancellationToken = default);
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
+using FWH.Mobile.Configuration;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Entities;
 using FWH.Mobile.Services;
@@ -20,6 +21,7 @@ public class LocationTrackingServiceTests : IDisposable
     private readonly IGpsService _gpsService;
     private readonly NotesDbContext _dbContext;
     private readonly ILocationService _locationService;
+    private readonly LocationSettings _locationSettings;
     private readonly ILogger<LocationTrackingService> _logger;
     private readonly LocationTrackingService _service;
 
@@ -27,6 +29,7 @@ public class LocationTrackingServiceTests : IDisposable
     {
         _gpsService = Substitute.For<IGpsService>();
         _locationService = Substitute.For<ILocationService>();
+        _locationSettings = new LocationSettings { PollingIntervalMode = "normal" };
         _logger = Substitute.For<ILogger<LocationTrackingService>>();
 
         // Create in-memory database
@@ -42,6 +45,7 @@ public class LocationTrackingServiceTests : IDisposable
             _gpsService,
             _dbContext,
             _locationService,
+            _locationSettings,
             _logger);
     }
 
@@ -255,6 +259,7 @@ public class LocationTrackingServiceTests : IDisposable
             _gpsService,
             disposedContext,
             _locationService,
+            _locationSettings,
             _logger);
 
         var testCoordinates = new GpsCoordinates(37.7749, -122.4194)

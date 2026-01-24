@@ -10,27 +10,14 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
-        
-        Loaded += (_, _) =>
-        {
-            var logViewer = this.FindControl<LogViewerControl>("LogViewer");
-            if (logViewer != null)
-            {
-                logViewer.DataContext = App.ServiceProvider.GetRequiredService<LogViewerViewModel>();
-            }
 
-            // Set DataContext for MovementStateControl
-            var movementStateControl = this.FindControl<MovementStateControl>("MovementState");
-            if (movementStateControl != null)
-            {
-                movementStateControl.DataContext = App.ServiceProvider.GetRequiredService<MovementStateViewModel>();
-            }
-        };
+        // Set DataContext to MainViewModel
+        DataContext = App.ServiceProvider.GetRequiredService<MainViewModel>();
     }
 
-    public FWH.Common.Chat.ViewModels.ChatViewModel? ViewModel
+    public MainViewModel? ViewModel
     {
-        get => DataContext as FWH.Common.Chat.ViewModels.ChatViewModel;
+        get => DataContext as MainViewModel;
         set => DataContext = value;
     }
 }

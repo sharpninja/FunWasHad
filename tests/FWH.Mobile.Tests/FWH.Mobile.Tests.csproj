@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\FWH.Mobile\FWH.Mobile\FWH.Mobile.csproj" />
     <ProjectReference Include="..\..\src\FWH.Common.Location\FWH.Common.Location.csproj" />
+    <ProjectReference Include="..\..\src\FWH.Orchestrix.Mediator.Remote\FWH.Orchestrix.Mediator.Remote.csproj" />
   </ItemGroup>
 
 </Project>

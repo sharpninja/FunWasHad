@@ -21,14 +21,19 @@ public class FeedbackController : ControllerBase
 {
     private readonly MarketingDbContext _context;
     private readonly ILogger<FeedbackController> _logger;
+    private readonly FWH.MarketingApi.Services.IBlobStorageService _blobStorage;
     private const long MaxFileSize = 50 * 1024 * 1024; // 50MB
     private static readonly string[] AllowedImageTypes = { "image/jpeg", "image/png", "image/gif", "image/webp" };
     private static readonly string[] AllowedVideoTypes = { "video/mp4", "video/quicktime", "video/x-msvideo" };
 
-    public FeedbackController(MarketingDbContext context, ILogger<FeedbackController> logger)
+    public FeedbackController(
+        MarketingDbContext context,
+        ILogger<FeedbackController> logger,
+        FWH.MarketingApi.Services.IBlobStorageService blobStorage)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
     }
 
     /// <summary>
@@ -147,11 +152,26 @@ public class FeedbackController : ControllerBase
             return NotFound($"Feedback {feedbackId} not found");
         }
 
-        // In production, upload to cloud storage (S3, Azure Blob, etc.)
-        // For now, simulate storage URL
-        var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-        var storageUrl = $"/uploads/feedback/{feedbackId}/images/{fileName}";
-        var thumbnailUrl = $"/uploads/feedback/{feedbackId}/images/thumb_{fileName}";
+        // Upload file to blob storage
+        string storageUrl;
+        string? thumbnailUrl;
+
+        try
+        {
+            using var fileStream = file.OpenReadStream();
+            (storageUrl, thumbnailUrl) = await _blobStorage.UploadWithThumbnailAsync(
+                fileStream,
+                file.FileName,
+                file.ContentType,
+                $"feedback/{feedbackId}/images",
+                generateThumbnail: true,
+                cancellationToken: default);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to upload image attachment for feedback {FeedbackId}", feedbackId);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to upload file");
+        }
 
         var attachment = new FeedbackAttachment
         {
@@ -216,10 +236,26 @@ public class FeedbackController : ControllerBase
             return NotFound($"Feedback {feedbackId} not found");
         }
 
-        // In production, upload to cloud storage and process video
-        var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-        var storageUrl = $"/uploads/feedback/{feedbackId}/videos/{fileName}";
-        var thumbnailUrl = $"/uploads/feedback/{feedbackId}/videos/thumb_{fileName}.jpg";
+        // Upload file to blob storage
+        string storageUrl;
+        string? thumbnailUrl;
+
+        try
+        {
+            using var fileStream = file.OpenReadStream();
+            (storageUrl, thumbnailUrl) = await _blobStorage.UploadWithThumbnailAsync(
+                fileStream,
+                file.FileName,
+                file.ContentType,
+                $"feedback/{feedbackId}/videos",
+                generateThumbnail: false, // Video thumbnail generation not yet implemented
+                cancellationToken: default);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to upload video attachment for feedback {FeedbackId}", feedbackId);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to upload file");
+        }
 
         var attachment = new FeedbackAttachment
         {
@@ -288,18 +324,25 @@ public class FeedbackController : ControllerBase
     }
 
     /// <summary>
-    /// Get all feedback for a business.
+    /// Get all feedback for a business with pagination.
     /// </summary>
     /// <param name="businessId">Business ID</param>
     /// <param name="includeAttachments">Include attachment details</param>
     /// <param name="publicOnly">Only return public, approved feedback</param>
+    /// <param name="page">Page number (1-based, default: 1)</param>
+    /// <param name="pageSize">Items per page (default: 20, max: 100)</param>
     [HttpGet("business/{businessId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<Feedback>>> GetBusinessFeedback(
+    public async Task<ActionResult<PagedResult<Feedback>>> GetBusinessFeedback(
         long businessId,
         [FromQuery] bool includeAttachments = false,
-        [FromQuery] bool publicOnly = true)
+        [FromQuery] bool publicOnly = true,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
+        var pagination = new FWH.MarketingApi.Models.PaginationParameters { Page = page, PageSize = pageSize };
+        pagination.Validate();
+
         var query = _context.Feedbacks
             .Where(f => f.BusinessId == businessId);
 
@@ -313,12 +356,24 @@ public class FeedbackController : ControllerBase
             query = query.Include(f => f.Attachments);
         }
 
+        var totalCount = await query.CountAsync();
         var feedback = await query
             .OrderByDescending(f => f.SubmittedAt)
-            .Take(100)
+            .Skip(pagination.Skip)
+            .Take(pagination.Take)
             .ToListAsync();
 
-        return Ok(feedback);
+        var result = new FWH.MarketingApi.Models.PagedResult<Feedback>
+        {
+            Items = feedback,
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = totalCount
+        };
+
+        _logger.LogDebug("Retrieved {Count} feedback items (page {Page}) for business {BusinessId}",
+            feedback.Count, pagination.Page, businessId);
+        return Ok(result);
     }
 
     /// <summary>

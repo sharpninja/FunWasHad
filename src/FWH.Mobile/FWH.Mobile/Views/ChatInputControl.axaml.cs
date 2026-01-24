@@ -10,6 +10,7 @@ using FWH.Mobile.Services;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace FWH.Mobile;
 
@@ -67,6 +68,28 @@ public partial class ChatInputControl : UserControl
 
             if (imageBytes != null && imageBytes.Length > 0)
             {
+                // Store image via ImageService if available
+                var imageService = App.ServiceProvider?.GetService<IImageService>();
+                if (imageService != null)
+                {
+                    try
+                    {
+                        await imageService.StoreImageAsync(
+                            imageBytes,
+                            "user_upload",
+                            null,
+                            "User",
+                            null,
+                            "image/jpeg",
+                            $"chat_{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}.jpg");
+                        logger?.LogDebug("Stored chat image via ImageService");
+                    }
+                    catch (Exception storeEx)
+                    {
+                        logger?.LogWarning(storeEx, "Failed to store chat image via ImageService");
+                    }
+                }
+
                 // Update the ImagePayload with the captured image
                 var chatInput = DataContext as ChatInputViewModel;
                 if (chatInput?.CurrentImage != null)

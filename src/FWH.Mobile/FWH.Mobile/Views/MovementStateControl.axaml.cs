@@ -1,9 +1,7 @@
 using Avalonia.Controls;
 using FWH.Mobile.ViewModels;
 using Mapsui;
-using Mapsui.Layers;
 using Mapsui.Projections;
-using Mapsui.Styles;
 using Mapsui.Tiling;
 using Mapsui.UI.Avalonia;
 using System;
@@ -18,7 +16,6 @@ namespace FWH.Mobile.Views;
 public partial class MovementStateControl : UserControl
 {
     private MovementStateViewModel? _viewModel;
-    private MarkerLayer? _locationMarkerLayer;
 
     public MovementStateControl()
     {
@@ -62,15 +59,10 @@ public partial class MovementStateControl : UserControl
         // Add OpenStreetMap tile layer
         LocationMap.Map.Layers.Add(OpenStreetMap.CreateTileLayer());
 
-        // Create a marker layer for the device location
-        _locationMarkerLayer = new MarkerLayer("DeviceLocation")
-        {
-            Style = null // Will be set per marker
-        };
-        LocationMap.Map.Layers.Add(_locationMarkerLayer);
-
-        // Set initial view (will be updated when location is available)
-        LocationMap.Map.Home = n => n.NavigateTo(new MPoint(0, 0), n.Resolutions[9]); // Zoom level 9
+        // Set initial view (Mapsui 5: use Navigator.CenterOnAndZoomTo)
+        var resolutions = LocationMap.Map.Navigator.Resolutions;
+        if (resolutions.Count > 9)
+            LocationMap.Map.Navigator.CenterOnAndZoomTo(new MPoint(0, 0), resolutions[9]);
     }
 
     private void UpdateMapLocation()
@@ -87,25 +79,11 @@ public partial class MovementStateControl : UserControl
         // Convert WGS84 (lat/lon) to Web Mercator (used by maps)
         var (x, y) = SphericalMercator.FromLonLat(lon, lat);
 
-        // Clear existing markers
-        _locationMarkerLayer?.Features.Clear();
-
-        // Add marker for current location
-        var feature = new PointFeature(new MPoint(x, y));
-        feature.Styles.Add(new SymbolStyle
-        {
-            Symbol = new Symbol
-            {
-                Type = SymbolType.Ellipse,
-                Fill = new Brush(new Color(255, 0, 0, 128)), // Red with transparency
-                Outline = new Pen { Color = Color.Red, Width = 2 },
-                Size = 12
-            }
-        });
-        _locationMarkerLayer?.Features.Add(feature);
-
-        // Center map on location
-        LocationMap.Map.Home = n => n.NavigateTo(new MPoint(x, y), n.Resolutions[15]); // Zoom level 15 for street level
+        // Center map on location (Mapsui 5: use Navigator.CenterOnAndZoomTo)
+        // TODO: Restore device marker when Mapsui 5 MemoryLayer API is confirmed
+        var resolutions = LocationMap.Map.Navigator.Resolutions;
+        if (resolutions.Count > 15)
+            LocationMap.Map.Navigator.CenterOnAndZoomTo(new MPoint(x, y), resolutions[15]);
         LocationMap.Refresh();
     }
 }

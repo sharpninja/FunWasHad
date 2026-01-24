@@ -28,6 +28,7 @@ using FWH.Common.Location;
 using FWH.Common.Location.Extensions;
 using FWH.Mobile.Data.Extensions;
 using FWH.Common.Imaging.Extensions;
+using FWH.Mobile.Services;
 using FWH.Mobile.Options;
 using FWH.Mobile.Services;
 using FWH.Orchestrix.Mediator.Remote.Extensions;
@@ -52,6 +53,10 @@ public partial class App : Application
         // Register API settings
         var apiSettings = configuration.GetSection("ApiSettings").Get<ApiSettings>() ?? new ApiSettings();
         services.AddSingleton(apiSettings);
+
+        // Register location settings
+        var locationSettings = configuration.GetSection("LocationSettings").Get<LocationSettings>() ?? new LocationSettings();
+        services.AddSingleton(locationSettings);
 
         // Register log store and configure logging to use Avalonia logger
         var logStore = new FWH.Mobile.Logging.AvaloniaLogStore(maxEntries: 1000);
@@ -115,6 +120,15 @@ public partial class App : Application
             marketingApiBaseAddress = apiSettings.GetMarketingApiBaseUrl();
         }
 
+        // Register API authentication service
+        var apiKey = configuration["ApiSecurity:ApiKey"] ?? "dev-api-key-change-in-production";
+        var apiSecret = configuration["ApiSecurity:ApiSecret"] ?? "dev-api-secret-change-in-production";
+        services.AddSingleton<FWH.Mobile.Services.IApiAuthenticationService>(sp =>
+        {
+            var logger = sp.GetService<ILogger<FWH.Mobile.Services.ApiAuthenticationService>>();
+            return new FWH.Mobile.Services.ApiAuthenticationService(apiKey, apiSecret, logger);
+        });
+
         services.AddApiHttpClients(options =>
         {
             options.LocationApiBaseUrl = locationApiBaseAddress;
@@ -138,6 +152,12 @@ public partial class App : Application
                 loggerFactory.CreateLogger<LocationApiClient>());
         });
 
+        // Register image service
+        services.AddSingleton<IImageService, ImageService>();
+
+        // Register theme service
+        services.AddSingleton<IThemeService, ThemeService>();
+
         // Register location tracking service
         services.AddSingleton<ILocationTrackingService, LocationTrackingService>();
 
@@ -156,6 +176,9 @@ public partial class App : Application
         // Register movement state ViewModel
         services.AddSingleton<MovementStateViewModel>();
 
+        // Register main ViewModel for navigation
+        services.AddSingleton<MainViewModel>();
+
         // Register imaging services
         services.AddImagingServices();
 
@@ -172,7 +195,13 @@ public partial class App : Application
         TryRegisterPlatformCameraServices(services);
 
         // Register camera capture ViewModel
-        services.AddSingleton<CameraCaptureViewModel>();
+        services.AddSingleton<CameraCaptureViewModel>(sp =>
+        {
+            var cameraService = sp.GetRequiredService<ICameraService>();
+            var logger = sp.GetService<ILogger<CameraCaptureViewModel>>();
+            var imageService = sp.GetService<IImageService>();
+            return new CameraCaptureViewModel(cameraService, logger, imageService);
+        });
 
         // Register log viewer ViewModel
         services.AddSingleton<LogViewerViewModel>();

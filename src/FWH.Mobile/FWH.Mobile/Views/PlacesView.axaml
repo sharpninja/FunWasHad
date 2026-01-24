@@ -1,0 +1,153 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:FWH.Mobile.ViewModels"
+             xmlns:local="using:FWH.Mobile.Views"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="FWH.Mobile.Views.PlacesView"
+             x:DataType="vm:PlacesViewModel">
+    <UserControl.Resources>
+        <local:UrlToImageConverter x:Key="UrlToImageConverter" />
+        <local:FavoriteTooltipConverter x:Key="FavoriteTooltipConverter" />
+        <local:FavoriteIconConverter x:Key="FavoriteIconConverter" />
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0"
+                Background="#F8F9FA"
+                BorderBrush="#E0E0E0"
+                BorderThickness="0,0,0,1"
+                Padding="16">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="Places"
+                           FontSize="24"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1"
+                          ItemsSource="{Binding FilterModes}"
+                          SelectedItem="{Binding FilterMode}"
+                          MinWidth="120"
+                          VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!-- Places List -->
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Places}"
+                          Margin="8">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="vm:PlaceItem">
+                        <Border Background="White"
+                                BorderBrush="#E0E0E0"
+                                BorderThickness="0,0,0,1"
+                                Padding="16,12"
+                                Margin="0,0,0,4">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                <!-- Logo or Icon/Emoji -->
+                                <Border Grid.Column="0"
+                                        Width="48"
+                                        Height="48"
+                                        CornerRadius="4"
+                                        Background="#F0F0F0"
+                                        VerticalAlignment="Center"
+                                        Margin="0,0,16,0">
+                                    <Grid>
+                                        <Image Source="{Binding LogoUrl, Converter={StaticResource UrlToImageConverter}}"
+                                               Stretch="Uniform"
+                                               IsVisible="{Binding LogoUrl, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                        <TextBlock Text="📍"
+                                                   FontSize="32"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   IsVisible="{Binding LogoUrl, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+                                    </Grid>
+                                </Border>
+
+                                <!-- Place Info -->
+                                <StackPanel Grid.Column="1"
+                                            Spacing="4">
+                                    <!-- Business Name or Address -->
+                                    <TextBlock Text="{Binding DisplayName}"
+                                               FontSize="18"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap" />
+
+                                    <!-- City -->
+                                    <TextBlock Text="{Binding City}"
+                                               FontSize="14"
+                                               Foreground="#666666"
+                                               TextWrapping="Wrap"
+                                               IsVisible="{Binding City, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                                    <!-- Date and Time Visited (Local Time) -->
+                                    <TextBlock FontSize="12"
+                                               Foreground="#999999"
+                                               Margin="0,4,0,0">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="{}{0:g}">
+                                                <Binding Path="LocalTime" />
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </StackPanel>
+
+                                <!-- Favorite Button -->
+                                <Button Grid.Column="2"
+                                        Command="{Binding $parent[ItemsControl].DataContext.ToggleFavoriteCommand}"
+                                        CommandParameter="{Binding}"
+                                        Padding="8"
+                                        MinWidth="40"
+                                        MinHeight="40"
+                                        Margin="8,0,0,0"
+                                        ToolTip.Tip="{Binding IsFavorite, Converter={StaticResource FavoriteTooltipConverter}}">
+                                    <TextBlock FontSize="18"
+                                               Text="{Binding IsFavorite, Converter={StaticResource FavoriteIconConverter}}" />
+                                </Button>
+
+                                <!-- Delete Button -->
+                                <Button Grid.Column="3"
+                                        Command="{Binding $parent[ItemsControl].DataContext.DeletePlaceCommand}"
+                                        CommandParameter="{Binding}"
+                                        Padding="8"
+                                        MinWidth="40"
+                                        MinHeight="40"
+                                        Margin="8,0,0,0"
+                                        ToolTip.Tip="Delete place">
+                                    <TextBlock Text="✕" FontSize="18" />
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Loading Indicator -->
+        <TextBlock Grid.Row="1"
+                   Text="Loading places..."
+                   FontSize="16"
+                   Foreground="#999999"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding IsLoading}" />
+
+        <!-- Empty State -->
+        <TextBlock Grid.Row="1"
+                   Text="No places yet. Places will appear here when you become stationary at a location."
+                   FontSize="16"
+                   Foreground="#999999"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   TextWrapping="Wrap"
+                   Margin="32"
+                   IsVisible="{Binding IsEmpty}" />
+    </Grid>
+</UserControl>

@@ -37,6 +37,12 @@ builder.Services.AddControllers()
 // Add problem details
 builder.Services.AddProblemDetails();
 
+// Add blob storage service
+// For Railway staging, use local file storage with persistent volume
+// For production, consider cloud storage (S3, Azure Blob, etc.)
+builder.Services.AddSingleton<FWH.MarketingApi.Services.IBlobStorageService,
+    FWH.MarketingApi.Services.LocalFileBlobStorageService>();
+
 // Add Swagger/OpenAPI for Debug and Staging builds
 #if DEBUG || STAGING
 builder.Services.AddEndpointsApiExplorer();
@@ -85,7 +91,29 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Add API key authentication middleware
+// Note: In Development/Staging, authentication is optional (can be disabled via config)
+var requireAuth = app.Configuration.GetValue<bool>("ApiSecurity:RequireAuthentication", defaultValue: true);
+if (requireAuth)
+{
+    app.UseMiddleware<FWH.MarketingApi.Middleware.ApiKeyAuthenticationMiddleware>();
+}
+
 app.UseHttpsRedirection();
+
+// Serve static files from uploads directory
+var uploadsPath = app.Configuration["BlobStorage:LocalPath"]
+    ?? Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+if (Directory.Exists(uploadsPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+        RequestPath = "/uploads"
+    });
+    app.Logger.LogInformation("Static file serving enabled for uploads at /uploads");
+}
+
 app.MapControllers();
 
 static async Task ApplyDatabaseMigrationsAsync(WebApplication app)

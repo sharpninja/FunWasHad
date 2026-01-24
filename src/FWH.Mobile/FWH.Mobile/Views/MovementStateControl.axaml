@@ -75,7 +75,7 @@
                            FontSize="13"
                            FontWeight="Medium"
                            Foreground="#495057"/>
-                <TextBlock Text="{Binding CurrentAddress}"
+                <TextBlock Text="{Binding DisplayAddress}"
                            FontSize="13"
                            Foreground="#212529"
                            TextWrapping="Wrap"

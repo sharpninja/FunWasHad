@@ -133,6 +133,11 @@ PORT=8080
 # Database Connection (replace Postgres with your actual service name)
 ConnectionStrings__marketing=${{Postgres.DATABASE_URL}}
 
+# Blob Storage Configuration
+BlobStorage__Provider=LocalFile
+BlobStorage__LocalPath=/app/uploads
+BlobStorage__BaseUrl=/uploads
+
 # Logging
 Logging__LogLevel__Default=Information
 Logging__LogLevel__Microsoft.AspNetCore=Warning
@@ -140,6 +145,15 @@ Logging__LogLevel__Microsoft.EntityFrameworkCore=Information
 ```
 
 **⚠️ Important:** Replace `Postgres` with your actual PostgreSQL service name!
+
+### Configure Persistent Storage (for file uploads):
+1. Click **"Settings"** → **"Volumes"**
+2. Click **"Add Volume"**
+3. **Mount Path:** `/app/uploads`
+4. **Volume Name:** `marketing-api-uploads` (or any name you prefer)
+5. Click **"Add"**
+
+This ensures uploaded files (feedback attachments) persist across deployments.
 
 ### Configure Deployment:
 1. Click **"Settings"** → **"Deploy"**
@@ -352,6 +366,13 @@ railway status
 | `ASPNETCORE_URLS` | `http://+:8080` | Listening address |
 | `PORT` | `8080` | Railway port |
 | `ConnectionStrings__marketing` | `${{Postgres.DATABASE_URL}}` | Database connection |
+| `BlobStorage__Provider` | `LocalFile` | Storage provider type |
+| `BlobStorage__LocalPath` | `/app/uploads` | Local storage path |
+| `BlobStorage__BaseUrl` | `/uploads` | Base URL for serving files |
+
+**Note:** For blob storage, you should also configure a persistent volume in Railway:
+- **Mount Path:** `/app/uploads`
+- This ensures uploaded files persist across deployments
 
 ### PostgreSQL Auto-Generated Variables
 
@@ -438,6 +459,9 @@ ASPNETCORE_ENVIRONMENT=Staging
 ASPNETCORE_URLS=http://+:8080
 PORT=8080
 ConnectionStrings__marketing=${{Postgres.DATABASE_URL}}
+BlobStorage__Provider=LocalFile
+BlobStorage__LocalPath=/app/uploads
+BlobStorage__BaseUrl=/uploads
 Logging__LogLevel__Default=Information
 Logging__LogLevel__Microsoft.AspNetCore=Warning
 Logging__LogLevel__Microsoft.EntityFrameworkCore=Information

@@ -94,6 +94,14 @@ app.UseSwaggerUI(options =>
 });
 #endif
 
+// Add API key authentication middleware
+// Note: In Development/Staging, authentication is optional (can be disabled via config)
+var requireAuth = app.Configuration.GetValue<bool>("ApiSecurity:RequireAuthentication", defaultValue: true);
+if (requireAuth)
+{
+    app.UseMiddleware<FWH.Location.Api.Middleware.ApiKeyAuthenticationMiddleware>();
+}
+
 // HTTPS redirection disabled for Android development
 // Android emulator connects via HTTP (http://10.0.2.2:4748)
 // Enable in production with proper SSL certificates

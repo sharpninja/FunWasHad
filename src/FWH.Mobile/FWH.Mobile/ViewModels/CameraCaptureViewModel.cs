@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FWH.Common.Chat.Services;
+using FWH.Mobile.Services;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
@@ -16,6 +17,7 @@ public partial class CameraCaptureViewModel : ObservableObject
 {
     private readonly ICameraService _cameraService;
     private readonly ILogger<CameraCaptureViewModel>? _logger;
+    private readonly IImageService? _imageService;
 
     [ObservableProperty]
     private byte[]? _capturedImage;
@@ -32,10 +34,14 @@ public partial class CameraCaptureViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "Tap to capture photo";
 
-    public CameraCaptureViewModel(ICameraService cameraService, ILogger<CameraCaptureViewModel>? logger = null)
+    public CameraCaptureViewModel(
+        ICameraService cameraService,
+        ILogger<CameraCaptureViewModel>? logger = null,
+        IImageService? imageService = null)
     {
         _cameraService = cameraService ?? throw new ArgumentNullException(nameof(cameraService));
         _logger = logger;
+        _imageService = imageService;
         // Defer IsCameraAvailable check until Activity is available
         // Initialize to false - will be updated when actually needed
         IsCameraAvailable = false;

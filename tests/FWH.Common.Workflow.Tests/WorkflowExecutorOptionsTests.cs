@@ -18,11 +18,14 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using FWH.Orchestrix.Contracts.Mediator;
 using FWH.Orchestrix.Mediator.Remote.Mediator;
+using System;
 
 namespace FWH.Common.Workflow.Tests;
 
-public class WorkflowExecutorOptionsTests
+public class WorkflowExecutorOptionsTests : IDisposable
 {
+    private readonly List<IDisposable> _disposables = new();
+
     public class ScopedDep
     {
         public string Id { get; } = System.Guid.NewGuid().ToString("N");
@@ -56,6 +59,7 @@ public class WorkflowExecutorOptionsTests
     {
         var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
+        _disposables.Add(connection); // Track for disposal
 
         services.AddDbContext<NotesDbContext>(o => o.UseSqlite(connection));
 
@@ -85,9 +89,26 @@ public class WorkflowExecutorOptionsTests
         services.AddTransient<IWorkflowView, WorkflowView>();
 
         sp = services.BuildServiceProvider();
+        _disposables.Add(sp); // Track ServiceProvider for disposal
         _ = sp.GetRequiredService<WorkflowActionHandlerRegistrar>();
 
         return sp.GetRequiredService<IWorkflowActionExecutor>();
+    }
+
+    public void Dispose()
+    {
+        foreach (var disposable in _disposables)
+        {
+            try
+            {
+                disposable.Dispose();
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
+        _disposables.Clear();
     }
 
     /// <summary>

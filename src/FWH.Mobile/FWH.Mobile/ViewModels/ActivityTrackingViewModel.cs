@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FWH.Mobile.Configuration;
 using FWH.Mobile.Services;
 using System;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ public partial class ActivityTrackingViewModel : ObservableObject
 {
     private readonly ActivityTrackingService _activityTrackingService;
     private readonly ILocationTrackingService _locationTrackingService;
+    private readonly LocationSettings _locationSettings;
 
     [ObservableProperty]
     private string _currentState = "Unknown";
@@ -53,8 +55,18 @@ public partial class ActivityTrackingViewModel : ObservableObject
     {
         CurrentState = _locationTrackingService.CurrentMovementState.ToString();
         
-        var speed = _locationTrackingService.CurrentSpeedMph;
-        CurrentSpeed = speed.HasValue ? $"{speed:F1} mph" : "0.0 mph";
+        // Display speed based on configured unit preference
+        if (_locationSettings.UseKmh)
+        {
+            var speed = _locationTrackingService.CurrentSpeedKmh;
+            CurrentSpeed = speed.HasValue ? $"{speed:F1} km/h" : "0.0 km/h";
+        }
+        else
+        {
+            // Default to mph
+            var speed = _locationTrackingService.CurrentSpeedMph;
+            CurrentSpeed = speed.HasValue ? $"{speed:F1} mph" : "0.0 mph";
+        }
 
         ActivitySummary = _activityTrackingService.GetActivitySummary();
         IsTracking = _activityTrackingService.IsTrackingActivity;

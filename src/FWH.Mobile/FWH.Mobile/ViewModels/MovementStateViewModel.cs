@@ -1,6 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using FWH.Common.Location;
+using FWH.Mobile.Configuration;
 using FWH.Mobile.Services;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 
 namespace FWH.Mobile.ViewModels;
 
@@ -11,6 +14,8 @@ namespace FWH.Mobile.ViewModels;
 public partial class MovementStateViewModel : ObservableObject
 {
     private readonly ILocationTrackingService _locationTrackingService;
+    private readonly ILocationService _locationService;
+    private readonly LocationSettings _locationSettings;
     private readonly ILogger<MovementStateViewModel> _logger;
 
     [ObservableProperty]
@@ -43,11 +48,23 @@ public partial class MovementStateViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasAddress = false;
 
+    [ObservableProperty]
+    private string? _businessName;
+
+    /// <summary>
+    /// Gets the display address - shows business name if available, otherwise shows address.
+    /// </summary>
+    public string DisplayAddress => !string.IsNullOrEmpty(BusinessName) ? BusinessName : CurrentAddress;
+
     public MovementStateViewModel(
         ILocationTrackingService locationTrackingService,
+        ILocationService locationService,
+        LocationSettings locationSettings,
         ILogger<MovementStateViewModel> logger)
     {
         _locationTrackingService = locationTrackingService ?? throw new ArgumentNullException(nameof(locationTrackingService));
+        _locationService = locationService ?? throw new ArgumentNullException(nameof(locationService));
+        _locationSettings = locationSettings ?? throw new ArgumentNullException(nameof(locationSettings));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
         // Subscribe to events
@@ -100,6 +117,48 @@ public partial class MovementStateViewModel : ObservableObject
             CurrentAddress = "--";
             HasAddress = false;
         }
+        OnPropertyChanged(nameof(DisplayAddress));
+        
+        // Check for business if we have coordinates
+        if (Latitude.HasValue && Longitude.HasValue)
+        {
+            var location = new Common.Location.Models.GpsCoordinates
+            {
+                Latitude = Latitude.Value,
+                Longitude = Longitude.Value
+            };
+            _ = CheckForBusinessAsync(location);
+        }
+    }
+
+    private async Task CheckForBusinessAsync(Common.Location.Models.GpsCoordinates location)
+    {
+        try
+        {
+            var business = await _locationService.GetClosestBusinessAsync(
+                location.Latitude,
+                location.Longitude,
+                maxDistanceMeters: 100, // Check within 100m for businesses
+                cancellationToken: default);
+
+            if (business != null)
+            {
+                BusinessName = business.Name;
+                _logger.LogDebug("Found business at current location: {BusinessName}", business.Name);
+                OnPropertyChanged(nameof(DisplayAddress));
+            }
+            else
+            {
+                BusinessName = null;
+                OnPropertyChanged(nameof(DisplayAddress));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error checking for business at current location");
+            BusinessName = null;
+            OnPropertyChanged(nameof(DisplayAddress));
+        }
     }
 
     private void UpdateMovementState(MovementState state)
@@ -122,13 +181,21 @@ public partial class MovementStateViewModel : ObservableObject
         var speedMph = _locationTrackingService.CurrentSpeedMph;
         var speedKmh = _locationTrackingService.CurrentSpeedKmh;
 
-        if (speedMph.HasValue && speedKmh.HasValue)
+        if (!speedMph.HasValue || !speedKmh.HasValue)
         {
-            SpeedText = $"{speedMph.Value:F1} mph / {speedKmh.Value:F1} km/h";
+            SpeedText = "--";
+            return;
+        }
+
+        // Display speed based on configured unit preference
+        if (_locationSettings.UseKmh)
+        {
+            SpeedText = $"{speedKmh.Value:F1} km/h";
         }
         else
         {
-            SpeedText = "--";
+            // Default to mph
+            SpeedText = $"{speedMph.Value:F1} mph";
         }
     }
 

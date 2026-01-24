@@ -15,7 +15,7 @@ namespace FWH.MarketingApi.Tests;
 /// <summary>
 /// Custom web application factory for Marketing API integration tests.
 /// Implements TR-TEST-002: Integration Tests - API endpoints.
-/// 
+///
 /// Uses PostgreSQL test container to match production database and support
 /// all EF Core features including filtered includes and navigation property filters.
 /// </summary>
@@ -27,9 +27,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         .WithUsername("test")
         .WithPassword("test")
         .Build();
-    
+
     private string? _connectionString;
-    
+
     protected override IHost CreateHost(IHostBuilder builder)
     {
         builder.ConfigureServices(services =>
@@ -42,7 +42,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             services.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Internal.IDbContextPool<MarketingDbContext>));
             services.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Internal.IScopedDbContextLease<>));
             services.RemoveAll(typeof(Microsoft.EntityFrameworkCore.Internal.IScopedDbContextLease<MarketingDbContext>));
-            
+
             // Register DbContext WITHOUT pooling for tests
             services.AddDbContext<MarketingDbContext>((sp, options) =>
             {
@@ -54,7 +54,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 options.EnableSensitiveDataLogging();
                 options.EnableDetailedErrors();
             }, ServiceLifetime.Scoped, ServiceLifetime.Scoped); // Explicitly set to Scoped, not Singleton
-            
+
             // Replace the implementation with test-specific one
             services.RemoveAll<MarketingDbContext>();
             services.AddScoped<MarketingDbContext>(sp =>
@@ -64,29 +64,38 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             });
         });
 
-        // Configure connection string to use test container
+        // Configure connection string and blob storage for tests
+        var testUploadsPath = Path.Combine(Path.GetTempPath(), $"marketing-api-test-uploads-{Guid.NewGuid()}");
+        Directory.CreateDirectory(testUploadsPath);
+
         builder.ConfigureAppConfiguration(config =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                { "ConnectionStrings:marketing", _connectionString ?? throw new InvalidOperationException("PostgreSQL container not started") }
+                { "ConnectionStrings:marketing", _connectionString ?? throw new InvalidOperationException("PostgreSQL container not started") },
+                { "BlobStorage:Provider", "LocalFile" },
+                { "BlobStorage:LocalPath", testUploadsPath },
+                { "BlobStorage:BaseUrl", "/uploads" },
+                { "ApiSecurity:ApiKey", "test-api-key" },
+                { "ApiSecurity:ApiSecret", "test-api-secret" },
+                { "ApiSecurity:RequireAuthentication", "false" } // Disable auth for easier testing
             });
         });
 
         var host = base.CreateHost(builder);
-        
+
         // Ensure database schema is created using migrations
         using (var scope = host.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
             var logger = scope.ServiceProvider.GetService<ILogger<CustomWebApplicationFactory>>();
-            
+
             try
             {
                 // Drop and recreate database to ensure clean state
                 db.Database.EnsureDeleted();
                 db.Database.EnsureCreated();
-                
+
                 logger?.LogInformation("Database schema created successfully");
             }
             catch (Exception ex)
@@ -95,22 +104,22 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 throw;
             }
         }
-        
+
         return host;
     }
-    
+
     public async Task InitializeAsync()
     {
         await _postgresContainer.StartAsync();
         _connectionString = _postgresContainer.GetConnectionString();
     }
-    
+
     public new async Task DisposeAsync()
     {
         await _postgresContainer.DisposeAsync();
         await base.DisposeAsync();
     }
-    
+
     protected override void Dispose(bool disposing)
     {
         // Container disposal is handled by DisposeAsync

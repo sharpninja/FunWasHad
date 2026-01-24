@@ -21,21 +21,23 @@
         <!-- Text Input Mode -->
         <Grid IsVisible="{Binding InputMode, Mode=OneWay, Converter={StaticResource TextVisibility}}"
               HorizontalAlignment="Stretch"
-              VerticalAlignment="Stretch" 
+              VerticalAlignment="Stretch"
               ColumnDefinitions="*,Auto"
               ColumnSpacing="8"
               Margin="8">
-            <TextBox Grid.Column="0" 
-                     AcceptsReturn="True" 
+            <TextBox Grid.Column="0"
+                     AcceptsReturn="True"
                      TextWrapping="Wrap"
                      Text="{Binding Text, Mode=TwoWay}"
                      HorizontalAlignment="Stretch"
                      VerticalAlignment="Stretch"/>
             <Button Grid.Column="1"
-                    Content="Send"
-                    Command="{Binding SendCommand}"/>
+                    Command="{Binding SendCommand}"
+                    ToolTip.Tip="Send">
+                <TextBlock Text="➤" FontSize="18" />
+            </Button>
         </Grid>
-        
+
         <!-- Image/Camera Mode -->
         <Grid IsVisible="{Binding InputMode, Converter={StaticResource PhotoVisibility}}"
               HorizontalAlignment="Stretch"
@@ -62,17 +64,20 @@
                 </StackPanel>
             </Border>
             <Button Grid.Row="1"
-                    Content="Open Camera"
                     Command="{Binding OpenCameraCommand}"
                     HorizontalAlignment="Center"
                     Padding="24,12"
-                    MinWidth="150"/>
+                    MinWidth="60"
+                    MinHeight="60"
+                    ToolTip.Tip="Open Camera">
+                <TextBlock Text="📷" FontSize="24" />
+            </Button>
         </Grid>
-        
+
         <!-- Choice Mode -->
         <Grid IsVisible="{Binding InputMode, Converter={StaticResource ChoiceVisibility}}"
               HorizontalAlignment="Stretch"
-              VerticalAlignment="Stretch" 
+              VerticalAlignment="Stretch"
               RowDefinitions="Auto,*"
               RowSpacing="8"
               Margin="8">
@@ -80,9 +85,9 @@
                        Text="{Binding Choices.Prompt}"
                        TextWrapping="Wrap"
                        TextAlignment="Right"/>
-            <ItemsControl Grid.Row="1" 
-                          ItemsSource="{Binding Choices.Choices}" 
-                          HorizontalAlignment="Right">                
+            <ItemsControl Grid.Row="1"
+                          ItemsSource="{Binding Choices.Choices}"
+                          HorizontalAlignment="Right">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="local:ChoicesItem">
                         <Button Content="{Binding ChoiceText}"

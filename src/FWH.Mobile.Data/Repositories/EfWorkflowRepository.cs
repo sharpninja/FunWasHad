@@ -62,6 +62,16 @@ public class EfWorkflowRepository : IWorkflowRepository
                 .Include(w => w.StartPoints)
                 .FirstOrDefaultAsync(w => w.Id == id, cancellationToken);
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Loading workflow {WorkflowId} was cancelled", id);
+            throw;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error loading workflow {WorkflowId}", id);
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading workflow {WorkflowId}", id);
@@ -80,6 +90,16 @@ public class EfWorkflowRepository : IWorkflowRepository
                 .Include(w => w.Transitions)
                 .Include(w => w.StartPoints)
                 .ToListAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Loading all workflows was cancelled");
+            throw;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error loading all workflows");
+            throw;
         }
         catch (Exception ex)
         {
@@ -111,6 +131,16 @@ public class EfWorkflowRepository : IWorkflowRepository
                 .Where(w => w.Name.Contains(namePattern) && w.CreatedAt >= since)
                 .OrderByDescending(w => w.CreatedAt)
                 .ToListAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Finding workflows by pattern {Pattern} was cancelled", namePattern);
+            throw;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error finding workflows by name pattern {Pattern}", namePattern);
+            throw;
         }
         catch (Exception ex)
         {
@@ -243,6 +273,16 @@ public class EfWorkflowRepository : IWorkflowRepository
             var affected = await _context.SaveChangesAsync(cancellationToken);
             _logger.LogInformation("Deleted workflow {WorkflowId}", id);
             return affected > 0;
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Deleting workflow {WorkflowId} was cancelled", id);
+            throw;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error deleting workflow {WorkflowId}", id);
+            throw;
         }
         catch (Exception ex)
         {

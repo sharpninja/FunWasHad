@@ -2,6 +2,7 @@ using FWH.MarketingApi.Data;
 using FWH.MarketingApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace FWH.MarketingApi.Controllers;
 
@@ -93,29 +94,51 @@ public class MarketingController : ControllerBase
     }
 
     /// <summary>
-    /// Get active coupons for a business.
+    /// Get active coupons for a business with pagination.
     /// Implements TR-API-002: GET /api/marketing/{businessId}/coupons.
     /// </summary>
     /// <param name="businessId">Business ID</param>
-    /// <returns>List of active coupons for the business</returns>
+    /// <param name="page">Page number (1-based, default: 1)</param>
+    /// <param name="pageSize">Items per page (default: 20, max: 100)</param>
+    /// <returns>Paginated list of active coupons for the business</returns>
     [HttpGet("{businessId}/coupons")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<Coupon>>> GetCoupons(long businessId)
+    public async Task<ActionResult<PagedResult<Coupon>>> GetCoupons(
+        long businessId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
+        var pagination = new PaginationParameters { Page = page, PageSize = pageSize };
+        pagination.Validate();
+
         var now = DateTimeOffset.UtcNow;
-        var coupons = await _context.Coupons
+        var query = _context.Coupons
             .Include(c => c.Business)
             .Where(c => c.BusinessId == businessId
                 && c.IsActive
                 && c.ValidFrom <= now
                 && c.ValidUntil >= now
                 && c.Business.IsSubscribed
-                && (c.MaxRedemptions == null || c.CurrentRedemptions < c.MaxRedemptions))
+                && (c.MaxRedemptions == null || c.CurrentRedemptions < c.MaxRedemptions));
+
+        var totalCount = await query.CountAsync();
+        var coupons = await query
             .OrderByDescending(c => c.CreatedAt)
+            .Skip(pagination.Skip)
+            .Take(pagination.Take)
             .ToListAsync();
 
-        _logger.LogDebug("Retrieved {Count} coupons for business {BusinessId}", coupons.Count, businessId);
-        return Ok(coupons);
+        var result = new PagedResult<Coupon>
+        {
+            Items = coupons,
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = totalCount
+        };
+
+        _logger.LogDebug("Retrieved {Count} coupons (page {Page}) for business {BusinessId}",
+            coupons.Count, pagination.Page, businessId);
+        return Ok(result);
     }
 
     /// <summary>
@@ -170,31 +193,51 @@ public class MarketingController : ControllerBase
     }
 
     /// <summary>
-    /// Get news items for a business.
+    /// Get news items for a business with pagination.
     /// Implements TR-API-002: GET /api/marketing/{businessId}/news.
     /// </summary>
     /// <param name="businessId">Business ID</param>
-    /// <param name="limit">Maximum number of news items to return (default 10, max 50)</param>
-    /// <returns>List of published news items for the business</returns>
+    /// <param name="page">Page number (1-based, default: 1)</param>
+    /// <param name="pageSize">Items per page (default: 20, max: 100)</param>
+    /// <returns>Paginated list of published news items for the business</returns>
     [HttpGet("{businessId}/news")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<NewsItem>>> GetNews(long businessId, [FromQuery] int limit = 10)
+    public async Task<ActionResult<PagedResult<NewsItem>>> GetNews(
+        long businessId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
+        var pagination = new PaginationParameters { Page = page, PageSize = pageSize };
+        pagination.Validate();
+
         var now = DateTimeOffset.UtcNow;
-        var newsItems = await _context.NewsItems
+        var query = _context.NewsItems
             .Include(n => n.Business)
             .Where(n => n.BusinessId == businessId
                 && n.IsPublished
                 && n.PublishedAt <= now
                 && n.Business.IsSubscribed
-                && (n.ExpiresAt == null || n.ExpiresAt > now))
+                && (n.ExpiresAt == null || n.ExpiresAt > now));
+
+        var totalCount = await query.CountAsync();
+        var newsItems = await query
             .OrderByDescending(n => n.IsFeatured)
             .ThenByDescending(n => n.PublishedAt)
-            .Take(Math.Min(limit, 50))
+            .Skip(pagination.Skip)
+            .Take(pagination.Take)
             .ToListAsync();
 
-        _logger.LogDebug("Retrieved {Count} news items for business {BusinessId}", newsItems.Count, businessId);
-        return Ok(newsItems);
+        var result = new PagedResult<NewsItem>
+        {
+            Items = newsItems,
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = totalCount
+        };
+
+        _logger.LogDebug("Retrieved {Count} news items (page {Page}) for business {BusinessId}",
+            newsItems.Count, pagination.Page, businessId);
+        return Ok(result);
     }
 
     /// <summary>
@@ -229,34 +272,73 @@ public class MarketingController : ControllerBase
             return BadRequest("Radius must be between 1 and 50000 meters");
         }
 
-        // Simple bounding box query (for production, use PostGIS or similar)
-        var latDelta = radiusMeters / 111000.0; // Approximate degrees
-        var lonDelta = radiusMeters / (111000.0 * Math.Cos(latitude * Math.PI / 180.0));
+        // Try to use PostGIS spatial queries for efficient distance-based filtering
+        // If PostGIS is not available (e.g., in test environments), fall back to bounding box method
+        List<Business> businesses;
 
-        var businesses = await _context.Businesses
-            .Where(b => b.IsSubscribed
-                && b.Latitude >= latitude - latDelta
-                && b.Latitude <= latitude + latDelta
-                && b.Longitude >= longitude - lonDelta
-                && b.Longitude <= longitude + lonDelta)
-            .ToListAsync();
+        try
+        {
+            // Use parameterized SQL with PostGIS for efficient spatial query
+            // This query uses the spatial GIST index for optimal performance
+            // FormattableString automatically parameterizes the values
+            businesses = await _context.Businesses
+                .FromSqlInterpolated($@"
+                    SELECT b.*
+                    FROM businesses b
+                    WHERE b.is_subscribed = true
+                      AND b.location_geometry IS NOT NULL
+                      AND ST_DWithin(
+                          b.location_geometry::geography,
+                          ST_SetSRID(ST_MakePoint({longitude}, {latitude}), 4326)::geography,
+                          {radiusMeters}
+                      )
+                    ORDER BY ST_Distance(
+                        b.location_geometry::geography,
+                        ST_SetSRID(ST_MakePoint({longitude}, {latitude}), 4326)::geography
+                    )
+                ")
+                .ToListAsync();
 
-        // Filter by actual distance
-        var nearbyBusinesses = businesses
-            .Select(b => new
-            {
-                Business = b,
-                Distance = CalculateDistance(latitude, longitude, b.Latitude, b.Longitude)
-            })
-            .Where(x => x.Distance <= radiusMeters)
-            .OrderBy(x => x.Distance)
-            .Select(x => x.Business)
-            .ToList();
+            _logger.LogDebug("Found {Count} businesses within {Radius}m of ({Lat}, {Lon}) using PostGIS spatial query",
+                businesses.Count, radiusMeters, latitude, longitude);
+        }
+        catch (Exception ex) when (ex is Npgsql.PostgresException pgEx && (pgEx.SqlState == "0A000" || pgEx.Message.Contains("postgis", StringComparison.OrdinalIgnoreCase)) ||
+                                     ex.Message.Contains("postgis", StringComparison.OrdinalIgnoreCase) ||
+                                     ex.Message.Contains("ST_DWithin", StringComparison.OrdinalIgnoreCase) ||
+                                     ex.Message.Contains("location_geometry", StringComparison.OrdinalIgnoreCase))
+        {
+            // PostGIS is not available, fall back to bounding box method
+            _logger.LogWarning(ex, "PostGIS not available, falling back to bounding box query method");
 
-        _logger.LogDebug("Found {Count} businesses within {Radius}m of ({Lat}, {Lon})",
-            nearbyBusinesses.Count, radiusMeters, latitude, longitude);
+            // Simple bounding box query (fallback when PostGIS is not available)
+            var latDelta = radiusMeters / 111000.0; // Approximate degrees
+            var lonDelta = radiusMeters / (111000.0 * Math.Cos(latitude * Math.PI / 180.0));
 
-        return Ok(nearbyBusinesses);
+            var allBusinesses = await _context.Businesses
+                .Where(b => b.IsSubscribed
+                    && b.Latitude >= latitude - latDelta
+                    && b.Latitude <= latitude + latDelta
+                    && b.Longitude >= longitude - lonDelta
+                    && b.Longitude <= longitude + lonDelta)
+                .ToListAsync();
+
+            // Filter by actual distance
+            businesses = allBusinesses
+                .Select(b => new
+                {
+                    Business = b,
+                    Distance = CalculateDistance(latitude, longitude, b.Latitude, b.Longitude)
+                })
+                .Where(x => x.Distance <= radiusMeters)
+                .OrderBy(x => x.Distance)
+                .Select(x => x.Business)
+                .ToList();
+
+            _logger.LogDebug("Found {Count} businesses within {Radius}m of ({Lat}, {Lon}) using bounding box fallback",
+                businesses.Count, radiusMeters, latitude, longitude);
+        }
+
+        return Ok(businesses);
     }
 
     private static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
@@ -271,5 +353,110 @@ public class MarketingController : ControllerBase
 
         var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
         return earthRadiusMeters * c;
+    }
+
+    /// <summary>
+    /// Get marketing information for a city by name and state/country.
+    /// </summary>
+    /// <param name="cityName">City name</param>
+    /// <param name="state">State or province (optional)</param>
+    /// <param name="country">Country (optional)</param>
+    /// <returns>City marketing data including theme</returns>
+    [HttpGet("city")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CityMarketingResponse>> GetCityMarketing(
+        [FromQuery] string cityName,
+        [FromQuery] string? state = null,
+        [FromQuery] string? country = null)
+    {
+        if (string.IsNullOrWhiteSpace(cityName))
+        {
+            return BadRequest("City name is required");
+        }
+
+        // Use EF.Functions.ILike for case-insensitive comparison (PostgreSQL-specific)
+        // For cross-database compatibility, could use ToLower() but ILike is more efficient
+        var query = _context.Cities
+            .Include(c => c.Theme)
+            .Where(c => c.IsActive && EF.Functions.ILike(c.Name, cityName));
+
+        if (!string.IsNullOrWhiteSpace(state))
+        {
+            query = query.Where(c => EF.Functions.ILike(c.State, state));
+        }
+
+        if (!string.IsNullOrWhiteSpace(country))
+        {
+            query = query.Where(c => EF.Functions.ILike(c.Country, country));
+        }
+
+        var city = await query.FirstOrDefaultAsync();
+
+        if (city == null)
+        {
+            _logger.LogWarning("City not found: {CityName}, {State}, {Country}", cityName, state, country);
+            return NotFound();
+        }
+
+        // Create theme DTO to avoid circular reference issues
+        CityThemeDto? themeDto = null;
+        if (city.Theme != null && city.Theme.IsActive)
+        {
+            themeDto = new CityThemeDto
+            {
+                Id = city.Theme.Id,
+                CityId = city.Theme.CityId,
+                ThemeName = city.Theme.ThemeName,
+                PrimaryColor = city.Theme.PrimaryColor,
+                SecondaryColor = city.Theme.SecondaryColor,
+                AccentColor = city.Theme.AccentColor,
+                BackgroundColor = city.Theme.BackgroundColor,
+                TextColor = city.Theme.TextColor,
+                LogoUrl = city.Theme.LogoUrl,
+                BackgroundImageUrl = city.Theme.BackgroundImageUrl,
+                CustomCss = city.Theme.CustomCss,
+                IsActive = city.Theme.IsActive,
+                CreatedAt = city.Theme.CreatedAt,
+                UpdatedAt = city.Theme.UpdatedAt
+            };
+        }
+
+        var response = new CityMarketingResponse
+        {
+            CityId = city.Id,
+            CityName = city.Name,
+            State = city.State,
+            Country = city.Country,
+            Description = city.Description,
+            Website = city.Website,
+            Theme = themeDto
+        };
+
+        _logger.LogDebug("Retrieved marketing data for city: {CityName}", city.Name);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Get city theme by city ID.
+    /// </summary>
+    /// <param name="cityId">City ID</param>
+    /// <returns>City theme</returns>
+    [HttpGet("city/{cityId}/theme")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<CityTheme>> GetCityTheme(long cityId)
+    {
+        var theme = await _context.CityThemes
+            .Include(t => t.City)
+            .FirstOrDefaultAsync(t => t.CityId == cityId && t.IsActive && t.City.IsActive);
+
+        if (theme == null)
+        {
+            _logger.LogWarning("Theme not found for city {CityId}", cityId);
+            return NotFound();
+        }
+
+        return Ok(theme);
     }
 }
