@@ -21,7 +21,7 @@ docker-compose down
 - Location API: http://localhost:4747/swagger
 - Marketing API: http://localhost:4749/swagger
 
-See [DOCKER.md](DOCKER.md) for detailed Docker commands and [docs/deployment/docker-guide.md](docs/deployment/docker-guide.md) for complete deployment guide.
+See [Docker Quick Reference](docs/deployment/Docker-Quick-Reference.md) for detailed Docker commands and [docs/deployment/docker-guide.md](docs/deployment/docker-guide.md) for complete deployment guide.
 
 ### Local Development
 
@@ -154,7 +154,7 @@ The project uses two main GitHub Actions workflows:
 - **[Technical Requirements](docs/Technical-Requirements.md)** - Complete technical specifications
 - **[API Documentation](docs/api/API-Documentation.md)** - RESTful API reference
 - **[Docker Guide](docs/deployment/docker-guide.md)** - Deployment and operations
-- **[Docker Quick Reference](DOCKER.md)** - Common Docker commands
+- **[Docker Quick Reference](docs/deployment/Docker-Quick-Reference.md)** - Common Docker commands
 - **[Database Initialization](docs/mobile/database-initialization.md)** - SQLite setup for mobile
 - **[Testing Guide](docs/testing/)** - Testing strategy and practices
 

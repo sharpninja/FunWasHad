@@ -87,6 +87,16 @@ docs/
 | [Aspire_LocationAPI_Port_Configuration.md](configuration/Aspire_LocationAPI_Port_Configuration.md) | Port configuration for Android |
 | [PostgreSQL_LocalStorage_Configuration.md](configuration/PostgreSQL_LocalStorage_Configuration.md) | PostgreSQL persistent storage |
 
+### 🚀 [deployment/](deployment/) - Deployment Guides
+
+| Document | Description |
+|----------|-------------|
+| [Docker-Quick-Reference.md](deployment/Docker-Quick-Reference.md) | Quick reference for Docker commands |
+| [Railway-Setup-Quick-Start.md](deployment/Railway-Setup-Quick-Start.md) | Quick start guide for Railway staging setup |
+| [docker-guide.md](deployment/docker-guide.md) | Complete Docker deployment guide |
+| [railway-staging-setup.md](deployment/railway-staging-setup.md) | Complete Railway staging environment setup |
+| [railway-connection-string-troubleshooting.md](deployment/railway-connection-string-troubleshooting.md) | Railway connection string troubleshooting |
+
 ---
 
 ### 📱 [platform/](platform/) - Platform-Specific Documentation
@@ -116,6 +126,7 @@ docs/
 
 | Document | Description |
 |----------|-------------|
+| [Code-Review-Report-2025-01-27.md](reviews/Code-Review-Report-2025-01-27.md) | Comprehensive code review report (all issues resolved) |
 | [Code-Review-Recommendations-Implementation-Summary.md](reviews/Code-Review-Recommendations-Implementation-Summary.md) | Implementation of code review recommendations |
 | [Documentation-Cleanup-Summary.md](reviews/Documentation-Cleanup-Summary.md) | Documentation cleanup summary |
 | [Documentation-Organization-Summary.md](reviews/Documentation-Organization-Summary.md) | Documentation organization summary |
@@ -214,9 +225,10 @@ docs/
 - **configuration/:** 4 files
 - **platform/:** 3 files
 - **references/:** 1 file
+- **deployment/:** 5 files
 - **reviews/:** 4 files
-- **summaries/:** 23 files
-- **testing/:** 5 files
+- **summaries/:** 25 files
+- **testing/:** 6 files
 
 ---
 
