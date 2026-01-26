@@ -9,8 +9,13 @@ import {
   removeCliBlock,
   pathsEqual,
 } from './parser';
-import { resolveCliMdPath, resolveExecuteOptions } from './resolver';
+import { resolveCliMdPath, resolvePromptsMdPath, resolveExecuteOptions } from './resolver';
 import * as runner from './runner';
+import {
+  loadPromptList,
+  PromptsTreeDataProvider,
+  createOrShowPromptFormPanel,
+} from './promptsView';
 
 /** CR-EXT-1.3.2: max CLI.md size to avoid DoS from huge files. */
 const MAX_CLI_MD_BYTES = 1_000_000;
@@ -73,6 +78,13 @@ function getCliMdPath(workspaceRoot: string): string {
   const res = resolveCliMdPath(rootResolved, cliAgent?.CliMdPath, vsc);
   debug(`getCliMdPath: => ${res}`);
   return res;
+}
+
+function getPromptsMdPath(workspaceRoot: string): string {
+  const rootResolved = path.resolve(workspaceRoot);
+  const cliAgent = getCliAgentConfig(workspaceRoot);
+  const vsc = vscode.workspace.getConfiguration('fwhCliAgent').get<string>('promptsMdPath');
+  return resolvePromptsMdPath(rootResolved, cliAgent?.PromptsMdPath, vsc);
 }
 
 function getExecuteOptions(workspaceRoot: string): { mode: 'composer' | 'agent-cli'; composerCommand: string } {
@@ -229,7 +241,13 @@ async function onCliMdChange(uri: vscode.Uri, output: vscode.OutputChannel): Pro
           })();
     const edit = new vscode.WorkspaceEdit();
     edit.replace(uri, fullRange, newContent);
-    await vscode.workspace.applyEdit(edit);
+    try {
+      await vscode.workspace.applyEdit(edit);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      output.appendLine(`[Cursor CLI] applyEdit failed: ${msg}`);
+      void vscode.window.showWarningMessage(`FWH CLI Agent: Could not update CLI.md: ${msg}`);
+    }
   }
 }
 
@@ -315,6 +333,75 @@ export function activate(context: vscode.ExtensionContext): void {
       const u = vscode.Uri.file(cliPath);
       await onCliMdChange(u, output);
     })
+  );
+
+  // MVP-SUPPORT-005: Prompts list (TreeView) and Open prompt form
+  const loadPrompts = (): ReturnType<typeof loadPromptList> => {
+    const r = getWorkspaceRoot();
+    if (!r) return [];
+    return loadPromptList(getPromptsMdPath(r), getCliMdPath(r));
+  };
+  const promptsProvider = new PromptsTreeDataProvider(loadPrompts);
+  const promptsTreeView = vscode.window.createTreeView('fwhCliAgent.promptsList', { treeDataProvider: promptsProvider });
+  context.subscriptions.push(promptsTreeView);
+
+  const openPromptForm = async (element?: vscode.TreeItem): Promise<void> => {
+    const node = element ?? promptsTreeView.selection[0];
+    const name = (node?.id ?? node?.label) as string | undefined;
+    if (!name) {
+      void vscode.window.showInformationMessage('FWH CLI Agent: Select a prompt from the Prompts view.');
+      return;
+    }
+    const items = loadPrompts();
+    const item = items.find((i) => i.name === name);
+    if (!item) return;
+    if (item.prompt) {
+      createOrShowPromptFormPanel(item.prompt, async (promptName: string, filledText: string) => {
+        const r = getWorkspaceRoot();
+        if (!r) {
+          void vscode.window.showErrorMessage('FWH CLI Agent: No workspace folder.');
+          return;
+        }
+        output.appendLine(`[Cursor CLI] Invoke prompt: ${promptName}`);
+        output.show();
+        const { mode, composerCommand } = getExecuteOptions(r);
+        if (mode === 'composer') {
+          await runInComposer(filledText, composerCommand, output);
+        } else {
+          await runWithAgentCli(filledText, r, output);
+        }
+      });
+    } else {
+      let content: string;
+      try {
+        content = fs.readFileSync(cliPath, 'utf8');
+      } catch (e) {
+        debug(`openPromptForm (CLI): failed to read ${cliPath}: ${e instanceof Error ? e.message : String(e)}`);
+        void vscode.window.showErrorMessage(`FWH CLI Agent: Could not read CLI.md.`);
+        return;
+      }
+      const promptText = extractPromptFromPromptsSection(content, name);
+      if (!promptText) {
+        output.appendLine(`[Cursor CLI] No populated prompt for "${name}" in CLI.md.`);
+        void vscode.window.showWarningMessage(`FWH CLI Agent: No populated prompt for "${name}" in CLI.md.`);
+        return;
+      }
+      output.appendLine(`[Cursor CLI] Run prompt from CLI: ${name}`);
+      output.show();
+      const { mode, composerCommand } = getExecuteOptions(root);
+      if (mode === 'composer') {
+        await runInComposer(promptText, composerCommand, output);
+      } else {
+        await runWithAgentCli(promptText, root, output);
+      }
+    }
+  };
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('fwhCliAgent.openPromptForm', openPromptForm)
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand('fwhCliAgent.refreshPromptsList', () => promptsProvider.refresh())
   );
 
   context.subscriptions.push(

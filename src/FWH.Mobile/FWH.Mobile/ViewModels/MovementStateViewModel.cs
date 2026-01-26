@@ -3,7 +3,6 @@ using FWH.Common.Location;
 using FWH.Mobile.Configuration;
 using FWH.Mobile.Services;
 using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 
 namespace FWH.Mobile.ViewModels;
 
@@ -118,7 +117,7 @@ public partial class MovementStateViewModel : ObservableObject
             HasAddress = false;
         }
         OnPropertyChanged(nameof(DisplayAddress));
-        
+
         // Check for business if we have coordinates
         if (Latitude.HasValue && Longitude.HasValue)
         {
@@ -139,7 +138,7 @@ public partial class MovementStateViewModel : ObservableObject
                 location.Latitude,
                 location.Longitude,
                 maxDistanceMeters: 100, // Check within 100m for businesses
-                cancellationToken: default);
+                cancellationToken: default).ConfigureAwait(false);
 
             if (business != null)
             {

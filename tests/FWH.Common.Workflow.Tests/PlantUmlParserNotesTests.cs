@@ -1,5 +1,3 @@
-using System.Linq;
-using FWH.Common.Workflow;
 using Xunit;
 
 namespace FWH.Common.Workflow.Tests;
@@ -17,7 +15,7 @@ public class PlantUmlParserNotesTests
     /// <para><strong>Reason for expectation:</strong> The parser should recognize the "note right of Start" syntax, extract the note text after the colon, and assign it to the Start node's NoteMarkdown property. The presence of "markdown" in the NoteMarkdown confirms the note was correctly parsed and attached. This validates that inline note syntax is supported and note content is preserved.</para>
     /// </remarks>
     [Fact]
-    public void Parse_InlineNote_AttachesNoteToNode()
+    public void ParseInlineNoteAttachesNoteToNode()
     {
         var input = @"@startuml
 [*] --> Start
@@ -31,7 +29,7 @@ note right of Start : This is *markdown* content
     }
 
     [Fact]
-    public void Parse_BlockNote_AttachesNoteToNode()
+    public void ParseBlockNoteAttachesNoteToNode()
     {
         var input = @"@startuml
 :Start;

@@ -1,8 +1,6 @@
 using Avalonia.Controls;
-using Avalonia.Data;
 using Avalonia.Threading;
 using FWH.Mobile.ViewModels;
-using System;
 
 namespace FWH.Mobile.Views;
 

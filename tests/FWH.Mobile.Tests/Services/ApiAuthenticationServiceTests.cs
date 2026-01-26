@@ -32,7 +32,7 @@ public class ApiAuthenticationServiceTests
     /// <para><strong>Reason for expectation:</strong> The service should automatically add the configured API key to all requests, enabling seamless authentication without requiring manual header management in each HTTP call.</para>
     /// </remarks>
     [Fact]
-    public void AddAuthenticationHeaders_AddsApiKeyHeader()
+    public void AddAuthenticationHeadersAddsApiKeyHeader()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -60,7 +60,7 @@ public class ApiAuthenticationServiceTests
     /// <para><strong>Reason for expectation:</strong> The service should compute signatures using HMAC-SHA256 with the API secret, ensuring requests cannot be tampered with without knowledge of the secret.</para>
     /// </remarks>
     [Fact]
-    public void AddAuthenticationHeaders_AddsRequestSignature()
+    public void AddAuthenticationHeadersAddsRequestSignature()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -89,7 +89,7 @@ public class ApiAuthenticationServiceTests
     /// <para><strong>Reason for expectation:</strong> The signature algorithm must be deterministic and match the server-side computation. This test verifies the implementation correctness by comparing against a manually computed signature.</para>
     /// </remarks>
     [Fact]
-    public void AddAuthenticationHeaders_SignatureMatchesExpectedComputation()
+    public void AddAuthenticationHeadersSignatureMatchesExpectedComputation()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -193,7 +193,7 @@ public class ApiAuthenticationServiceTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_InvalidApiSecret_ThrowsArgumentException(string? apiSecret)
+    public void ConstructorInvalidApiSecretThrowsArgumentException(string? apiSecret)
     {
         // Arrange & Act & Assert
         var ex = Assert.Throws<ArgumentException>(() =>

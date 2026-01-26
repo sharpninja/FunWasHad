@@ -41,8 +41,18 @@ Monitors `CLI.md`, parses prompts from the **## Prompts** section, and runs them
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `fwhCliAgent.cliMdPath` | `CLI.md` | Path to CLI.md relative to workspace root. Overrides `cli-agent.json` when set. |
+| `fwhCliAgent.promptsMdPath` | `scripts/modules/FWH.Prompts/prompts.md` | Path to prompts.md (FWH.Prompts templates). Used by the **Prompts** view. Overrides `cli-agent.json` when set. |
 | `fwhCliAgent.executeMode` | `composer` | `composer` = open Composer + copy prompt to clipboard; `agent-cli` = run `agent -p "..."` in a new terminal. |
 | `fwhCliAgent.composerCommand` | `composer.new` | Command ID to open Cursor Composer when mode is `composer`. Adjust if Cursor uses a different ID (e.g. `aichat.new`). |
+
+## Prompts view (MVP-SUPPORT-005)
+
+The **Prompts** view in the Explorer sidebar lists prompts from `prompts.md` (FWH.Prompts) and from **## Prompts** in `CLI.md`. Click a prompt (or right‑click **Open prompt form**) to:
+
+- **Prompts from prompts.md**: A webview opens with a form for each parameter. Fill values and click **Invoke** to substitute `{Param}` in the template and run via Composer or agent-cli (per `executeMode`).
+- **Prompts from CLI.md only**: Runs the existing populated `### Prompt: <name>` body from CLI.md.
+
+Commands: **Open prompt form** (click a prompt or context menu) opens the parameter form or runs from CLI.md; **Refresh prompts list** reloads from `prompts.md` and `CLI.md`.
 
 ## Commands
 

@@ -1,22 +1,17 @@
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using Xunit;
 using FWH.Common.Workflow.Actions;
+using FWH.Common.Workflow.Controllers;
 using FWH.Common.Workflow.Instance;
-using FWH.Common.Workflow.Storage;
 using FWH.Common.Workflow.Mapping;
 using FWH.Common.Workflow.State;
+using FWH.Common.Workflow.Storage;
 using FWH.Common.Workflow.Views;
-using FWH.Common.Workflow.Controllers;
-using FWH.Common.Workflow;
 using FWH.Mobile.Data.Data;
-using FWH.Mobile.Data.Repositories;
-using System.Collections.Generic;
-using System.Threading;
 using FWH.Orchestrix.Contracts.Mediator;
 using FWH.Orchestrix.Mediator.Remote.Mediator;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -41,14 +36,14 @@ public class ScopedHandler : IWorkflowActionHandler
         _dep = dep;
     }
 
-    public Task<IDictionary<string,string>?> HandleAsync(ActionHandlerContext context, IDictionary<string,string> parameters, CancellationToken cancellationToken = default)
+    public Task<IDictionary<string, string>?> HandleAsync(ActionHandlerContext context, IDictionary<string, string> parameters, CancellationToken cancellationToken = default)
     {
-        var updates = new Dictionary<string,string>
+        var updates = new Dictionary<string, string>
         {
             ["fromScoped"] = _dep.GetValue()
         };
 
-        return Task.FromResult<IDictionary<string,string>?>(updates);
+        return Task.FromResult<IDictionary<string, string>?>(updates);
     }
 }
 
@@ -65,7 +60,7 @@ public class ScopedHandlerTests
     /// <para><strong>Reason for expectation:</strong> The executor should create a service scope before resolving the handler, allowing scoped services to be resolved. The handler should receive its IScopedDep dependency and be able to call its methods. The workflow variable being set to "scoped-value" confirms the dependency was resolved and the handler executed successfully. This validates that scoped service resolution works correctly in the workflow execution pipeline.</para>
     /// </remarks>
     [Fact]
-    public async Task ScopedHandler_ResolvesScopedService_WhenExecutorCreatesScope()
+    public async Task ScopedHandlerResolvesScopedServiceWhenExecutorCreatesScope()
     {
         var services = new ServiceCollection();
 
@@ -95,10 +90,10 @@ public class ScopedHandlerTests
         _ = sp.GetRequiredService<WorkflowActionHandlerRegistrar>();
 
         // create a fake workflow and node with note action
-        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w1", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A","A","{\"action\":\"ScopedAction\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
+        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w1", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A", "A", "{\"action\":\"ScopedAction\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
 
         var executor = sp.GetRequiredService<IWorkflowActionExecutor>();
-        var executed = await executor.ExecuteAsync("w1", def.Nodes[0], def, CancellationToken.None);
+        var executed = await executor.ExecuteAsync("w1", def.Nodes[0], def, CancellationToken.None).ConfigureAwait(true);
         Assert.True(executed);
 
         var inst = sp.GetRequiredService<IWorkflowInstanceManager>();

@@ -1,18 +1,13 @@
-using System.Linq;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit;
-using FWH.Common.Workflow;
 using FWH.Common.Workflow.Controllers;
-using FWH.Common.Workflow.Storage;
 using FWH.Common.Workflow.Instance;
 using FWH.Common.Workflow.Mapping;
 using FWH.Common.Workflow.State;
+using FWH.Common.Workflow.Storage;
 using FWH.Common.Workflow.Views;
-using FWH.Common.Workflow.Models;
-using System;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -69,7 +64,7 @@ public class WorkflowServiceTests
     /// <para><strong>Reason for expectation:</strong> When the workflow reaches a decision node with multiple outgoing transitions (if-else), the service should recognize it as a choice point and return a choice payload. The payload should contain at least 2 choices corresponding to the decision branches. This allows the UI to display options and wait for user selection before advancing.</para>
     /// </remarks>
     [Fact]
-    public async Task GetCurrentStatePayload_ReturnsChoiceForBranchingNode()
+    public async Task GetCurrentStatePayloadReturnsChoiceForBranchingNode()
     {
         var plant = @"@startuml
 :Start;
@@ -83,9 +78,9 @@ endif
 @enduml";
 
         var svc = BuildWithInMemoryRepo();
-        var def = await svc.ImportWorkflowAsync(plant, "wf1", "test");
+        var def = await svc.ImportWorkflowAsync(plant, "wf1", "test").ConfigureAwait(true);
 
-        var payload = await svc.GetCurrentStatePayloadAsync(def.Id);
+        var payload = await svc.GetCurrentStatePayloadAsync(def.Id).ConfigureAwait(true);
         Assert.True(payload.IsChoice);
         Assert.True(payload.Choices.Count >= 2);
     }
@@ -101,7 +96,7 @@ endif
     /// <para><strong>Reason for expectation:</strong> The AdvanceByChoiceValueAsync method should map the choice index to the corresponding transition, advance the workflow controller to the target node, and persist the new CurrentNodeId to the database. When the workflow is reloaded from the database, it should reflect the advanced state, confirming that persistence works correctly. This ensures workflow state survives application restarts.</para>
     /// </remarks>
     [Fact]
-    public async Task AdvanceByChoiceValue_AdvancesAndPersists()
+    public async Task AdvanceByChoiceValueAdvancesAndPersists()
     {
         var services = new ServiceCollection();
         var connection = new SqliteConnection("DataSource=:memory:");
@@ -144,19 +139,19 @@ A --> B
 A --> C
 @enduml";
 
-        var def = await svc.ImportWorkflowAsync(plant, "wf_persist", "persistTest");
+        var def = await svc.ImportWorkflowAsync(plant, "wf_persist", "persistTest").ConfigureAwait(true);
 
-        var payload = await svc.GetCurrentStatePayloadAsync(def.Id);
+        var payload = await svc.GetCurrentStatePayloadAsync(def.Id).ConfigureAwait(true);
         Assert.True(payload.IsChoice);
 
         // choose index 1, which should map to the second outgoing
-        var advanced = await svc.AdvanceByChoiceValueAsync(def.Id, 1);
+        var advanced = await svc.AdvanceByChoiceValueAsync(def.Id, 1).ConfigureAwait(true);
         Assert.True(advanced);
 
         // Reload persisted definition and check CurrentNodeId
         var repo = sp.GetRequiredService<FWH.Mobile.Data.Repositories.IWorkflowRepository>();
-        var persisted = await repo.GetByIdAsync(def.Id);
+        var persisted = await repo.GetByIdAsync(def.Id).ConfigureAwait(true);
         Assert.NotNull(persisted);
-        Assert.Equal((await svc.GetCurrentStatePayloadAsync(def.Id)).Choices.FirstOrDefault()?.TargetNodeId ?? persisted.CurrentNodeId, persisted.CurrentNodeId);
+        Assert.Equal((await svc.GetCurrentStatePayloadAsync(def.Id).ConfigureAwait(true)).Choices.FirstOrDefault()?.TargetNodeId ?? persisted.CurrentNodeId, persisted.CurrentNodeId);
     }
 }

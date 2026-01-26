@@ -1,23 +1,13 @@
-using Xunit;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
+using FWH.Common.Workflow.Actions;
+using FWH.Common.Workflow.Extensions;
+using FWH.Common.Workflow.Instance;
+using FWH.Mobile.Data.Data;
+using FWH.Mobile.Data.Repositories;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using FWH.Common.Workflow;
-using FWH.Common.Workflow.Actions;
-using FWH.Common.Workflow.Controllers;
-using FWH.Common.Workflow.Instance;
-using FWH.Mobile.Data.Repositories;
-using FWH.Mobile.Data.Data;
-using FWH.Common.Workflow.Storage;
-using FWH.Common.Workflow.Mapping;
-using FWH.Common.Workflow.State;
-using FWH.Common.Workflow.Views;
-using FWH.Common.Workflow.Extensions;
-using System.Collections.Concurrent;
-using System.Threading;
-using System;
-using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -86,7 +76,7 @@ public class ActionExecutorErrorHandlingTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The executor should wrap handler execution in try-catch blocks, log the exception, and continue workflow execution. The workflow advancing to B confirms that exceptions don't block workflow progression. This ensures that one failing action doesn't stop the entire workflow, which is critical for reliability in production systems.</para>
     /// </remarks>
     [Fact]
-    public async Task ActionExecutor_HandlerThrowsException_ReturnsEmptyUpdates()
+    public async Task ActionExecutorHandlerThrowsExceptionReturnsEmptyUpdates()
     {
         // Arrange
         var exceptionThrown = false;
@@ -100,10 +90,10 @@ public class ActionExecutorErrorHandlingTests : IDisposable
         });
 
         var plant = "@startuml\n[*] --> A\n:A\nnote right: {\"action\": \"ThrowException\", \"params\": {}}\nA --> B\n:B\n@enduml";
-        var def = await svc.ImportWorkflowAsync(plant, "error1", "ErrorTest1");
+        var def = await svc.ImportWorkflowAsync(plant, "error1", "ErrorTest1").ConfigureAwait(true);
 
         // Wait for action to execute (give it more time to ensure async operations complete)
-        await Task.Delay(1000);
+        await Task.Delay(1000).ConfigureAwait(true);
 
         // Assert - exception was thrown but workflow continued
         Assert.True(exceptionThrown);
@@ -139,10 +129,10 @@ public class ActionExecutorErrorHandlingTests : IDisposable
 
         // Plant UML with action name
         var plant = "@startuml\n[*] --> A\n:A\nnote right: {\"action\": \"NonExistentAction\", \"params\": {}}\nA --> B\n:B\n@enduml";
-        var def = await svc.ImportWorkflowAsync(plant, "error2", "ErrorTest2");
+        var def = await svc.ImportWorkflowAsync(plant, "error2", "ErrorTest2").ConfigureAwait(true);
 
         // Wait for action processing
-        await Task.Delay(300);
+        await Task.Delay(300).ConfigureAwait(true);
 
         // Assert - workflow should advance after action execution
         var controller = sp.GetRequiredService<IWorkflowController>();
@@ -184,10 +174,10 @@ public class ActionExecutorErrorHandlingTests : IDisposable
             :B;
             @enduml
             """;
-        var def = await svc.ImportWorkflowAsync(plant, "error3", "ErrorTest3");
+        var def = await svc.ImportWorkflowAsync(plant, "error3", "ErrorTest3").ConfigureAwait(true);
 
         // Wait for action
-        await Task.Delay(300);
+        await Task.Delay(300).ConfigureAwait(true);
 
         // Assert
         Assert.True(handlerCalled);
@@ -216,7 +206,7 @@ public class ActionExecutorErrorHandlingTests : IDisposable
             services.AddWorkflowActionHandler("LongRunning", async (ctx, p, ct) =>
             {
                 handlerStarted = true;
-                await Task.Delay(5000, ct); // Long delay
+                await Task.Delay(5000, ct).ConfigureAwait(true); // Long delay
                 handlerCompleted = true;
                 return new Dictionary<string, string>();
             });
@@ -229,8 +219,8 @@ public class ActionExecutorErrorHandlingTests : IDisposable
 
         try
         {
-            var def = await svc.ImportWorkflowAsync(plant, "error4", "ErrorTest4");
-            await Task.Delay(200); // Wait a bit
+            var def = await svc.ImportWorkflowAsync(plant, "error4", "ErrorTest4").ConfigureAwait(true);
+            await Task.Delay(200).ConfigureAwait(true); // Wait a bit
         }
         catch (OperationCanceledException)
         {
@@ -276,7 +266,7 @@ public class ActionExecutorErrorHandlingTests : IDisposable
                     currentMax = maxConcurrent;
                 }
 
-                await Task.Delay(50, ct);
+                await Task.Delay(50, ct).ConfigureAwait(true);
                 Interlocked.Decrement(ref concurrentExecutions);
 
                 return new Dictionary<string, string>
@@ -294,14 +284,14 @@ public class ActionExecutorErrorHandlingTests : IDisposable
             var task = Task.Run(async () =>
             {
                 var plant = "@startuml\n[*] --> A\n:A\nnote right: {\"action\": \"ConcurrentTest\", \"params\": {}}\nA --> B\n:B\n@enduml";
-                await svc.ImportWorkflowAsync(plant, workflowId, $"Concurrent_{i}");
+                await svc.ImportWorkflowAsync(plant, workflowId, $"Concurrent_{i}").ConfigureAwait(true);
             });
             tasks.Add(task);
         }
 
         // Act
-        await Task.WhenAll(tasks);
-        await Task.Delay(1000); // Wait for all handlers to complete
+        await Task.WhenAll(tasks).ConfigureAwait(true);
+        await Task.Delay(1000).ConfigureAwait(true); // Wait for all handlers to complete
 
         // Assert - Note: Each workflow may execute the action during both start node calculation
         // and actual node execution, or there may be retry logic, so we check for at least 10 executions
@@ -330,7 +320,7 @@ public class ActionExecutorErrorHandlingTests : IDisposable
         {
             services.AddWorkflowActionHandler("IsolationTest", async (ctx, p, ct) =>
             {
-                await Task.Delay(10, ct);
+                await Task.Delay(10, ct).ConfigureAwait(true);
                 return new Dictionary<string, string>
                 {
                     ["workflowId"] = ctx.WorkflowId
@@ -343,10 +333,10 @@ public class ActionExecutorErrorHandlingTests : IDisposable
         // Create two workflows
         var plant = "@startuml\n[*] --> A\n:A\nnote right: {\"action\": \"IsolationTest\", \"params\": {}}\nA --> B\n:B\n@enduml";
 
-        var def1 = await svc.ImportWorkflowAsync(plant, "isolation1", "Isolation1");
-        var def2 = await svc.ImportWorkflowAsync(plant, "isolation2", "Isolation2");
+        var def1 = await svc.ImportWorkflowAsync(plant, "isolation1", "Isolation1").ConfigureAwait(true);
+        var def2 = await svc.ImportWorkflowAsync(plant, "isolation2", "Isolation2").ConfigureAwait(true);
 
-        await Task.Delay(300);
+        await Task.Delay(300).ConfigureAwait(true);
 
         // Assert - each workflow should have its own variables
         var vars1 = wm.GetVariables(def1.Id);
@@ -355,15 +345,11 @@ public class ActionExecutorErrorHandlingTests : IDisposable
         Assert.NotNull(vars1);
         Assert.NotNull(vars2);
 
-        if (vars1.ContainsKey("workflowId"))
-        {
-            Assert.Equal("isolation1", vars1["workflowId"]);
-        }
+        if (vars1.TryGetValue("workflowId", out var v1))
+            Assert.Equal("isolation1", v1);
 
-        if (vars2.ContainsKey("workflowId"))
-        {
-            Assert.Equal("isolation2", vars2["workflowId"]);
-        }
+        if (vars2.TryGetValue("workflowId", out var v2))
+            Assert.Equal("isolation2", v2);
     }
 
     [Fact]
@@ -372,16 +358,16 @@ public class ActionExecutorErrorHandlingTests : IDisposable
         // Arrange
         var svc = BuildWithInMemoryRepo(out var sp, services =>
         {
-        services.AddWorkflowActionHandler("NullReturn", (ctx, p, ct) =>
-        {
-            return Task.FromResult<IDictionary<string, string>?>(null);
-        });
+            services.AddWorkflowActionHandler("NullReturn", (ctx, p, ct) =>
+            {
+                return Task.FromResult<IDictionary<string, string>?>(null);
+            });
         });
 
         var plant = "@startuml\n[*] --> A\n:A\nnote right: {\"action\": \"NullReturn\", \"params\": {}}\nA --> B\n:B\n@enduml";
-        var def = await svc.ImportWorkflowAsync(plant, "error5", "ErrorTest5");
+        var def = await svc.ImportWorkflowAsync(plant, "error5", "ErrorTest5").ConfigureAwait(true);
 
-        await Task.Delay(300);
+        await Task.Delay(300).ConfigureAwait(true);
 
         // Assert - workflow should continue without error
         var controller = sp.GetRequiredService<IWorkflowController>();
@@ -400,7 +386,7 @@ public class ActionExecutorErrorHandlingTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The executor should execute handlers asynchronously using Task-based execution, allowing multiple handlers to run concurrently. The fast handler's 10ms delay should complete well before the slow handler's 2000ms delay finishes. The fastHandlerCompleted being true while slowHandlerStarted is also true confirms parallel execution and that handlers don't block each other.</para>
     /// </remarks>
     [Fact]
-    public async Task ActionExecutor_LongRunningHandlers_DoNotBlockOthers()
+    public async Task ActionExecutorLongRunningHandlersDoNotBlockOthers()
     {
         // Arrange
         var slowHandlerStarted = false;
@@ -411,13 +397,13 @@ public class ActionExecutorErrorHandlingTests : IDisposable
             services.AddWorkflowActionHandler("SlowHandler", async (ctx, p, ct) =>
             {
                 slowHandlerStarted = true;
-                await Task.Delay(2000, ct);
+                await Task.Delay(2000, ct).ConfigureAwait(true);
                 return new Dictionary<string, string>();
             });
 
             services.AddWorkflowActionHandler("FastHandler", async (ctx, p, ct) =>
             {
-                await Task.Delay(10, ct);
+                await Task.Delay(10, ct).ConfigureAwait(true);
                 fastHandlerCompleted = true;
                 return new Dictionary<string, string>();
             });
@@ -428,12 +414,12 @@ public class ActionExecutorErrorHandlingTests : IDisposable
         var slowTask = svc.ImportWorkflowAsync(slowPlant, "slow", "Slow");
 
         // Wait a bit then start fast workflow
-        await Task.Delay(50);
+        await Task.Delay(50).ConfigureAwait(true);
         var fastPlant = "@startuml\n[*] --> A\n:A\nnote right: {\"action\": \"FastHandler\", \"params\": {}}\nA --> B\n:B\n@enduml";
-        var fastDef = await svc.ImportWorkflowAsync(fastPlant, "fast", "Fast");
+        var fastDef = await svc.ImportWorkflowAsync(fastPlant, "fast", "Fast").ConfigureAwait(true);
 
         // Wait for fast handler to complete
-        await Task.Delay(300);
+        await Task.Delay(300).ConfigureAwait(true);
 
         // Assert
         Assert.True(slowHandlerStarted);

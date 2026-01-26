@@ -1,10 +1,8 @@
-using System.Linq;
 using Xunit;
-using FWH.Common.Workflow;
 
 namespace FWH.Common.Workflow.Tests;
 
-public class PlantUmlParser_SelfTransitionTests
+public class PlantUmlParserSelfTransitionTests
 {
     /// <summary>
     /// Tests that PlantUmlParser does not create unconditional self-transitions (transitions from a node to itself without a condition) when parsing if-else structures.
@@ -17,7 +15,7 @@ public class PlantUmlParser_SelfTransitionTests
     /// <para><strong>Reason for expectation:</strong> The parser should correctly identify the if-else structure and create transitions only between distinct nodes (Start→decision, decision→Then, decision→Else, Then→End, Else→End). It should not create transitions from a node to itself without a condition. The empty selfEdges collection confirms that no invalid self-transitions were created, ensuring the workflow structure is correct and executable.</para>
     /// </remarks>
     [Fact]
-    public void Parse_IfDoesNotCreateUnconditionalSelfTransitions()
+    public void ParseIfDoesNotCreateUnconditionalSelfTransitions()
     {
         var input = @"@startuml
 :Start;
@@ -39,7 +37,7 @@ endif;
     }
 
     [Fact]
-    public void Parse_LoopMayCreateConditionalSelfTransitionOnly()
+    public void ParseLoopMayCreateConditionalSelfTransitionOnly()
     {
         var input = @"@startuml
 start;

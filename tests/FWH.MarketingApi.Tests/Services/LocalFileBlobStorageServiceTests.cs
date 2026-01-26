@@ -1,4 +1,3 @@
-using System.IO;
 using System.Text;
 using FWH.MarketingApi.Services;
 using Microsoft.Extensions.Configuration;
@@ -60,7 +59,7 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The service should store files in container-specific directories and return URLs that match the BaseUrl configuration. The file should be physically present on disk for verification.</para>
     /// </remarks>
     [Fact]
-    public async Task UploadAsync_StoresFileAndReturnsUrl()
+    public async Task UploadAsyncStoresFileAndReturnsUrl()
     {
         // Arrange
         var content = "test content";
@@ -70,7 +69,7 @@ public class LocalFileBlobStorageServiceTests : IDisposable
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
 
         // Act
-        var storageUrl = await _service.UploadAsync(stream, fileName, contentType, container);
+        var storageUrl = await _service.UploadAsync(stream, fileName, contentType, container).ConfigureAwait(true);
 
         // Assert
         Assert.NotNull(storageUrl);
@@ -82,7 +81,7 @@ public class LocalFileBlobStorageServiceTests : IDisposable
         Assert.True(File.Exists(expectedPath));
 
         // Verify file content
-        var fileContent = await File.ReadAllTextAsync(expectedPath);
+        var fileContent = await File.ReadAllTextAsync(expectedPath).ConfigureAwait(true);
         Assert.Equal(content, fileContent);
     }
 
@@ -97,7 +96,7 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The service prefixes filenames with GUIDs to ensure uniqueness. This prevents conflicts when multiple files share the same original name.</para>
     /// </remarks>
     [Fact]
-    public async Task UploadAsync_GeneratesUniqueFileNames()
+    public async Task UploadAsyncGeneratesUniqueFileNames()
     {
         // Arrange
         var fileName = "test.txt";
@@ -107,8 +106,8 @@ public class LocalFileBlobStorageServiceTests : IDisposable
         using var stream2 = new MemoryStream(Encoding.UTF8.GetBytes("content2"));
 
         // Act
-        var url1 = await _service.UploadAsync(stream1, fileName, contentType, container);
-        var url2 = await _service.UploadAsync(stream2, fileName, contentType, container);
+        var url1 = await _service.UploadAsync(stream1, fileName, contentType, container).ConfigureAwait(true);
+        var url2 = await _service.UploadAsync(stream2, fileName, contentType, container).ConfigureAwait(true);
 
         // Assert
         Assert.NotEqual(url1, url2);
@@ -131,7 +130,7 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The service should sanitize file names by removing path separators and invalid characters, preventing directory traversal attacks and ensuring files stay within the intended storage location.</para>
     /// </remarks>
     [Fact]
-    public async Task UploadAsync_SanitizesFileName()
+    public async Task UploadAsyncSanitizesFileName()
     {
         // Arrange
         var maliciousFileName = "../../../etc/passwd";
@@ -140,7 +139,7 @@ public class LocalFileBlobStorageServiceTests : IDisposable
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("content"));
 
         // Act
-        var storageUrl = await _service.UploadAsync(stream, maliciousFileName, contentType, container);
+        var storageUrl = await _service.UploadAsync(stream, maliciousFileName, contentType, container).ConfigureAwait(true);
 
         // Assert
         // Verify the file is stored in the container directory, not outside
@@ -164,21 +163,21 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The service should remove files from disk when DeleteAsync is called. The method returns true to indicate successful deletion.</para>
     /// </remarks>
     [Fact]
-    public async Task DeleteAsync_RemovesFile()
+    public async Task DeleteAsyncRemovesFile()
     {
         // Arrange
         var fileName = "test.txt";
         var contentType = "text/plain";
         var container = "test-container";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("content"));
-        var storageUrl = await _service.UploadAsync(stream, fileName, contentType, container);
+        var storageUrl = await _service.UploadAsync(stream, fileName, contentType, container).ConfigureAwait(true);
 
         // Verify file exists
         var filePath = Path.Combine(_testBasePath, container, Path.GetFileName(storageUrl));
         Assert.True(File.Exists(filePath));
 
         // Act
-        var deleted = await _service.DeleteAsync(storageUrl);
+        var deleted = await _service.DeleteAsync(storageUrl).ConfigureAwait(true);
 
         // Assert
         Assert.True(deleted);
@@ -196,13 +195,13 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The service should gracefully handle missing files by returning false rather than throwing exceptions. This allows callers to handle the case appropriately.</para>
     /// </remarks>
     [Fact]
-    public async Task DeleteAsync_NonExistentFile_ReturnsFalse()
+    public async Task DeleteAsyncNonExistentFileReturnsFalse()
     {
         // Arrange
         var nonExistentUrl = "/uploads/test-container/nonexistent-file.txt";
 
         // Act
-        var deleted = await _service.DeleteAsync(nonExistentUrl);
+        var deleted = await _service.DeleteAsync(nonExistentUrl).ConfigureAwait(true);
 
         // Assert
         Assert.False(deleted);
@@ -219,7 +218,7 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The service should be able to read files from disk and return them as streams. The stream content should match what was originally uploaded.</para>
     /// </remarks>
     [Fact]
-    public async Task GetAsync_RetrievesFileStream()
+    public async Task GetAsyncRetrievesFileStream()
     {
         // Arrange
         var content = "test content";
@@ -227,15 +226,15 @@ public class LocalFileBlobStorageServiceTests : IDisposable
         var contentType = "text/plain";
         var container = "test-container";
         using var uploadStream = new MemoryStream(Encoding.UTF8.GetBytes(content));
-        var storageUrl = await _service.UploadAsync(uploadStream, fileName, contentType, container);
+        var storageUrl = await _service.UploadAsync(uploadStream, fileName, contentType, container).ConfigureAwait(true);
 
         // Act
-        using var retrievedStream = await _service.GetAsync(storageUrl);
+        using var retrievedStream = await _service.GetAsync(storageUrl).ConfigureAwait(true);
 
         // Assert
         Assert.NotNull(retrievedStream);
         using var reader = new StreamReader(retrievedStream);
-        var retrievedContent = await reader.ReadToEndAsync();
+        var retrievedContent = await reader.ReadToEndAsync().ConfigureAwait(true);
         Assert.Equal(content, retrievedContent);
     }
 
@@ -250,13 +249,13 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The service should return null for missing files, allowing callers to handle the case appropriately (e.g., return 404 to clients).</para>
     /// </remarks>
     [Fact]
-    public async Task GetAsync_NonExistentFile_ReturnsNull()
+    public async Task GetAsyncNonExistentFileReturnsNull()
     {
         // Arrange
         var nonExistentUrl = "/uploads/test-container/nonexistent-file.txt";
 
         // Act
-        var stream = await _service.GetAsync(nonExistentUrl);
+        var stream = await _service.GetAsync(nonExistentUrl).ConfigureAwait(true);
 
         // Assert
         Assert.Null(stream);
@@ -273,17 +272,17 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The service should accurately report file existence by checking the file system. This is useful for validation before operations.</para>
     /// </remarks>
     [Fact]
-    public async Task ExistsAsync_ExistingFile_ReturnsTrue()
+    public async Task ExistsAsyncExistingFileReturnsTrue()
     {
         // Arrange
         var fileName = "test.txt";
         var contentType = "text/plain";
         var container = "test-container";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("content"));
-        var storageUrl = await _service.UploadAsync(stream, fileName, contentType, container);
+        var storageUrl = await _service.UploadAsync(stream, fileName, contentType, container).ConfigureAwait(true);
 
         // Act
-        var exists = await _service.ExistsAsync(storageUrl);
+        var exists = await _service.ExistsAsync(storageUrl).ConfigureAwait(true);
 
         // Assert
         Assert.True(exists);
@@ -300,13 +299,13 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The service should accurately report when files don't exist, allowing callers to handle missing files appropriately.</para>
     /// </remarks>
     [Fact]
-    public async Task ExistsAsync_NonExistentFile_ReturnsFalse()
+    public async Task ExistsAsyncNonExistentFileReturnsFalse()
     {
         // Arrange
         var nonExistentUrl = "/uploads/test-container/nonexistent-file.txt";
 
         // Act
-        var exists = await _service.ExistsAsync(nonExistentUrl);
+        var exists = await _service.ExistsAsync(nonExistentUrl).ConfigureAwait(true);
 
         // Assert
         Assert.False(exists);
@@ -323,14 +322,21 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The service should validate required parameters at the start of the method, failing fast with clear error messages rather than failing later with cryptic errors.</para>
     /// </remarks>
     [Fact]
-    public async Task UploadAsync_NullStream_ThrowsArgumentNullException()
+    public async Task UploadAsyncNullStreamThrowsArgumentNullException()
     {
         // Arrange
         Stream? stream = null;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _service.UploadAsync(stream!, "test.txt", "text/plain", "container"));
+        try
+        {
+            await _service.UploadAsync(stream!, "test.txt", "text/plain", "container").ConfigureAwait(true);
+            Assert.True(false, "Expected ArgumentNullException");
+        }
+        catch (ArgumentNullException)
+        {
+            // Expected exception
+        }
     }
 
     /// <summary>
@@ -347,14 +353,21 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public async Task UploadAsync_InvalidFileName_ThrowsArgumentException(string? fileName)
+    public async Task UploadAsyncInvalidFileNameThrowsArgumentException(string? fileName)
     {
         // Arrange
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes("content"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.UploadAsync(stream, fileName!, "text/plain", "container"));
+        try
+        {
+            await _service.UploadAsync(stream, fileName!, "text/plain", "container").ConfigureAwait(true);
+            Assert.True(false, "Expected ArgumentException");
+        }
+        catch (ArgumentException)
+        {
+            // Expected exception
+        }
     }
 
     /// <summary>
@@ -368,7 +381,7 @@ public class LocalFileBlobStorageServiceTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> The service should support thumbnail generation for images. Currently, thumbnails may be null if not implemented, but the method signature should support it.</para>
     /// </remarks>
     [Fact]
-    public async Task UploadWithThumbnailAsync_ReturnsStorageAndThumbnailUrls()
+    public async Task UploadWithThumbnailAsyncReturnsStorageAndThumbnailUrls()
     {
         // Arrange
         var fileName = "test.jpg";
@@ -378,7 +391,7 @@ public class LocalFileBlobStorageServiceTests : IDisposable
 
         // Act
         var (storageUrl, thumbnailUrl) = await _service.UploadWithThumbnailAsync(
-            stream, fileName, contentType, container, generateThumbnail: true);
+            stream, fileName, contentType, container, generateThumbnail: true).ConfigureAwait(true);
 
         // Assert
         Assert.NotNull(storageUrl);

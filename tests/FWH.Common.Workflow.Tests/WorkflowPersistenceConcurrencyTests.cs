@@ -1,24 +1,18 @@
-using Xunit;
-using System.Threading.Tasks;
-using System.Linq;
-using System.Threading;
-using System.Collections.Generic;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using FWH.Common.Workflow;
-using FWH.Common.Workflow.Instance;
+using FWH.Common.Workflow.Actions;
 using FWH.Common.Workflow.Controllers;
-using FWH.Common.Workflow.Storage;
+using FWH.Common.Workflow.Instance;
 using FWH.Common.Workflow.Mapping;
 using FWH.Common.Workflow.State;
+using FWH.Common.Workflow.Storage;
 using FWH.Common.Workflow.Views;
-using FWH.Common.Workflow.Actions;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Repositories;
-using System;
 using FWH.Orchestrix.Contracts.Mediator;
 using FWH.Orchestrix.Mediator.Remote.Mediator;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -91,7 +85,7 @@ public class WorkflowPersistenceConcurrencyTests
             }))
             .ToArray();
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(true);
 
         // Assert - All variables should be set
         var variables = manager.GetVariables(workflowId);
@@ -133,7 +127,7 @@ public class WorkflowPersistenceConcurrencyTests
             }))
             .ToArray();
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(true);
 
         // Assert - Should complete without errors
         Assert.Equal(100, updateCount);
@@ -170,7 +164,7 @@ public class WorkflowPersistenceConcurrencyTests
             .Select(i => service.ImportWorkflowAsync(plant, $"workflow-{i}", $"Test {i}"))
             .ToArray();
 
-        var workflows = await Task.WhenAll(tasks);
+        var workflows = await Task.WhenAll(tasks).ConfigureAwait(true);
 
         // Assert - All should succeed with unique IDs
         Assert.Equal(50, workflows.Length);
@@ -189,7 +183,7 @@ public class WorkflowPersistenceConcurrencyTests
     /// <para><strong>Reason for expectation:</strong> The controller should use thread-safe operations when updating workflow state (e.g., database transactions, locks). Each workflow's state should be updated independently. The currentNode not being "A" confirms that advancement succeeded for all workflows, and the absence of exceptions confirms thread-safety is maintained.</para>
     /// </remarks>
     [Fact]
-    public async Task WorkflowController_ConcurrentAdvance_ThreadSafe()
+    public async Task WorkflowControllerConcurrentAdvanceThreadSafe()
     {
         // Arrange
         var sp = BuildServices();
@@ -207,20 +201,20 @@ A --> C
         var workflows = await Task.WhenAll(
             Enumerable.Range(0, 20)
                 .Select(i => service.ImportWorkflowAsync(plant, $"concurrent-adv-{i}", $"Test {i}"))
-        );
+        ).ConfigureAwait(true);
 
         // Act - Advance all workflows concurrently
         var tasks = workflows.Select(async wf =>
         {
-            var state = await controller.GetCurrentStatePayloadAsync(wf.Id);
+            var state = await controller.GetCurrentStatePayloadAsync(wf.Id).ConfigureAwait(true);
             if (state.IsChoice && state.Choices.Any())
             {
-                await controller.AdvanceByChoiceValueAsync(wf.Id, state.Choices[0].TargetNodeId);
+                await controller.AdvanceByChoiceValueAsync(wf.Id, state.Choices[0].TargetNodeId).ConfigureAwait(true);
             }
         }).ToArray();
 
         // Assert - Should complete without errors
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(true);
 
         // Verify each workflow advanced
         foreach (var wf in workflows)
@@ -242,7 +236,7 @@ A --> C
     /// <para><strong>Reason for expectation:</strong> The repository should use thread-safe database operations (e.g., connection pooling, proper transaction handling) to allow concurrent reads. Each GetByIdAsync call should independently retrieve its workflow without interfering with others. The non-null assertions confirm that all workflows were successfully persisted and can be retrieved, validating that persistence and retrieval work correctly under concurrent load.</para>
     /// </remarks>
     [Fact]
-    public async Task WorkflowRepository_ConcurrentPersist_AllSucceed()
+    public async Task WorkflowRepositoryConcurrentPersistAllSucceed()
     {
         // Arrange
         var sp = BuildServices();
@@ -254,20 +248,23 @@ A --> C
         var workflows = await Task.WhenAll(
             Enumerable.Range(0, 30)
                 .Select(i => service.ImportWorkflowAsync(plant, $"persist-{i}", $"Persist {i}"))
-        );
+        ).ConfigureAwait(true);
 
-        await Task.Delay(500); // Wait for initial persistence
+        await Task.Delay(500).ConfigureAwait(true); // Wait for initial persistence
 
         // Act - Retrieve all concurrently
         var retrievalTasks = workflows
             .Select(wf => repo.GetByIdAsync(wf.Id))
             .ToArray();
 
-        var persisted = await Task.WhenAll(retrievalTasks);
+        var persisted = await Task.WhenAll(retrievalTasks).ConfigureAwait(true);
 
         // Assert - All should be persisted
         Assert.Equal(30, persisted.Length);
-        Assert.All(persisted, p => Assert.NotNull(p));
+        foreach (var p in persisted)
+        {
+            Assert.NotNull(p);
+        }
     }
 
     /// <summary>
@@ -298,17 +295,17 @@ A --> C
 :C;
 @enduml";
 
-        var workflow = await service1.ImportWorkflowAsync(plant, "restore-test", "Restore Test");
+        var workflow = await service1.ImportWorkflowAsync(plant, "restore-test", "Restore Test").ConfigureAwait(true);
 
         // Advance to a specific state
-        var state = await controller1.GetCurrentStatePayloadAsync(workflow.Id);
+        var state = await controller1.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
         if (state.IsChoice && state.Choices.Any())
         {
-            await controller1.AdvanceByChoiceValueAsync(workflow.Id, state.Choices[0].TargetNodeId);
+            await controller1.AdvanceByChoiceValueAsync(workflow.Id, state.Choices[0].TargetNodeId).ConfigureAwait(true);
         }
 
         var savedNodeId = controller1.GetCurrentNodeId(workflow.Id);
-        await Task.Delay(200); // Ensure persistence completes
+        await Task.Delay(200).ConfigureAwait(true); // Ensure persistence completes
 
         // Act - Create new service provider and load workflow
         var sp2 = BuildServices();
@@ -316,7 +313,7 @@ A --> C
         var controller2 = sp2.GetRequiredService<IWorkflowController>();
 
         // Import the same workflow (should restore from persistence)
-        var restored = await service2.ImportWorkflowAsync(plant, "restore-test", "Restore Test");
+        var restored = await service2.ImportWorkflowAsync(plant, "restore-test", "Restore Test").ConfigureAwait(true);
         var restoredNodeId = controller2.GetCurrentNodeId(restored.Id);
 
         // Assert - Should restore to saved state
@@ -336,7 +333,7 @@ A --> C
     /// <para><strong>Reason for expectation:</strong> The GetVariables method should use thread-safe data structures (e.g., ConcurrentDictionary, read locks) to allow concurrent reads. Read operations should not block each other and should return consistent snapshots of the variable state. The non-null dictionaries and exact count of 20 confirm that all reads succeeded and returned the correct data, validating thread-safety for read operations.</para>
     /// </remarks>
     [Fact]
-    public async Task WorkflowInstanceManager_GetVariablesConcurrent_ThreadSafe()
+    public async Task WorkflowInstanceManagerGetVariablesConcurrentThreadSafe()
     {
         // Arrange
         var sp = BuildServices();
@@ -360,7 +357,7 @@ A --> C
             .ToArray();
 
         // Assert - All reads should succeed
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(true);
     }
 
     /// <summary>
@@ -374,7 +371,7 @@ A --> C
     /// <para><strong>Reason for expectation:</strong> The store should use thread-safe data structures (e.g., ConcurrentDictionary, locks) to allow concurrent writes and reads. Each store operation should atomically add its definition, and each retrieve operation should independently fetch its definition. The non-null definitions confirm that all stores succeeded and all retrieves returned valid data, validating thread-safety for both write and read operations.</para>
     /// </remarks>
     [Fact]
-    public async Task WorkflowDefinitionStore_ConcurrentAddAndRetrieve_ThreadSafe()
+    public async Task WorkflowDefinitionStoreConcurrentAddAndRetrieveThreadSafe()
     {
         // Arrange
         var sp = BuildServices();
@@ -392,18 +389,21 @@ A --> C
             })
             .ToArray();
 
-        await Task.WhenAll(addTasks);
+        await Task.WhenAll(addTasks).ConfigureAwait(true);
 
         // Retrieve concurrently
         var retrieveTasks = Enumerable.Range(0, 50)
-            .Select(i => Task.Run(() => store.Get($"def-{i}")))
+            .Select(i => Task.Run(() => store.GetById($"def-{i}")))
             .ToArray();
 
-        var definitions = await Task.WhenAll(retrieveTasks);
+        var definitions = await Task.WhenAll(retrieveTasks).ConfigureAwait(true);
 
         // Assert
         Assert.Equal(50, definitions.Length);
-        Assert.All(definitions, d => Assert.NotNull(d));
+        foreach (var d in definitions)
+        {
+            Assert.NotNull(d);
+        }
     }
 
     /// <summary>
@@ -417,7 +417,7 @@ A --> C
     /// <para><strong>Reason for expectation:</strong> The workflow instance manager should scope state per workflow ID, ensuring each workflow's state is stored and retrieved independently. Concurrent queries should not interfere with each other, and each workflow should have its own state object. The non-null states confirm that all instances have valid state and isolation is maintained, validating that multiple workflows can operate concurrently without conflicts.</para>
     /// </remarks>
     [Fact]
-    public async Task WorkflowService_ConcurrentStartInstance_EachGetsOwnState()
+    public async Task WorkflowServiceConcurrentStartInstanceEachGetsOwnState()
     {
         // Arrange
         var sp = BuildServices();
@@ -430,18 +430,21 @@ A --> C
         var workflows = await Task.WhenAll(
             Enumerable.Range(0, 30)
                 .Select(i => service.ImportWorkflowAsync(plant, $"start-{i}", $"Start {i}"))
-        );
+        ).ConfigureAwait(true);
 
         // Act - Start all instances concurrently (they're already started by Import, but verify state)
         var stateTasks = workflows
             .Select(wf => controller.GetCurrentStatePayloadAsync(wf.Id))
             .ToArray();
 
-        var states = await Task.WhenAll(stateTasks);
+        var states = await Task.WhenAll(stateTasks).ConfigureAwait(true);
 
         // Assert - Each should have its own state
         Assert.Equal(30, states.Length);
-        Assert.All(states, s => Assert.NotNull(s));
+        foreach (var s in states)
+        {
+            Assert.NotNull(s);
+        }
     }
 
     [Fact]
@@ -487,7 +490,7 @@ A --> C
             }));
         }
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(true);
 
         // Assert - Should complete without exceptions
         // Verify we can still read all workflow variables
@@ -509,7 +512,7 @@ A --> C
     /// <para><strong>Reason for expectation:</strong> The repository should handle rapid updates by either batching them, using the latest value, or queuing them appropriately. The final CurrentNodeId should reflect the last update (node C after 3 advances). The non-empty CurrentNodeId confirms that persistence succeeded and the final state was saved correctly, validating that rapid updates don't prevent proper persistence.</para>
     /// </remarks>
     [Fact]
-    public async Task WorkflowRepository_UpdateCurrentNodeId_HandlesRapidUpdates()
+    public async Task WorkflowRepositoryUpdateCurrentNodeIdHandlesRapidUpdates()
     {
         // Arrange
         var sp = BuildServices();
@@ -526,23 +529,23 @@ B --> C
 :C;
 @enduml";
 
-        var workflow = await service.ImportWorkflowAsync(plant, "rapid-update", "Rapid");
+        var workflow = await service.ImportWorkflowAsync(plant, "rapid-update", "Rapid").ConfigureAwait(true);
 
         // Act - Advance rapidly multiple times
         for (int i = 0; i < 3; i++)
         {
-            var state = await controller.GetCurrentStatePayloadAsync(workflow.Id);
+            var state = await controller.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
             if (!state.IsChoice)
             {
-                await controller.AdvanceByChoiceValueAsync(workflow.Id, null);
+                await controller.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true);
             }
-            await Task.Delay(50); // Small delay between advances
+            await Task.Delay(50).ConfigureAwait(true); // Small delay between advances
         }
 
-        await Task.Delay(300); // Wait for persistence
+        await Task.Delay(300).ConfigureAwait(true); // Wait for persistence
 
         // Assert - Should persist final state
-        var persisted = await repo.GetByIdAsync(workflow.Id);
+        var persisted = await repo.GetByIdAsync(workflow.Id).ConfigureAwait(true);
         Assert.NotNull(persisted);
         Assert.False(string.IsNullOrWhiteSpace(persisted!.CurrentNodeId));
     }

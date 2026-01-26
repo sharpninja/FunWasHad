@@ -1,7 +1,5 @@
-using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Threading.Tasks;
 
 namespace FWH.Common.Chat.ViewModels;
 
@@ -20,7 +18,7 @@ public partial class ChoicesItem(int order, string text, object? value)
     public event EventHandler<ChoicesItem?>? ChoiceSubmitted;
 
 
-    [RelayCommand(AllowConcurrentExecutions =false)]
+    [RelayCommand(AllowConcurrentExecutions = false)]
     private Task SelectChoice(ChoicesItem? choice)
     {
         ChoiceSubmitted?.Invoke(this, choice);

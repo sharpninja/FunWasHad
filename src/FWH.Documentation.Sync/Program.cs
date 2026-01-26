@@ -24,7 +24,7 @@ class Program
     {
         var builder = Host.CreateApplicationBuilder(args);
         builder.Logging.AddConsole();
-        
+
         var host = builder.Build();
         var logger = host.Services.GetRequiredService<ILogger<Program>>();
         var config = host.Services.GetRequiredService<IConfiguration>();
@@ -41,13 +41,13 @@ class Program
             switch (mode.ToLower())
             {
                 case "check":
-                    await ValidateDocumentation(projectRoot, logger);
+                    await ValidateDocumentation(projectRoot, logger).ConfigureAwait(false);
                     break;
                 case "sync":
-                    await SynchronizeDocumentation(projectRoot, logger);
+                    await SynchronizeDocumentation(projectRoot, logger).ConfigureAwait(false);
                     break;
                 case "watch":
-                    await WatchForChanges(projectRoot, logger);
+                    await WatchForChanges(projectRoot, logger).ConfigureAwait(false);
                     break;
                 default:
                     logger.LogError("Unknown mode: {Mode}. Use 'check', 'sync', or 'watch'", mode);
@@ -68,7 +68,7 @@ class Program
 
         var issues = new List<string>();
         var todoPath = Path.Combine(projectRoot, "docs", "Project", "TODO.md");
-        var todoItems = await ParseTodoItems(todoPath);
+        var todoItems = await ParseTodoItems(todoPath).ConfigureAwait(false);
 
         // Check all documents reference TODO identifiers
         foreach (var doc in RequiredDocuments)
@@ -80,10 +80,10 @@ class Program
                 continue;
             }
 
-            var content = await File.ReadAllTextAsync(docPath);
+            var content = await File.ReadAllTextAsync(docPath).ConfigureAwait(false);
             foreach (var item in todoItems)
             {
-                if (!content.Contains(item.Identifier))
+                if (!content.Contains(item.Identifier, StringComparison.Ordinal))
                 {
                     issues.Add($"{doc} missing reference to {item.Identifier}");
                 }
@@ -113,17 +113,17 @@ class Program
         var statusPath = Path.Combine(projectRoot, "docs", "Project", "Status.md");
         var docsPath = Path.Combine(projectRoot, "docs");
 
-        var todoItems = await ParseTodoItems(todoPath);
+        var todoItems = await ParseTodoItems(todoPath).ConfigureAwait(false);
         logger.LogInformation("Found {Count} TODO items", todoItems.Count);
 
-        await UpdateStatusDocument(statusPath, todoItems, logger);
-        await UpdateLastModifiedDates(projectRoot, logger);
-        
+        await UpdateStatusDocument(statusPath, todoItems, logger).ConfigureAwait(false);
+        await UpdateLastModifiedDates(projectRoot, logger).ConfigureAwait(false);
+
         // Remove broken links
-        await RemoveBrokenLinks(docsPath, logger);
-        
+        await RemoveBrokenLinks(docsPath, logger).ConfigureAwait(false);
+
         // Rebuild documentation
-        await BuildDocumentation(docsPath, logger);
+        await BuildDocumentation(docsPath, logger).ConfigureAwait(false);
 
         logger.LogInformation("Synchronization complete");
     }
@@ -142,22 +142,22 @@ class Program
 
         watcher.Changed += async (sender, e) =>
         {
-            logger.LogInformation("[{Time}] {ChangeType}: {Path}", 
+            logger.LogInformation("[{Time}] {ChangeType}: {Path}",
                 DateTime.Now.ToString("HH:mm:ss"), e.ChangeType, e.FullPath);
-            
-            await Task.Delay(2000); // Debounce
-            await SynchronizeDocumentation(projectRoot, logger);
+
+            await Task.Delay(2000).ConfigureAwait(false); // Debounce
+            await SynchronizeDocumentation(projectRoot, logger).ConfigureAwait(false);
         };
 
         watcher.EnableRaisingEvents = true;
 
         // Keep running
-        await Task.Delay(Timeout.Infinite);
+        await Task.Delay(Timeout.Infinite).ConfigureAwait(false);
     }
 
     private static async Task<List<TodoItem>> ParseTodoItems(string todoPath)
     {
-        var content = await File.ReadAllTextAsync(todoPath);
+        var content = await File.ReadAllTextAsync(todoPath).ConfigureAwait(false);
         var items = new List<TodoItem>();
 
         // Match TODO items with identifiers: - [ ] **MVP-XXX-XXX:**
@@ -181,7 +181,7 @@ class Program
 
     private static async Task UpdateStatusDocument(string statusPath, List<TodoItem> todoItems, ILogger logger)
     {
-        var content = await File.ReadAllTextAsync(statusPath);
+        var content = await File.ReadAllTextAsync(statusPath).ConfigureAwait(false);
         var updated = false;
 
         // Count items per project
@@ -204,11 +204,11 @@ class Program
                 _ => null
             };
 
-            if (project != null && stats.ContainsKey(project))
+            if (project != null && stats.TryGetValue(project, out var st))
             {
                 // Determine priority from TODO.md content (would need to parse more)
-                stats[project].Total++;
-                if (item.IsCompleted) stats[project].Completed++;
+                st.Total++;
+                if (item.IsCompleted) st.Completed++;
             }
         }
 
@@ -223,7 +223,7 @@ class Program
 
         if (updated)
         {
-            await File.WriteAllTextAsync(statusPath, content);
+            await File.WriteAllTextAsync(statusPath, content).ConfigureAwait(false);
             logger.LogInformation("Updated Status.md");
         }
     }
@@ -238,11 +238,11 @@ class Program
             var docPath = Path.Combine(projectRoot, "docs", "Project", doc);
             if (File.Exists(docPath))
             {
-                var content = await File.ReadAllTextAsync(docPath);
+                var content = await File.ReadAllTextAsync(docPath).ConfigureAwait(false);
                 if (Regex.IsMatch(content, datePattern))
                 {
                     content = Regex.Replace(content, datePattern, newDate);
-                    await File.WriteAllTextAsync(docPath, content);
+                    await File.WriteAllTextAsync(docPath, content).ConfigureAwait(false);
                     logger.LogInformation("Updated {Doc}", doc);
                 }
             }
@@ -254,7 +254,7 @@ class Program
         logger.LogInformation("Checking for broken links...");
 
         var markdownFiles = Directory.GetFiles(docsPath, "*.md", SearchOption.AllDirectories)
-            .Where(f => !f.Contains("_site") && !f.Contains(".git"))
+            .Where(f => !f.Contains("_site", StringComparison.Ordinal) && !f.Contains(".git", StringComparison.Ordinal))
             .ToList();
 
         var totalRemoved = 0;
@@ -262,7 +262,7 @@ class Program
 
         foreach (var filePath in markdownFiles)
         {
-            var content = await File.ReadAllTextAsync(filePath);
+            var content = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
             var originalContent = content;
             var removedCount = 0;
 
@@ -273,22 +273,22 @@ class Program
                 var linkPath = match.Groups[2].Value;
 
                 // Skip external links
-                if (linkPath.StartsWith("http://") || linkPath.StartsWith("https://"))
+                if (linkPath.StartsWith("http://", StringComparison.Ordinal) || linkPath.StartsWith("https://", StringComparison.Ordinal))
                     continue;
 
                 // Skip anchor links
-                if (linkPath.StartsWith("#"))
+                if (linkPath.StartsWith('#'))
                     continue;
 
                 // Resolve path
                 string? resolvedPath = null;
-                if (linkPath.StartsWith("~/"))
+                if (linkPath.StartsWith("~/", StringComparison.Ordinal))
                 {
                     // DocFX format: ~/ means relative to docs root
                     var relativePath = linkPath.Substring(2);
                     resolvedPath = Path.Combine(docsPath, relativePath);
                 }
-                else if (linkPath.StartsWith("../"))
+                else if (linkPath.StartsWith("../", StringComparison.Ordinal))
                 {
                     // Relative path: ../ means go up from current file
                     var fileDir = Path.GetDirectoryName(filePath);
@@ -309,7 +309,7 @@ class Program
                 if (resolvedPath != null && !File.Exists(resolvedPath))
                 {
                     // Remove the link, keep just the text
-                    content = content.Replace(match.Value, linkText);
+                    content = content.Replace(match.Value, linkText, StringComparison.Ordinal);
                     removedCount++;
                     logger.LogWarning("Removed broken link: {LinkPath} from {File}", linkPath, Path.GetFileName(filePath));
                 }
@@ -317,7 +317,7 @@ class Program
 
             if (removedCount > 0)
             {
-                await File.WriteAllTextAsync(filePath, content);
+                await File.WriteAllTextAsync(filePath, content).ConfigureAwait(false);
                 totalRemoved += removedCount;
                 logger.LogInformation("Removed {Count} broken link(s) from {File}", removedCount, Path.GetFileName(filePath));
             }
@@ -364,9 +364,9 @@ class Program
                 return;
             }
 
-            var output = await process.StandardOutput.ReadToEndAsync();
-            var error = await process.StandardError.ReadToEndAsync();
-            await process.WaitForExitAsync();
+            var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+            var error = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+            await process.WaitForExitAsync().ConfigureAwait(false);
 
             if (process.ExitCode == 0)
             {
@@ -377,7 +377,7 @@ class Program
                 logger.LogWarning("Documentation build completed with warnings/errors (exit code: {ExitCode})", process.ExitCode);
                 // Log first few errors/warnings
                 var lines = (output + error).Split('\n')
-                    .Where(l => l.Contains("error", StringComparison.OrdinalIgnoreCase) || 
+                    .Where(l => l.Contains("error", StringComparison.OrdinalIgnoreCase) ||
                                 l.Contains("warning", StringComparison.OrdinalIgnoreCase))
                     .Take(5);
                 foreach (var line in lines)

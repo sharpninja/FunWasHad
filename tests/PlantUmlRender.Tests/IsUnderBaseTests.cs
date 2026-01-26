@@ -1,4 +1,3 @@
-using PlantUmlRender;
 using Xunit;
 
 namespace PlantUmlRender.Tests;
@@ -6,14 +5,14 @@ namespace PlantUmlRender.Tests;
 public class IsUnderBaseTests
 {
     [Fact]
-    public void IsUnderBase_SameDir_ReturnsTrue()
+    public void IsUnderBaseSameDirReturnsTrue()
     {
         var dir = Path.GetTempPath();
         Assert.True(Program.IsUnderBase(dir, dir));
     }
 
     [Fact]
-    public void IsUnderBase_SubDir_ReturnsTrue()
+    public void IsUnderBaseSubDirReturnsTrue()
     {
         var baseDir = Path.GetTempPath();
         var sub = Path.Combine(baseDir, "sub");
@@ -21,7 +20,7 @@ public class IsUnderBaseTests
     }
 
     [Fact]
-    public void IsUnderBase_FileInSub_ReturnsTrue()
+    public void IsUnderBaseFileInSubReturnsTrue()
     {
         var baseDir = Path.GetTempPath();
         var file = Path.Combine(baseDir, "sub", "file.txt");
@@ -29,7 +28,7 @@ public class IsUnderBaseTests
     }
 
     [Fact]
-    public void IsUnderBase_SiblingDir_ReturnsFalse()
+    public void IsUnderBaseSiblingDirReturnsFalse()
     {
         var baseDir = Path.GetTempPath();
         var parent = Path.GetDirectoryName(baseDir.TrimEnd(Path.DirectorySeparatorChar)) ?? baseDir;
@@ -39,7 +38,7 @@ public class IsUnderBaseTests
     }
 
     [Fact]
-    public void IsUnderBase_ParentDir_ReturnsFalse()
+    public void IsUnderBaseParentDirReturnsFalse()
     {
         var baseDir = Path.GetTempPath();
         var sub = Path.Combine(baseDir, "x");

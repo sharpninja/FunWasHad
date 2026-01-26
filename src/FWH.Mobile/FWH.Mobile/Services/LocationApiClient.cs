@@ -53,7 +53,7 @@ public sealed class LocationApiClient : ILocationService
         CancellationToken cancellationToken = default)
     {
         var requestUri = BuildNearbyUri(latitude, longitude, radiusMeters, categories);
-        return await SendCollectionRequestAsync(requestUri, cancellationToken);
+        return await SendCollectionRequestAsync(requestUri, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<BusinessLocation?> GetClosestBusinessAsync(
@@ -66,7 +66,7 @@ public sealed class LocationApiClient : ILocationService
 
         try
         {
-            using var response = await _httpClient.GetAsync(requestUri, cancellationToken);
+            using var response = await _httpClient.GetAsync(new Uri(requestUri, UriKind.Relative), cancellationToken).ConfigureAwait(false);
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
@@ -74,7 +74,7 @@ public sealed class LocationApiClient : ILocationService
             }
 
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<BusinessLocation>(_serializerOptions, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<BusinessLocation>(_serializerOptions, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -94,7 +94,7 @@ public sealed class LocationApiClient : ILocationService
             latitude,
             longitude,
             maxDistanceMeters,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (closestBusiness != null && !string.IsNullOrEmpty(closestBusiness.Address))
         {
@@ -140,7 +140,7 @@ public sealed class LocationApiClient : ILocationService
                 "api/locations/device",
                 request,
                 _serializerOptions,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             response.EnsureSuccessStatusCode();
             return true;
@@ -156,10 +156,10 @@ public sealed class LocationApiClient : ILocationService
     {
         try
         {
-            using var response = await _httpClient.GetAsync(requestUri, cancellationToken);
+            using var response = await _httpClient.GetAsync(new Uri(requestUri, UriKind.Relative), cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var locations = await response.Content.ReadFromJsonAsync<List<BusinessLocation>>(_serializerOptions, cancellationToken);
+            var locations = await response.Content.ReadFromJsonAsync<List<BusinessLocation>>(_serializerOptions, cancellationToken).ConfigureAwait(false);
             return locations ?? Enumerable.Empty<BusinessLocation>();
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)

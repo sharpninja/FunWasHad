@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Represents a tourism market that can contain multiple cities.
 /// </summary>
-public class TourismMarket
+internal class TourismMarket
 {
     public long Id { get; set; }
     public required string Name { get; set; }

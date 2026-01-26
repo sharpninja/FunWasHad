@@ -2,17 +2,13 @@ using CoreLocation;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FWH.Mobile.iOS.Services;
 
 /// <summary>
 /// iOS implementation of GPS service using CLLocationManager.
 /// </summary>
-public class iOSGpsService : IGpsService
+internal class iOSGpsService : IGpsService
 {
     private readonly CLLocationManager _locationManager;
     private readonly ILogger<iOSGpsService>? _logger;
@@ -71,7 +67,7 @@ public class iOSGpsService : IGpsService
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             cts.Token.Register(() => tcs.TrySetResult(false));
 
-            return await tcs.Task;
+            return await tcs.Task.ConfigureAwait(false);
         }
 
         return false;
@@ -93,7 +89,7 @@ public class iOSGpsService : IGpsService
             if (!IsLocationAvailable)
             {
                 // Try to request permission
-                var granted = await RequestLocationPermissionAsync();
+                var granted = await RequestLocationPermissionAsync().ConfigureAwait(false);
                 diagnostics["PermissionRequested"] = true;
                 diagnostics["PermissionGranted"] = granted;
 
@@ -141,7 +137,7 @@ public class iOSGpsService : IGpsService
                 }
             });
 
-            var result = await _locationTcs.Task;
+            var result = await _locationTcs.Task.ConfigureAwait(false);
 
             // Stop location updates
             _locationManager.StopUpdatingLocation();

@@ -4,9 +4,6 @@ using CommunityToolkit.Mvvm.Input;
 using FWH.Common.Chat.Services;
 using FWH.Mobile.Services;
 using Microsoft.Extensions.Logging;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace FWH.Mobile.ViewModels;
 
@@ -72,7 +69,7 @@ public partial class CameraCaptureViewModel : ObservableObject
             IsCapturing = true;
             StatusMessage = "Opening camera...";
 
-            var imageBytes = await _cameraService.TakePhotoAsync();
+            var imageBytes = await _cameraService.TakePhotoAsync().ConfigureAwait(false);
 
             if (imageBytes != null && imageBytes.Length > 0)
             {

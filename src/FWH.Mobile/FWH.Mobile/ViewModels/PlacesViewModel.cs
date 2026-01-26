@@ -1,18 +1,12 @@
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using System.Windows.Input;
 using FWH.Mobile.Configuration;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Services;
-using FWH.Mobile.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -104,7 +98,7 @@ public class PlacesViewModel : INotifyPropertyChanged
             var places = await _dbContext.StationaryPlaces
                 .Where(p => p.DeviceId == _deviceId)
                 .OrderByDescending(p => p.StationaryAt)
-                .ToListAsync();
+                .ToListAsync().ConfigureAwait(false);
 
             _allPlaces.Clear();
             var placesNeedingLogoFetch = new List<(PlaceItem item, string businessName, double lat, double lon)>();
@@ -160,7 +154,7 @@ public class PlacesViewModel : INotifyPropertyChanged
                 {
                     var batch = placesNeedingLogoFetch.Skip(i).Take(batchSize);
                     var tasks = batch.Select(p => FetchBusinessLogoAsync(p.item, p.businessName, p.lat, p.lon));
-                    await Task.WhenAll(tasks);
+                    await Task.WhenAll(tasks).ConfigureAwait(false);
                 }
             }
         }
@@ -202,11 +196,11 @@ public class PlacesViewModel : INotifyPropertyChanged
 
         try
         {
-            var entity = await _dbContext.StationaryPlaces.FindAsync(place.Id);
+            var entity = await _dbContext.StationaryPlaces.FindAsync(place.Id).ConfigureAwait(false);
             if (entity != null)
             {
                 entity.IsFavorite = !entity.IsFavorite;
-                await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
                 place.IsFavorite = entity.IsFavorite;
                 _logger.LogInformation("Toggled favorite for place: {PlaceId}, IsFavorite: {IsFavorite}", place.Id, place.IsFavorite);
@@ -239,11 +233,11 @@ public class PlacesViewModel : INotifyPropertyChanged
 
         try
         {
-            var entity = await _dbContext.StationaryPlaces.FindAsync(place.Id);
+            var entity = await _dbContext.StationaryPlaces.FindAsync(place.Id).ConfigureAwait(false);
             if (entity != null)
             {
                 _dbContext.StationaryPlaces.Remove(entity);
-                await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
                 _allPlaces.Remove(place);
                 Places.Remove(place);
@@ -312,19 +306,13 @@ public class PlacesViewModel : INotifyPropertyChanged
         {
             // Create HTTP client for marketing API
             using var httpClient = _httpClientFactory.CreateClient("MarketingApi");
-            var marketingApiUrl = _apiSettings.GetMarketingApiBaseUrl();
-            if (string.IsNullOrWhiteSpace(marketingApiUrl))
-            {
-                _logger.LogWarning("Marketing API base URL is not configured");
-                return;
-            }
-
-            httpClient.BaseAddress = new Uri(marketingApiUrl);
+            var marketingApiUri = _apiSettings.GetResolvedMarketingApiBaseUrl();
+            httpClient.BaseAddress = marketingApiUri;
             httpClient.Timeout = TimeSpan.FromSeconds(10);
 
             // Find nearby businesses in marketing API
             var nearbyUrl = $"api/marketing/nearby?latitude={latitude.ToString(CultureInfo.InvariantCulture)}&longitude={longitude.ToString(CultureInfo.InvariantCulture)}&radiusMeters=100";
-            var businesses = await httpClient.GetFromJsonAsync<List<MarketingBusinessDto>>(nearbyUrl);
+            var businesses = await httpClient.GetFromJsonAsync<List<MarketingBusinessDto>>(nearbyUrl).ConfigureAwait(false);
 
             if (businesses == null || !businesses.Any())
             {
@@ -354,7 +342,7 @@ public class PlacesViewModel : INotifyPropertyChanged
 
             // Get business theme to retrieve marketing info
             var themeUrl = $"api/marketing/{matchedBusiness.Id}/theme";
-            var theme = await httpClient.GetFromJsonAsync<BusinessThemeDto>(themeUrl);
+            var theme = await httpClient.GetFromJsonAsync<BusinessThemeDto>(themeUrl).ConfigureAwait(false);
 
             if (theme == null)
             {
@@ -371,7 +359,7 @@ public class PlacesViewModel : INotifyPropertyChanged
                         theme.LogoUrl,
                         "business_logo",
                         "Business",
-                        matchedBusiness.Id);
+                        matchedBusiness.Id).ConfigureAwait(false);
                 }
 
                 if (!string.IsNullOrEmpty(theme.BackgroundImageUrl))
@@ -380,7 +368,7 @@ public class PlacesViewModel : INotifyPropertyChanged
                         theme.BackgroundImageUrl,
                         "business_background",
                         "Business",
-                        matchedBusiness.Id);
+                        matchedBusiness.Id).ConfigureAwait(false);
                 }
             }
 
@@ -394,7 +382,7 @@ public class PlacesViewModel : INotifyPropertyChanged
             placeItem.BackgroundImageUrl = theme.BackgroundImageUrl;
 
             // Update database entity
-            var entity = await _dbContext.StationaryPlaces.FindAsync(placeItem.Id);
+            var entity = await _dbContext.StationaryPlaces.FindAsync(placeItem.Id).ConfigureAwait(false);
             if (entity != null)
             {
                 entity.BusinessId = matchedBusiness.Id;
@@ -406,7 +394,7 @@ public class PlacesViewModel : INotifyPropertyChanged
                 entity.TextColor = theme.TextColor;
                 entity.BackgroundImageUrl = theme.BackgroundImageUrl;
                 entity.MarketingInfoCachedAt = DateTimeOffset.UtcNow;
-                await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
             }
 
             _logger.LogDebug("Refreshed marketing info for business: {BusinessName}, BusinessId: {BusinessId}",

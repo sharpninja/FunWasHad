@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Media attachment for feedback (image or video).
 /// </summary>
-public class FeedbackAttachment
+internal class FeedbackAttachment
 {
     public long Id { get; set; }
     public long FeedbackId { get; set; }

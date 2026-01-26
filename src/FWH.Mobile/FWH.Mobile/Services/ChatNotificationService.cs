@@ -1,4 +1,3 @@
-using System;
 using FWH.Common.Chat.ViewModels;
 using Microsoft.Extensions.Logging;
 

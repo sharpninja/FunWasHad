@@ -1,18 +1,14 @@
-using System;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit;
-using FWH.Common.Chat;
+using FWH.Common.Chat.Extensions;
 using FWH.Common.Chat.ViewModels;
+using FWH.Common.Location.Extensions;
 using FWH.Common.Workflow;
 using FWH.Common.Workflow.Extensions;
-using FWH.Common.Chat.Extensions;
-using FWH.Common.Location.Extensions;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Repositories;
-using System.Linq;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Common.Chat.Tests;
 
@@ -21,7 +17,7 @@ namespace FWH.Common.Chat.Tests;
 /// </summary>
 public class ChatServiceErrorHandlingTests
 {
-    private ServiceProvider BuildServices()
+    private IServiceProvider BuildServices()
     {
         var services = new ServiceCollection();
 
@@ -65,7 +61,7 @@ public class ChatServiceErrorHandlingTests
     /// <para><strong>Reason for expectation:</strong> The service should catch exceptions from workflow lookup, handle them appropriately (e.g., add an error message to the chat list), and continue operating. The non-null Entries collection confirms the service didn't crash and the chat list remains in a valid state. This allows users to continue using the application even when workflows are missing.</para>
     /// </remarks>
     [Fact]
-    public async Task ChatService_WorkflowNotFound_DoesNotCrash()
+    public async Task ChatServiceWorkflowNotFoundDoesNotCrash()
     {
         // Arrange
         var sp = BuildServices();
@@ -73,7 +69,7 @@ public class ChatServiceErrorHandlingTests
         var chatList = sp.GetRequiredService<ChatListViewModel>();
 
         // Act - Try to render non-existent workflow
-        await chatService.RenderWorkflowStateAsync("non-existent-workflow-id");
+        await chatService.RenderWorkflowStateAsync("non-existent-workflow-id").ConfigureAwait(true);
 
         // Assert - Should not crash, chat list may have error entry or remain unchanged
         Assert.NotNull(chatList.Entries);
@@ -98,10 +94,10 @@ public class ChatServiceErrorHandlingTests
         var chatService = sp.GetRequiredService<ChatService>();
 
         // Act & Assert - Should not throw
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await Record.ExceptionAsync((Func<Task>)(async () =>
         {
-            await chatService.RenderWorkflowStateAsync(null!);
-        });
+            await chatService.RenderWorkflowStateAsync(null!).ConfigureAwait(true);
+        })).ConfigureAwait(true);
 
         // May throw ArgumentNullException or handle gracefully
         if (exception != null)
@@ -128,10 +124,10 @@ public class ChatServiceErrorHandlingTests
         var chatService = sp.GetRequiredService<ChatService>();
 
         // Act & Assert
-        var exception = await Record.ExceptionAsync(async () =>
+        var exception = await Record.ExceptionAsync((Func<Task>)(async () =>
         {
-            await chatService.RenderWorkflowStateAsync(string.Empty);
-        });
+            await chatService.RenderWorkflowStateAsync(string.Empty).ConfigureAwait(true);
+        })).ConfigureAwait(true);
 
         // May throw ArgumentException or handle gracefully
         if (exception != null)
@@ -141,7 +137,7 @@ public class ChatServiceErrorHandlingTests
     }
 
     [Fact]
-    public async Task ChatService_MultipleRenderCalls_DoesNotDuplicateEntries()
+    public async Task ChatServiceMultipleRenderCallsDoesNotDuplicateEntries()
     {
         // Arrange
         var sp = BuildServices();
@@ -150,15 +146,15 @@ public class ChatServiceErrorHandlingTests
         var workflowService = sp.GetRequiredService<IWorkflowService>();
 
         var plant = "@startuml\n[*] --> A\n:A;\n@enduml";
-        var workflow = await workflowService.ImportWorkflowAsync(plant, "test-dup", "Test");
+        var workflow = await workflowService.ImportWorkflowAsync(plant, "test-dup", "Test").ConfigureAwait(true);
 
         // Clear any entries that might have been added during import
         chatList.Entries.Clear();
 
         // Act - Render same workflow multiple times
-        await chatService.RenderWorkflowStateAsync(workflow.Id);
-        await chatService.RenderWorkflowStateAsync(workflow.Id);
-        await chatService.RenderWorkflowStateAsync(workflow.Id);
+        await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
+        await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
+        await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
 
         // Assert - Duplicate detection may not be perfect for rapid renders
         // But it should prevent excessive duplication (not 3x or more)
@@ -167,8 +163,8 @@ public class ChatServiceErrorHandlingTests
             $"Expected at most 3 entries after multiple renders, but got {chatList.Entries.Count}");
 
         // More importantly, ensure it doesn't keep growing unbounded
-        await chatService.RenderWorkflowStateAsync(workflow.Id);
-        await chatService.RenderWorkflowStateAsync(workflow.Id);
+        await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
+        await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
         var finalCount = chatList.Entries.Count;
 
         Assert.True(finalCount <= 5,
@@ -186,7 +182,7 @@ public class ChatServiceErrorHandlingTests
     /// <para><strong>Reason for expectation:</strong> The ChatService should use thread-safe collections (e.g., ObservableCollection with proper synchronization) or locks to protect the chat list during concurrent access. The non-empty entries confirm that at least one render succeeded and entries were added correctly. The absence of exceptions confirms thread-safety is maintained.</para>
     /// </remarks>
     [Fact]
-    public async Task ChatService_ConcurrentRenderCalls_ThreadSafe()
+    public async Task ChatServiceConcurrentRenderCallsThreadSafe()
     {
         // Arrange
         var sp = BuildServices();
@@ -195,18 +191,18 @@ public class ChatServiceErrorHandlingTests
         var workflowService = sp.GetRequiredService<IWorkflowService>();
 
         var plant = "@startuml\n[*] --> A\n:A;\n@enduml";
-        var workflow = await workflowService.ImportWorkflowAsync(plant, "test-concurrent", "Test");
+        var workflow = await workflowService.ImportWorkflowAsync(plant, "test-concurrent", "Test").ConfigureAwait(true);
 
         // Act - Render concurrently from multiple threads
         var tasks = Enumerable.Range(0, 10)
             .Select(_ => Task.Run(async () =>
             {
-                await chatService.RenderWorkflowStateAsync(workflow.Id);
+                await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
             }))
             .ToArray();
 
         // Assert - Should not throw
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(true);
         Assert.NotEmpty(chatList.Entries);
     }
 
@@ -229,7 +225,7 @@ public class ChatServiceErrorHandlingTests
         var chatList = sp.GetRequiredService<ChatListViewModel>();
 
         // Act
-        await chatService.StartAsync();
+        await chatService.StartAsync().ConfigureAwait(true);
 
         // Assert
         Assert.NotEmpty(chatList.Entries);
@@ -249,7 +245,7 @@ public class ChatServiceErrorHandlingTests
     /// <para><strong>Reason for expectation:</strong> The service should check if initialization has already occurred and skip adding duplicate initial entries. The at-most-double count allows for some tolerance (in case duplicate detection isn't perfect), but prevents unbounded growth. This ensures the service is idempotent and doesn't create excessive duplicates even if called multiple times.</para>
     /// </remarks>
     [Fact]
-    public async Task ChatService_StartAsyncCalledTwice_DoesNotDuplicateInitialMessages()
+    public async Task ChatServiceStartAsyncCalledTwiceDoesNotDuplicateInitialMessages()
     {
         // Arrange
         var sp = BuildServices();
@@ -257,10 +253,10 @@ public class ChatServiceErrorHandlingTests
         var chatList = sp.GetRequiredService<ChatListViewModel>();
 
         // Act
-        await chatService.StartAsync();
+        await chatService.StartAsync().ConfigureAwait(true);
         var initialCount = chatList.Entries.Count;
 
-        await chatService.StartAsync(); // Call again
+        await chatService.StartAsync().ConfigureAwait(true); // Call again
 
         // Assert - Should not duplicate initial entries
         Assert.True(chatList.Entries.Count <= initialCount * 2,
@@ -278,7 +274,7 @@ public class ChatServiceErrorHandlingTests
     /// <para><strong>Reason for expectation:</strong> The ChatViewModel should observe the ChatListViewModel and raise PropertyChanged when the list changes. The event firing confirms that the view model is properly connected to the list and notifies the UI of changes. This enables reactive UI updates when chat entries are added or modified.</para>
     /// </remarks>
     [Fact]
-    public Task ChatViewModel_PropertyChanged_FiresForChatList()
+    public Task ChatViewModelPropertyChangedFiresForChatList()
     {
         // Arrange
         var sp = BuildServices();
@@ -319,7 +315,7 @@ public class ChatServiceErrorHandlingTests
     }
 
     [Fact]
-    public void ChatInputViewModel_SendCommandWithNullText_SendsEmptyString()
+    public void ChatInputViewModelSendCommandWithNullTextSendsEmptyString()
     {
         // Arrange
         var sp = BuildServices();
@@ -371,7 +367,7 @@ public class ChatServiceErrorHandlingTests
     }
 
     [Fact]
-    public void ChoicePayload_AddDuplicateChoice_HandlesDuplicateIndex()
+    public void ChoicePayloadAddDuplicateChoiceHandlesDuplicateIndex()
     {
         // Arrange
         var choice1 = new ChoicesItem(0, "First", 1);
@@ -382,12 +378,12 @@ public class ChatServiceErrorHandlingTests
 
         // Assert - Should have two choices
         Assert.Equal(2, payload.Choices.Count);
-        Assert.Contains(payload.Choices, c => c.ChoiceText == "First");
-        Assert.Contains(payload.Choices, c => c.ChoiceText == "Second");
+        Assert.True(payload.Choices.Any(c => c.ChoiceText == "First"), "Expected choice 'First' not found");
+        Assert.True(payload.Choices.Any(c => c.ChoiceText == "Second"), "Expected choice 'Second' not found");
     }
 
     [Fact]
-    public async Task ChoicesItem_SelectChoiceCommand_CanExecuteMultipleTimes()
+    public async Task ChoicesItemSelectChoiceCommandCanExecuteMultipleTimes()
     {
         // Arrange
         var choice = new ChoicesItem(0, "Test", 1);
@@ -396,8 +392,8 @@ public class ChatServiceErrorHandlingTests
         choice.ChoiceSubmitted += (s, e) => executionCount++;
 
         // Act
-        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)choice.SelectChoiceCommand).ExecuteAsync(choice);
-        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)choice.SelectChoiceCommand).ExecuteAsync(choice);
+        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)choice.SelectChoiceCommand).ExecuteAsync(choice).ConfigureAwait(true);
+        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)choice.SelectChoiceCommand).ExecuteAsync(choice).ConfigureAwait(true);
 
         // Assert
         Assert.Equal(2, executionCount);
@@ -430,7 +426,7 @@ public class ChatServiceErrorHandlingTests
     /// <para><strong>Reason for expectation:</strong> Input validation is critical for API correctness. Null payloads cannot be used to display choices and would cause errors later. Throwing ArgumentNullException immediately provides clear feedback about the invalid input and follows .NET Framework Design Guidelines for parameter validation.</para>
     /// </remarks>
     [Fact]
-    public void ChoiceChatEntry_CreatedWithNullPayload_ThrowsArgumentNullException()
+    public void ChoiceChatEntryCreatedWithNullPayloadThrowsArgumentNullException()
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>

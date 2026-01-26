@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using FWH.Orchestrix.Contracts.Marketing;
-using Microsoft.Extensions.Logging;
 using FWH.Orchestrix.Contracts.Mediator;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Orchestrix.Mediator.Remote.Marketing;
 
@@ -17,6 +17,7 @@ public class SubmitFeedbackHandler : IMediatorHandler<SubmitFeedbackRequest, Sub
         IHttpClientFactory httpClientFactory,
         ILogger<SubmitFeedbackHandler> logger)
     {
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
         _httpClient = httpClientFactory.CreateClient("MarketingApi");
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -25,6 +26,7 @@ public class SubmitFeedbackHandler : IMediatorHandler<SubmitFeedbackRequest, Sub
         SubmitFeedbackRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation("Submitting feedback remotely for business {BusinessId}",
@@ -46,11 +48,11 @@ public class SubmitFeedbackHandler : IMediatorHandler<SubmitFeedbackRequest, Sub
                     request.Latitude,
                     request.Longitude
                 },
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<FeedbackCreatedDto>(cancellationToken);
+                var result = await response.Content.ReadFromJsonAsync<FeedbackCreatedDto>(cancellationToken).ConfigureAwait(false);
                 return new SubmitFeedbackResponse
                 {
                     Success = true,
@@ -58,7 +60,7 @@ public class SubmitFeedbackHandler : IMediatorHandler<SubmitFeedbackRequest, Sub
                 };
             }
 
-            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogWarning("Failed to submit feedback: {StatusCode} - {Error}",
                 response.StatusCode, error);
 

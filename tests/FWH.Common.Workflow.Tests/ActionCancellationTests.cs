@@ -1,12 +1,9 @@
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 using FWH.Common.Workflow.Actions;
 using FWH.Common.Workflow.Instance;
-using System.Collections.Generic;
 using FWH.Orchestrix.Contracts.Mediator;
 using FWH.Orchestrix.Mediator.Remote.Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -23,7 +20,7 @@ public class ActionCancellationTests
     /// <para><strong>Reason for expectation:</strong> When a CancellationToken is cancelled, the handler's Task.Delay should throw OperationCanceledException, causing ExecuteAsync to return false. This allows the workflow system to detect cancelled executions and handle them appropriately (e.g., not updating workflow state, logging cancellation). The false return value indicates the action did not complete successfully.</para>
     /// </remarks>
     [Fact]
-    public async Task Handler_CanBeCancelled()
+    public async Task HandlerCanBeCancelled()
     {
         var services = new ServiceCollection();
         services.AddSingleton<IWorkflowActionHandlerRegistry, WorkflowActionHandlerRegistry>();
@@ -32,8 +29,8 @@ public class ActionCancellationTests
         // create handler that honors cancellation
         var handler = new WorkflowActionHandlerAdapter("LongRunning", async (ctx, p, ct) =>
         {
-            await Task.Delay(5000, ct);
-            return new Dictionary<string,string> { ["ok"] = "1" };
+            await Task.Delay(5000, ct).ConfigureAwait(true);
+            return new Dictionary<string, string> { ["ok"] = "1" };
         });
 
         services.AddSingleton<IWorkflowActionHandler>(handler);
@@ -47,10 +44,10 @@ public class ActionCancellationTests
         _ = sp.GetRequiredService<WorkflowActionHandlerRegistrar>();
 
         var executor = sp.GetRequiredService<IWorkflowActionExecutor>();
-        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w","n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A","A","{\"action\":\"LongRunning\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
+        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A", "A", "{\"action\":\"LongRunning\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
 
         using var cts = new CancellationTokenSource(100);
-        var result = await executor.ExecuteAsync("w", def.Nodes[0], def, cts.Token);
+        var result = await executor.ExecuteAsync("w", def.Nodes[0], def, cts.Token).ConfigureAwait(true);
         Assert.False(result);
     }
 }

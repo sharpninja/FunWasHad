@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- CA1707: Allow underscores in test method names (e.g. Method_Scenario_Expected) -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+</Project>

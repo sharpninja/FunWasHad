@@ -29,9 +29,80 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         .Build();
 
     private string? _connectionString;
+    private IServiceProvider? _services;
+    private readonly SemaphoreSlim _initLock = new(1, 1);
+    private bool _initialized;
 
-    protected override IHost CreateHost(IHostBuilder builder)
+    /// <summary>Root service provider from the built test server. Use CreateScope() for scoped services.</summary>
+    public IServiceProvider Services
     {
+        get
+        {
+            // Ensure InitializeAsync has been called and server is created
+            // IClassFixture doesn't automatically call IAsyncLifetime.InitializeAsync()
+            if (!_initialized)
+            {
+                _initLock.Wait();
+                try
+                {
+                    if (!_initialized)
+                    {
+                        // InitializeAsync must be called before server can be created
+                        // Since IClassFixture doesn't call it automatically, we need to call it synchronously
+                        // This is a workaround - ideally xUnit would call InitializeAsync for IClassFixture
+                        InitializeAsync().AsTask().GetAwaiter().GetResult();
+                        _initialized = true;
+                    }
+                }
+                finally
+                {
+                    _initLock.Release();
+                }
+            }
+            
+            // Ensure server is created - accessing Server property will trigger creation
+            // Note: This may fail if WebApplicationFactory can't find CreateWebHostBuilder
+            // For minimal hosting, we need to ensure CreateWebHostBuilder is overridden
+            if (_services == null)
+            {
+                try
+                {
+                    _ = Server; // Trigger server creation
+                    _services = Server.Host.Services;
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("CreateWebHostBuilder"))
+                {
+                    // If CreateWebHostBuilder is missing, try to create host manually
+                    // This shouldn't happen if CreateWebHostBuilder is properly overridden
+                    throw new InvalidOperationException(
+                        "WebApplicationFactory failed to create server. Ensure CreateWebHostBuilder is properly overridden for minimal hosting model.", ex);
+                }
+            }
+            return _services;
+        }
+    }
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        // Ensure InitializeAsync has been called before configuring the host
+        // This is needed because IClassFixture doesn't automatically call IAsyncLifetime.InitializeAsync()
+        if (!_initialized)
+        {
+            _initLock.Wait();
+            try
+            {
+                if (!_initialized)
+                {
+                    InitializeAsync().AsTask().GetAwaiter().GetResult();
+                    _initialized = true;
+                }
+            }
+            finally
+            {
+                _initLock.Release();
+            }
+        }
+
         builder.ConfigureServices(services =>
         {
             // Replace database with PostgreSQL test container
@@ -62,13 +133,16 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 var options = sp.GetRequiredService<DbContextOptions<MarketingDbContext>>();
                 return new TestMarketingDbContext(options);
             });
+
+            // Ensure database schema is created when host starts
+            services.AddSingleton<IHostedService, EnsureDbCreatedHostedService>();
         });
 
         // Configure connection string and blob storage for tests
         var testUploadsPath = Path.Combine(Path.GetTempPath(), $"marketing-api-test-uploads-{Guid.NewGuid()}");
         Directory.CreateDirectory(testUploadsPath);
 
-        builder.ConfigureAppConfiguration(config =>
+        builder.ConfigureAppConfiguration((_, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -81,43 +155,17 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 { "ApiSecurity:RequireAuthentication", "false" } // Disable auth for easier testing
             });
         });
-
-        var host = base.CreateHost(builder);
-
-        // Ensure database schema is created using migrations
-        using (var scope = host.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-            var logger = scope.ServiceProvider.GetService<ILogger<CustomWebApplicationFactory>>();
-
-            try
-            {
-                // Drop and recreate database to ensure clean state
-                db.Database.EnsureDeleted();
-                db.Database.EnsureCreated();
-
-                logger?.LogInformation("Database schema created successfully");
-            }
-            catch (Exception ex)
-            {
-                logger?.LogError(ex, "Error ensuring database created");
-                throw;
-            }
-        }
-
-        return host;
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
-        await _postgresContainer.StartAsync();
+        await _postgresContainer.StartAsync().ConfigureAwait(true);
         _connectionString = _postgresContainer.GetConnectionString();
     }
 
-    public new async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        await _postgresContainer.DisposeAsync();
-        await base.DisposeAsync();
+        await _postgresContainer.DisposeAsync().ConfigureAwait(true);
     }
 
     protected override void Dispose(bool disposing)
@@ -125,4 +173,23 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         // Container disposal is handled by DisposeAsync
         base.Dispose(disposing);
     }
+
+    private sealed class EnsureDbCreatedHostedService : IHostedService
+    {
+        private readonly IServiceProvider _services;
+
+        public EnsureDbCreatedHostedService(IServiceProvider services) => _services = services;
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            using var scope = _services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
+            db.Database.EnsureDeleted();
+            db.Database.EnsureCreated();
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
 }

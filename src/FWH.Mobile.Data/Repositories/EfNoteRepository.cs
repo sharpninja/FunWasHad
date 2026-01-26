@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace FWH.Mobile.Data.Repositories;
 
@@ -10,7 +10,8 @@ public class EfNoteRepository : INoteRepository
 
     public EfNoteRepository(NotesDbContext context)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        ArgumentNullException.ThrowIfNull(context);
+        _context = context;
     }
 
     public async Task<Note> CreateAsync(Note note, CancellationToken cancellationToken = default)
@@ -20,8 +21,8 @@ public class EfNoteRepository : INoteRepository
 
         try
         {
-            var entry = await _context.Notes.AddAsync(note, cancellationToken);
-            await _context.SaveChangesAsync(cancellationToken);
+            var entry = await _context.Notes.AddAsync(note, cancellationToken).ConfigureAwait(false);
+            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return entry.Entity;
         }
         catch (DbUpdateException)
@@ -38,7 +39,7 @@ public class EfNoteRepository : INoteRepository
     {
         try
         {
-            return await _context.Notes.FindAsync(new object[] { id }, cancellationToken);
+            return await _context.Notes.FindAsync(new object[] { id }, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -50,7 +51,7 @@ public class EfNoteRepository : INoteRepository
     {
         try
         {
-            return await _context.Notes.OrderByDescending(n => n.CreatedAt).ToListAsync(cancellationToken);
+            return await _context.Notes.OrderByDescending(n => n.CreatedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -60,13 +61,12 @@ public class EfNoteRepository : INoteRepository
 
     public async Task<bool> UpdateAsync(Note note, CancellationToken cancellationToken = default)
     {
-        if (note == null)
-            throw new ArgumentNullException(nameof(note));
+        ArgumentNullException.ThrowIfNull(note);
 
         try
         {
             _context.Notes.Update(note);
-            var affected = await _context.SaveChangesAsync(cancellationToken);
+            var affected = await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return affected > 0;
         }
         catch (DbUpdateException)
@@ -83,10 +83,10 @@ public class EfNoteRepository : INoteRepository
     {
         try
         {
-            var entity = await _context.Notes.FindAsync(new object[] { id }, cancellationToken);
+            var entity = await _context.Notes.FindAsync(new object[] { id }, cancellationToken).ConfigureAwait(false);
             if (entity == null) return false;
             _context.Notes.Remove(entity);
-            var affected = await _context.SaveChangesAsync(cancellationToken);
+            var affected = await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return affected > 0;
         }
         catch (DbUpdateException)

@@ -2,7 +2,6 @@ using FWH.MarketingApi.Data;
 using FWH.MarketingApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace FWH.MarketingApi.Controllers;
 
@@ -18,7 +17,7 @@ namespace FWH.MarketingApi.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/[controller]")]
-public class MarketingController : ControllerBase
+internal class MarketingController : ControllerBase
 {
     private readonly MarketingDbContext _context;
     private readonly ILogger<MarketingController> _logger;
@@ -46,7 +45,7 @@ public class MarketingController : ControllerBase
             .Include(b => b.Coupons.Where(c => c.IsActive && c.ValidFrom <= DateTimeOffset.UtcNow && c.ValidUntil >= DateTimeOffset.UtcNow))
             .Include(b => b.MenuItems.Where(m => m.IsAvailable))
             .Include(b => b.NewsItems.Where(n => n.IsPublished && n.PublishedAt <= DateTimeOffset.UtcNow))
-            .FirstOrDefaultAsync(b => b.Id == businessId && b.IsSubscribed);
+            .FirstOrDefaultAsync(b => b.Id == businessId && b.IsSubscribed).ConfigureAwait(false);
 
         if (business == null)
         {
@@ -82,7 +81,7 @@ public class MarketingController : ControllerBase
     {
         var theme = await _context.BusinessThemes
             .Include(t => t.Business)
-            .FirstOrDefaultAsync(t => t.BusinessId == businessId && t.IsActive && t.Business.IsSubscribed);
+            .FirstOrDefaultAsync(t => t.BusinessId == businessId && t.IsActive && t.Business.IsSubscribed).ConfigureAwait(false);
 
         if (theme == null)
         {
@@ -121,12 +120,12 @@ public class MarketingController : ControllerBase
                 && c.Business.IsSubscribed
                 && (c.MaxRedemptions == null || c.CurrentRedemptions < c.MaxRedemptions));
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync().ConfigureAwait(false);
         var coupons = await query
             .OrderByDescending(c => c.CreatedAt)
             .Skip(pagination.Skip)
             .Take(pagination.Take)
-            .ToListAsync();
+            .ToListAsync().ConfigureAwait(false);
 
         var result = new PagedResult<Coupon>
         {
@@ -165,7 +164,7 @@ public class MarketingController : ControllerBase
             .OrderBy(m => m.Category)
             .ThenBy(m => m.SortOrder)
             .ThenBy(m => m.Name)
-            .ToListAsync();
+            .ToListAsync().ConfigureAwait(false);
 
         _logger.LogDebug("Retrieved {Count} menu items for business {BusinessId}", menuItems.Count, businessId);
         return Ok(menuItems);
@@ -187,7 +186,7 @@ public class MarketingController : ControllerBase
             .Select(m => m.Category)
             .Distinct()
             .OrderBy(c => c)
-            .ToListAsync();
+            .ToListAsync().ConfigureAwait(false);
 
         return Ok(categories);
     }
@@ -219,13 +218,13 @@ public class MarketingController : ControllerBase
                 && n.Business.IsSubscribed
                 && (n.ExpiresAt == null || n.ExpiresAt > now));
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync().ConfigureAwait(false);
         var newsItems = await query
             .OrderByDescending(n => n.IsFeatured)
             .ThenByDescending(n => n.PublishedAt)
             .Skip(pagination.Skip)
             .Take(pagination.Take)
-            .ToListAsync();
+            .ToListAsync().ConfigureAwait(false);
 
         var result = new PagedResult<NewsItem>
         {
@@ -297,7 +296,7 @@ public class MarketingController : ControllerBase
                         ST_SetSRID(ST_MakePoint({longitude}, {latitude}), 4326)::geography
                     )
                 ")
-                .ToListAsync();
+                .ToListAsync().ConfigureAwait(false);
 
             _logger.LogDebug("Found {Count} businesses within {Radius}m of ({Lat}, {Lon}) using PostGIS spatial query",
                 businesses.Count, radiusMeters, latitude, longitude);
@@ -320,7 +319,7 @@ public class MarketingController : ControllerBase
                     && b.Latitude <= latitude + latDelta
                     && b.Longitude >= longitude - lonDelta
                     && b.Longitude <= longitude + lonDelta)
-                .ToListAsync();
+                .ToListAsync().ConfigureAwait(false);
 
             // Filter by actual distance
             businesses = allBusinesses
@@ -391,7 +390,7 @@ public class MarketingController : ControllerBase
             query = query.Where(c => EF.Functions.ILike(c.Country, country));
         }
 
-        var city = await query.FirstOrDefaultAsync();
+        var city = await query.FirstOrDefaultAsync().ConfigureAwait(false);
 
         if (city == null)
         {
@@ -449,7 +448,7 @@ public class MarketingController : ControllerBase
     {
         var theme = await _context.CityThemes
             .Include(t => t.City)
-            .FirstOrDefaultAsync(t => t.CityId == cityId && t.IsActive && t.City.IsActive);
+            .FirstOrDefaultAsync(t => t.CityId == cityId && t.IsActive && t.City.IsActive).ConfigureAwait(false);
 
         if (theme == null)
         {

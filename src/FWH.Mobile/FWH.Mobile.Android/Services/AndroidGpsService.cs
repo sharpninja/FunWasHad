@@ -1,16 +1,11 @@
 using Android.Content;
+using Android.Content.PM;
 using Android.Locations;
 using Android.OS;
 using AndroidX.Core.Content;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Android.Content.PM;
 
 namespace FWH.Mobile.Android.Services;
 
@@ -173,7 +168,7 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
             });
 
             // Wait for the request to be posted (should be immediate)
-            await requestLocationTcs.Task;
+            await requestLocationTcs.Task.ConfigureAwait(false);
 
             // Set up timeout
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(LocationTimeoutSeconds));
@@ -189,7 +184,7 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
                 }
             });
 
-            var result = await _locationTcs.Task;
+            var result = await _locationTcs.Task.ConfigureAwait(false);
 
             // Clean up - RemoveUpdates must also be called on a thread with a Looper
             var removeUpdatesTcs = new TaskCompletionSource<bool>();
@@ -208,7 +203,7 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
             });
 
             // Wait for cleanup to complete (should be immediate)
-            await removeUpdatesTcs.Task;
+            await removeUpdatesTcs.Task.ConfigureAwait(false);
 
             if (result == null)
             {
@@ -297,6 +292,7 @@ public class AndroidGpsService : Java.Lang.Object, IGpsService, ILocationListene
     // ILocationListener implementation
     public void OnLocationChanged(Location location)
     {
+        ArgumentNullException.ThrowIfNull(location);
         if (_locationTcs != null && !_locationTcs.Task.IsCompleted)
         {
             var coordinates = new GpsCoordinates(

@@ -26,8 +26,7 @@
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.0.1" />
     <!-- Test packages required by FWH.Common.Workflow.Tests -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="xunit.v3" Version="3.2.1" />
     <PackageVersion Include="coverlet.collector" Version="6.0.0" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.1.0" />
     <!-- Mobile data packages (EF Core) - Updated to 9.0 for Aspire -->
@@ -35,8 +34,9 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.12" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
-    <PackageVersion Include="NSubstitute" Version="5.1.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.12" />
+    <PackageVersion Include="NSubstitute" Version="6.0.0" />
+    <!-- NSubstitute 6.0.0 should support .NET 9 (built from source for testing) -->
     <!-- Imaging packages -->
     <PackageVersion Include="SkiaSharp" Version="3.119.1" />
     <PackageVersion Include="Svg.Skia" Version="3.4.1" />
@@ -64,5 +64,8 @@
     <PackageVersion Include="KubernetesClient" Version="17.0.14" />
     <!-- Mapsui for native map control in Avalonia -->
     <PackageVersion Include="Mapsui.Avalonia" Version="5.0.0" />
+    <!-- Code analyzers (MVP-SUPPORT-003) -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Analyzers" Version="9.0.6" />
   </ItemGroup>
 </Project>

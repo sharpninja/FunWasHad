@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Theme settings for customizing the app appearance when at a business location.
 /// </summary>
-public class BusinessTheme
+internal class BusinessTheme
 {
     public long Id { get; set; }
     public long BusinessId { get; set; }

@@ -24,6 +24,7 @@
     <!-- Temporarily removed OpenAPI packages due to .NET 9 compatibility issues -->
     <!-- <PackageReference Include="Microsoft.AspNetCore.OpenApi" /> -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" PrivateAssets="all" />
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <!-- Explicit reference to resolve version conflict between ServiceDefaults and Aspire -->
@@ -33,6 +34,13 @@
   <ItemGroup>
     <ProjectReference Include="..\FWH.Common.Location\FWH.Common.Location.csproj" />
     <ProjectReference Include="..\FWH.ServiceDefaults\FWH.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+  <!-- Allow test projects to access internal types -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>FWH.Location.Api.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
   <!-- Copy migration scripts to output directory -->

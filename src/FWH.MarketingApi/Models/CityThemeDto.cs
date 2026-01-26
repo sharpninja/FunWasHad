@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// DTO for city theme data (without navigation properties to avoid circular references).
 /// </summary>
-public class CityThemeDto
+internal class CityThemeDto
 {
     public long Id { get; set; }
     public long CityId { get; set; }

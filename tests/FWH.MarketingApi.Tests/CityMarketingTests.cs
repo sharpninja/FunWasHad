@@ -1,9 +1,7 @@
-using System.Net;
-using System.Net.Http.Json;
-using FWH.MarketingApi.Data;
+using FWH.MarketingApi.Controllers;
 using FWH.MarketingApi.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace FWH.MarketingApi.Tests;
@@ -12,174 +10,64 @@ namespace FWH.MarketingApi.Tests;
 /// Tests for city marketing information retrieval endpoints.
 /// Implements TR-API-002: Marketing endpoints validation.
 /// </summary>
-public class CityMarketingTests : IClassFixture<CustomWebApplicationFactory>
+public class CityMarketingTests : ControllerTestBase
 {
-    private readonly CustomWebApplicationFactory _factory;
-
-    public CityMarketingTests(CustomWebApplicationFactory factory)
+    private MarketingController CreateController()
     {
-        _factory = factory;
-        SeedTestData();
-    }
-
-    private void SeedTestData()
-    {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
-        // Clear existing data
-        db.CityTourismMarkets.RemoveRange(db.CityTourismMarkets);
-        db.CityThemes.RemoveRange(db.CityThemes);
-        db.Cities.RemoveRange(db.Cities);
-        db.SaveChanges();
-
-        // Reset sequences to avoid ID conflicts
-        try
-        {
-            var maxCityId = db.Cities.Any() ? db.Cities.Max(c => c.Id) : 0;
-            var maxCityThemeId = db.CityThemes.Any() ? db.CityThemes.Max(c => c.Id) : 0;
-            var maxCityTourismMarketId = db.CityTourismMarkets.Any() ? db.CityTourismMarkets.Max(c => c.Id) : 0;
-
-            db.Database.ExecuteSqlRaw("SELECT setval('cities_id_seq', {0}, true)", maxCityId);
-            db.Database.ExecuteSqlRaw("SELECT setval('city_themes_id_seq', {0}, true)", maxCityThemeId);
-            db.Database.ExecuteSqlRaw("SELECT setval('city_tourism_markets_id_seq', {0}, true)", maxCityTourismMarketId);
-        }
-        catch
-        {
-            // Sequences might not exist yet or tables are empty, ignore
-        }
-
-        var now = DateTimeOffset.UtcNow;
-
-        // Create city with theme
-        var city = new City
-        {
-            Id = 1,
-            Name = "San Francisco",
-            State = "California",
-            Country = "USA",
-            Latitude = 37.7749,
-            Longitude = -122.4194,
-            Description = "The City by the Bay",
-            Website = "https://sf.gov",
-            IsActive = true,
-            CreatedAt = now
-        };
-
-        var theme = new CityTheme
-        {
-            Id = 1,
-            CityId = 1,
-            City = city,
-            ThemeName = "SF Theme",
-            PrimaryColor = "#003366",
-            SecondaryColor = "#FF6600",
-            LogoUrl = "https://sf.gov/logo.png",
-            BackgroundImageUrl = "https://sf.gov/bg.jpg",
-            IsActive = true,
-            CreatedAt = now
-        };
-
-        city.Theme = theme;
-
-        db.Cities.Add(city);
-        db.CityThemes.Add(theme);
-
-        // Create another city without theme
-        var city2 = new City
-        {
-            Id = 2,
-            Name = "Seattle",
-            State = "Washington",
-            Country = "USA",
-            Latitude = 47.6062,
-            Longitude = -122.3321,
-            Description = "The Emerald City",
-            IsActive = true,
-            CreatedAt = now
-        };
-
-        db.Cities.Add(city2);
-
-        // Create city with inactive theme (should not be returned)
-        var city3 = new City
-        {
-            Id = 3,
-            Name = "Portland",
-            State = "Oregon",
-            Country = "USA",
-            Latitude = 45.5152,
-            Longitude = -122.6784,
-            IsActive = true,
-            CreatedAt = now
-        };
-
-        var inactiveTheme = new CityTheme
-        {
-            Id = 2,
-            CityId = 3,
-            City = city3,
-            ThemeName = "Portland Theme",
-            PrimaryColor = "#00AA00",
-            IsActive = false, // Inactive
-            CreatedAt = now
-        };
-
-        city3.Theme = inactiveTheme;
-
-        db.Cities.Add(city3);
-        db.CityThemes.Add(inactiveTheme);
-
-        db.SaveChanges();
+        return new MarketingController(DbContext, CreateLogger<MarketingController>());
     }
 
     /// <summary>
     /// Tests GET /api/marketing/city - returns city marketing data with theme.
     /// </summary>
     [Fact]
-    public async Task GetCityMarketing_ReturnsCityWithTheme()
+    public async Task GetCityMarketingReturnsCityWithTheme()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestCityWithTheme();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/city?cityName=San Francisco&state=California&country=USA");
+        // Act
+        var result = await controller.GetCityMarketing("San Francisco", "California", "USA").ConfigureAwait(false);
 
-        if (response.StatusCode != HttpStatusCode.OK)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync();
-            throw new Exception($"API returned {response.StatusCode}: {errorContent}");
-        }
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<CityMarketingResponse>();
-        Assert.NotNull(result);
-        Assert.Equal(1, result!.CityId);
-        Assert.Equal("San Francisco", result.CityName);
-        Assert.Equal("California", result.State);
-        Assert.Equal("USA", result.Country);
-        Assert.Equal("The City by the Bay", result.Description);
-        Assert.Equal("https://sf.gov", result.Website);
-        Assert.NotNull(result.Theme);
-        Assert.Equal("SF Theme", result.Theme!.ThemeName);
-        Assert.Equal("#003366", result.Theme.PrimaryColor);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var response = Assert.IsType<CityMarketingResponse>(actionResult.Value);
+        Assert.Equal(1, response.CityId);
+        Assert.Equal("San Francisco", response.CityName);
+        Assert.Equal("California", response.State);
+        Assert.Equal("USA", response.Country);
+        Assert.Equal("The City by the Bay", response.Description);
+        Assert.Equal("https://sf.gov", response.Website);
+        Assert.NotNull(response.Theme);
+        Assert.Equal("SF Theme", response.Theme!.ThemeName);
+        Assert.Equal("#003366", response.Theme.PrimaryColor);
     }
 
     /// <summary>
     /// Tests GET /api/marketing/city - returns city without theme when theme is inactive.
     /// </summary>
     [Fact]
-    public async Task GetCityMarketing_ReturnsCityWithoutInactiveTheme()
+    public async Task GetCityMarketingReturnsCityWithoutInactiveTheme()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestCityWithInactiveTheme();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/city?cityName=Portland&state=Oregon&country=USA");
+        // Act
+        var result = await controller.GetCityMarketing("Portland", "Oregon", "USA").ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<CityMarketingResponse>();
-        Assert.NotNull(result);
-        Assert.Equal(3, result!.CityId);
-        Assert.Equal("Portland", result.CityName);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var response = Assert.IsType<CityMarketingResponse>(actionResult.Value);
+        Assert.Equal(3, response.CityId);
+        Assert.Equal("Portland", response.CityName);
         // Theme should be null because it's inactive
-        Assert.Null(result.Theme);
+        Assert.Null(response.Theme);
     }
 
     /// <summary>
@@ -188,42 +76,55 @@ public class CityMarketingTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task GetCityMarketing_ReturnsCityWithoutTheme()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestCityWithoutTheme();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/city?cityName=Seattle&state=Washington&country=USA");
+        // Act
+        var result = await controller.GetCityMarketing("Seattle", "Washington", "USA").ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<CityMarketingResponse>();
-        Assert.NotNull(result);
-        Assert.Equal(2, result!.CityId);
-        Assert.Equal("Seattle", result.CityName);
-        Assert.Null(result.Theme);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var response = Assert.IsType<CityMarketingResponse>(actionResult.Value);
+        Assert.Equal(2, response.CityId);
+        Assert.Equal("Seattle", response.CityName);
+        Assert.Null(response.Theme);
     }
 
     /// <summary>
     /// Tests GET /api/marketing/city - returns 404 for non-existent city.
     /// </summary>
     [Fact]
-    public async Task GetCityMarketing_NonExistentCity_ReturnsNotFound()
+    public async Task GetCityMarketingNonExistentCityReturnsNotFound()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/city?cityName=NonExistent&state=Nowhere&country=USA");
+        // Act
+        var result = await controller.GetCityMarketing("NonExistent", "Nowhere", "USA").ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
+        Assert.IsType<NotFoundResult>(actionResult.Result);
     }
 
     /// <summary>
     /// Tests GET /api/marketing/city - returns 400 when city name is missing.
     /// </summary>
     [Fact]
-    public async Task GetCityMarketing_MissingCityName_ReturnsBadRequest()
+    public async Task GetCityMarketingMissingCityNameReturnsBadRequest()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/city?state=California&country=USA");
+        // Act
+        var result = await controller.GetCityMarketing("", "California", "USA").ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
+        Assert.IsType<BadRequestObjectResult>(actionResult.Result);
     }
 
     /// <summary>
@@ -232,14 +133,19 @@ public class CityMarketingTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task GetCityMarketing_CaseInsensitiveMatching()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestCityWithTheme();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/city?cityName=san francisco&state=california&country=usa");
+        // Act
+        var result = await controller.GetCityMarketing("san francisco", "california", "usa").ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<CityMarketingResponse>();
-        Assert.NotNull(result);
-        Assert.Equal("San Francisco", result!.CityName);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var response = Assert.IsType<CityMarketingResponse>(actionResult.Value);
+        Assert.Equal("San Francisco", response.CityName);
     }
 
     /// <summary>
@@ -248,43 +154,58 @@ public class CityMarketingTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task GetCityTheme_ReturnsActiveTheme()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestCityWithTheme();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/city/1/theme");
+        // Act
+        var result = await controller.GetCityTheme(1).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<CityTheme>();
-        Assert.NotNull(result);
-        Assert.Equal(1, result!.CityId);
-        Assert.Equal("SF Theme", result.ThemeName);
-        Assert.Equal("#003366", result.PrimaryColor);
-        Assert.True(result.IsActive);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<CityTheme>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var theme = Assert.IsType<CityTheme>(actionResult.Value);
+        Assert.Equal(1, theme.CityId);
+        Assert.Equal("SF Theme", theme.ThemeName);
+        Assert.Equal("#003366", theme.PrimaryColor);
+        Assert.True(theme.IsActive);
     }
 
     /// <summary>
     /// Tests GET /api/marketing/city/{cityId}/theme - returns 404 for city without active theme.
     /// </summary>
     [Fact]
-    public async Task GetCityTheme_NoActiveTheme_ReturnsNotFound()
+    public async Task GetCityThemeNoActiveThemeReturnsNotFound()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestCityWithoutTheme();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/city/2/theme");
+        // Act
+        var result = await controller.GetCityTheme(2).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<CityTheme>>(result);
+        Assert.IsType<NotFoundResult>(actionResult.Result);
     }
 
     /// <summary>
     /// Tests GET /api/marketing/city/{cityId}/theme - returns 404 for inactive theme.
     /// </summary>
     [Fact]
-    public async Task GetCityTheme_InactiveTheme_ReturnsNotFound()
+    public async Task GetCityThemeInactiveThemeReturnsNotFound()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestCityWithInactiveTheme();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/city/3/theme");
+        // Act
+        var result = await controller.GetCityTheme(3).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<CityTheme>>(result);
+        Assert.IsType<NotFoundResult>(actionResult.Result);
     }
 
     /// <summary>
@@ -293,22 +214,26 @@ public class CityMarketingTests : IClassFixture<CustomWebApplicationFactory>
     [Fact]
     public async Task GetCityTheme_NonExistentCity_ReturnsNotFound()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/city/999/theme");
+        // Act
+        var result = await controller.GetCityTheme(999).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<CityTheme>>(result);
+        Assert.IsType<NotFoundResult>(actionResult.Result);
     }
 
     /// <summary>
     /// Tests that cities can be retrieved with their tourism markets via navigation properties.
     /// </summary>
     [Fact]
-    public async Task City_CanRetrieveTourismMarkets()
+    public async Task CityCanRetrieveTourismMarkets()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
+        // Arrange
+        SeedTestCityWithTheme();
+        
         // Create tourism market
         var market = new TourismMarket
         {
@@ -317,11 +242,11 @@ public class CityMarketingTests : IClassFixture<CustomWebApplicationFactory>
             IsActive = true,
             CreatedAt = DateTimeOffset.UtcNow
         };
-        db.TourismMarkets.Add(market);
-        await db.SaveChangesAsync();
+        DbContext.TourismMarkets.Add(market);
+        await DbContext.SaveChangesAsync().ConfigureAwait(false);
 
         // Create city and link to market
-        var city = await db.Cities.FirstOrDefaultAsync(c => c.Id == 1);
+        var city = await DbContext.Cities.FirstOrDefaultAsync(c => c.Id == 1).ConfigureAwait(false);
         Assert.NotNull(city);
 
         var relationship = new CityTourismMarket
@@ -332,15 +257,16 @@ public class CityMarketingTests : IClassFixture<CustomWebApplicationFactory>
             TourismMarket = market,
             CreatedAt = DateTimeOffset.UtcNow
         };
-        db.CityTourismMarkets.Add(relationship);
-        await db.SaveChangesAsync();
+        DbContext.CityTourismMarkets.Add(relationship);
+        await DbContext.SaveChangesAsync().ConfigureAwait(false);
 
-        // Retrieve city with markets
-        var cityWithMarkets = await db.Cities
+        // Act - Retrieve city with markets
+        var cityWithMarkets = await DbContext.Cities
             .Include(c => c.CityTourismMarkets)
                 .ThenInclude(ctm => ctm.TourismMarket)
-            .FirstOrDefaultAsync(c => c.Id == city.Id);
+            .FirstOrDefaultAsync(c => c.Id == city.Id).ConfigureAwait(false);
 
+        // Assert
         Assert.NotNull(cityWithMarkets);
         Assert.NotEmpty(cityWithMarkets.CityTourismMarkets);
         Assert.Contains(cityWithMarkets.CityTourismMarkets, ctm => ctm.TourismMarket.Name == "Test Market");

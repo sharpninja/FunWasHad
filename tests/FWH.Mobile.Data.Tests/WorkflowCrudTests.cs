@@ -1,8 +1,7 @@
-using System.Threading.Tasks;
-using Xunit;
 using FWH.Mobile.Data.Models;
 using FWH.Mobile.Data.Repositories;
 using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Mobile.Data.Tests;
 
@@ -19,7 +18,7 @@ public class WorkflowCrudTests : DataTestBase
     /// <para><strong>Reason for expectation:</strong> UpdateAsync should replace the entire workflow definition, not merge changes. This means removing old nodes/transitions/start points and adding new ones. The exact counts (1 node, 1 transition, 1 start point) and the specific IDs (n2) confirm that the old collections were completely replaced, not merged. This ensures workflow updates result in clean, valid workflow structures.</para>
     /// </remarks>
     [Fact]
-    public async Task UpdateWorkflow_ReplacesCollections()
+    public async Task UpdateWorkflowReplacesCollections()
     {
         var repo = ServiceProvider.GetRequiredService<IWorkflowRepository>();
 
@@ -32,7 +31,7 @@ public class WorkflowCrudTests : DataTestBase
         def.Transitions.Add(new TransitionEntity { FromNodeId = "n1", ToNodeId = "n2" });
         def.StartPoints.Add(new StartPointEntity { NodeId = "n1" });
 
-        await repo.CreateAsync(def);
+        await repo.CreateAsync(def).ConfigureAwait(true);
 
         // Create a fresh instance to represent the updated state (avoid modifying tracked entity)
         var updatedDef = new WorkflowDefinitionEntity
@@ -44,7 +43,7 @@ public class WorkflowCrudTests : DataTestBase
         updatedDef.Transitions.Add(new TransitionEntity { FromNodeId = "n2", ToNodeId = "n3" });
         updatedDef.StartPoints.Add(new StartPointEntity { NodeId = "n2" });
 
-        var updated = await repo.UpdateAsync(updatedDef);
+        var updated = await repo.UpdateAsync(updatedDef).ConfigureAwait(true);
         Assert.Equal("After", updated.Name);
         Assert.Single(updated.Nodes);
         Assert.Equal("n2", updated.Nodes[0].NodeId);
@@ -64,20 +63,20 @@ public class WorkflowCrudTests : DataTestBase
     /// <para><strong>Reason for expectation:</strong> DeleteAsync should remove the workflow entity and all related entities (via cascade delete or explicit deletion). The true return value indicates successful deletion. After deletion, querying for the workflow should return null, confirming it no longer exists in the database. This ensures deletion is permanent and complete.</para>
     /// </remarks>
     [Fact]
-    public async Task DeleteWorkflow_RemovesIt()
+    public async Task DeleteWorkflowRemovesIt()
     {
         var repo = ServiceProvider.GetRequiredService<IWorkflowRepository>();
 
         var def = new WorkflowDefinitionEntity { Id = "d1", Name = "ToDelete" };
-        await repo.CreateAsync(def);
+        await repo.CreateAsync(def).ConfigureAwait(true);
 
-        var got = await repo.GetByIdAsync("d1");
+        var got = await repo.GetByIdAsync("d1").ConfigureAwait(true);
         Assert.NotNull(got);
 
-        var deleted = await repo.DeleteAsync("d1");
+        var deleted = await repo.DeleteAsync("d1").ConfigureAwait(true);
         Assert.True(deleted);
 
-        var after = await repo.GetByIdAsync("d1");
+        var after = await repo.GetByIdAsync("d1").ConfigureAwait(true);
         Assert.Null(after);
     }
 }

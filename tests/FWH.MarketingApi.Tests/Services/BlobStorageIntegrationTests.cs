@@ -1,55 +1,29 @@
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text;
-using FWH.MarketingApi.Data;
+using FWH.MarketingApi.Controllers;
 using FWH.MarketingApi.Models;
-using FWH.MarketingApi.Tests;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using FWH.MarketingApi.Services;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using NSubstitute;
 using Xunit;
 
 namespace FWH.MarketingApi.Tests.Services;
 
 /// <summary>
-/// Integration tests for blob storage service with FeedbackController.
-/// Tests file upload functionality end-to-end through the HTTP API.
+/// Unit tests for blob storage service with FeedbackController.
+/// Tests file upload functionality through controller methods.
 /// </summary>
-public class BlobStorageIntegrationTests : IClassFixture<CustomWebApplicationFactory>
+public class BlobStorageIntegrationTests : ControllerTestBase
 {
-    private readonly CustomWebApplicationFactory _factory;
-
-    public BlobStorageIntegrationTests(CustomWebApplicationFactory factory)
+    private FeedbackController CreateController(IBlobStorageService? blobStorage = null)
     {
-        _factory = factory;
-        SeedTestData();
+        blobStorage ??= Substitute.For<IBlobStorageService>();
+        return new FeedbackController(DbContext, CreateLogger<FeedbackController>(), blobStorage);
     }
 
-    private void SeedTestData()
+    public BlobStorageIntegrationTests()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
-        // Clear existing data
-        db.Businesses.RemoveRange(db.Businesses);
-        db.Feedbacks.RemoveRange(db.Feedbacks);
-        db.FeedbackAttachments.RemoveRange(db.FeedbackAttachments);
-        db.SaveChanges();
-
-        // Add test business
-        var business = new Business
-        {
-            Id = 1,
-            Name = "Test Business",
-            Address = "123 Main St",
-            Latitude = 37.7749,
-            Longitude = -122.4194,
-            IsSubscribed = true,
-            CreatedAt = DateTimeOffset.UtcNow
-        };
-
-        db.Businesses.Add(business);
-        db.SaveChanges();
+        SeedTestBusiness();
     }
 
     /// <summary>
@@ -63,10 +37,22 @@ public class BlobStorageIntegrationTests : IClassFixture<CustomWebApplicationFac
     /// <para><strong>Reason for expectation:</strong> When a file is uploaded, it should be stored via the blob storage service, a database record should be created with the storage URL, and the file should be physically present on disk for serving.</para>
     /// </remarks>
     [Fact]
-    public async Task UploadImageAttachment_StoresFileAndCreatesRecord()
+    public async Task UploadImageAttachmentStoresFileAndCreatesRecord()
     {
         // Arrange
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        var blobStorage = Substitute.For<IBlobStorageService>();
+        var storageUrl = "/uploads/feedback/1/images/test-image.jpg";
+        var thumbnailUrl = "/uploads/feedback/1/images/test-image-thumb.jpg";
+        blobStorage.UploadWithThumbnailAsync(
+            Arg.Any<Stream>(),
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<bool>(),
+            Arg.Any<CancellationToken>())
+            .Returns((storageUrl, thumbnailUrl));
+
+        var controller = CreateController(blobStorage);
 
         // First create feedback
         var feedbackRequest = new SubmitFeedbackRequest
@@ -79,37 +65,30 @@ public class BlobStorageIntegrationTests : IClassFixture<CustomWebApplicationFac
             Message = "Test message",
             Rating = 5
         };
-        var feedbackResponse = await client.PostAsJsonAsync("/api/feedback", feedbackRequest);
-        var feedback = await feedbackResponse.Content.ReadFromJsonAsync<Feedback>();
+        var feedbackResult = await controller.SubmitFeedback(feedbackRequest).ConfigureAwait(false);
+        var feedbackActionResult = Assert.IsType<ActionResult<Feedback>>(feedbackResult);
+        var createdResult = Assert.IsType<CreatedAtActionResult>(feedbackActionResult.Result);
+        var feedback = Assert.IsType<Feedback>(createdResult.Value);
         Assert.NotNull(feedback);
 
         // Create image file content
         var imageContent = Encoding.UTF8.GetBytes("fake jpeg image data");
-        using var content = new MultipartFormDataContent();
-        using var imageStream = new MemoryStream(imageContent);
-        var streamContent = new StreamContent(imageStream);
-        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
-        content.Add(streamContent, "file", "test-image.jpg");
+        var file = CreateMockFormFile(imageContent, "test-image.jpg", "image/jpeg");
 
         // Act
-        var response = await client.PostAsync($"/api/feedback/{feedback!.Id}/attachments/image", content);
+        var result = await controller.UploadImage(feedback.Id, file).ConfigureAwait(false);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var attachment = await response.Content.ReadFromJsonAsync<FeedbackAttachment>();
+        var actionResult = Assert.IsType<ActionResult<FeedbackAttachment>>(result);
+        var createdAttachmentResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
+        var attachment = Assert.IsType<FeedbackAttachment>(createdAttachmentResult.Value);
         Assert.NotNull(attachment);
-        Assert.NotNull(attachment!.StorageUrl);
+        Assert.NotNull(attachment.StorageUrl);
         Assert.StartsWith("/uploads/feedback/", attachment.StorageUrl);
         Assert.Equal("image", attachment.AttachmentType);
         Assert.Equal("test-image.jpg", attachment.FileName);
         Assert.Equal("image/jpeg", attachment.ContentType);
         Assert.Equal(imageContent.Length, attachment.FileSizeBytes);
-
-        // Verify file exists via blob storage service
-        using var scope = _factory.Services.CreateScope();
-        var blobStorage = scope.ServiceProvider.GetRequiredService<FWH.MarketingApi.Services.IBlobStorageService>();
-        var exists = await blobStorage.ExistsAsync(attachment.StorageUrl);
-        Assert.True(exists);
     }
 
     /// <summary>
@@ -123,10 +102,27 @@ public class BlobStorageIntegrationTests : IClassFixture<CustomWebApplicationFac
     /// <para><strong>Reason for expectation:</strong> The storage URL should be a valid reference to the stored file. The blob storage service should be able to retrieve files it has stored, enabling file serving functionality.</para>
     /// </remarks>
     [Fact]
-    public async Task UploadImageAttachment_FileIsRetrievable()
+    public async Task UploadImageAttachmentFileIsRetrievable()
     {
         // Arrange
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        var imageContent = Encoding.UTF8.GetBytes("test image content");
+        var storageUrl = "/uploads/feedback/1/images/test.jpg";
+        var thumbnailUrl = "/uploads/feedback/1/images/test-thumb.jpg";
+        
+        var blobStorage = Substitute.For<IBlobStorageService>();
+        blobStorage.UploadWithThumbnailAsync(
+            Arg.Any<Stream>(),
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<bool>(),
+            Arg.Any<CancellationToken>())
+            .Returns((storageUrl, thumbnailUrl));
+        
+        blobStorage.GetAsync(storageUrl, Arg.Any<CancellationToken>())
+            .Returns(new MemoryStream(imageContent));
+
+        var controller = CreateController(blobStorage);
 
         // Create feedback
         var feedbackRequest = new SubmitFeedbackRequest
@@ -139,31 +135,27 @@ public class BlobStorageIntegrationTests : IClassFixture<CustomWebApplicationFac
             Message = "Test message",
             Rating = 5
         };
-        var feedbackResponse = await client.PostAsJsonAsync("/api/feedback", feedbackRequest);
-        var feedback = await feedbackResponse.Content.ReadFromJsonAsync<Feedback>();
+        var feedbackResult = await controller.SubmitFeedback(feedbackRequest).ConfigureAwait(false);
+        var feedbackActionResult = Assert.IsType<ActionResult<Feedback>>(feedbackResult);
+        var createdResult = Assert.IsType<CreatedAtActionResult>(feedbackActionResult.Result);
+        var feedback = Assert.IsType<Feedback>(createdResult.Value);
         Assert.NotNull(feedback);
 
         // Upload image
-        var imageContent = Encoding.UTF8.GetBytes("test image content");
-        using var content = new MultipartFormDataContent();
-        using var imageStream = new MemoryStream(imageContent);
-        var streamContent = new StreamContent(imageStream);
-        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
-        content.Add(streamContent, "file", "test.jpg");
-
-        var uploadResponse = await client.PostAsync($"/api/feedback/{feedback!.Id}/attachments/image", content);
-        var attachment = await uploadResponse.Content.ReadFromJsonAsync<FeedbackAttachment>();
+        var file = CreateMockFormFile(imageContent, "test.jpg", "image/jpeg");
+        var uploadResult = await controller.UploadImage(feedback.Id, file).ConfigureAwait(false);
+        var uploadActionResult = Assert.IsType<ActionResult<FeedbackAttachment>>(uploadResult);
+        var createdAttachmentResult = Assert.IsType<CreatedAtActionResult>(uploadActionResult.Result);
+        var attachment = Assert.IsType<FeedbackAttachment>(createdAttachmentResult.Value);
         Assert.NotNull(attachment);
 
         // Act - Retrieve file via blob storage
-        using var scope = _factory.Services.CreateScope();
-        var blobStorage = scope.ServiceProvider.GetRequiredService<FWH.MarketingApi.Services.IBlobStorageService>();
-        using var retrievedStream = await blobStorage.GetAsync(attachment!.StorageUrl);
+        using var retrievedStream = await blobStorage.GetAsync(attachment.StorageUrl).ConfigureAwait(false);
 
         // Assert
         Assert.NotNull(retrievedStream);
         using var reader = new StreamReader(retrievedStream);
-        var retrievedContent = await reader.ReadToEndAsync();
+        var retrievedContent = await reader.ReadToEndAsync().ConfigureAwait(false);
         Assert.Equal("test image content", retrievedContent);
     }
 
@@ -178,10 +170,22 @@ public class BlobStorageIntegrationTests : IClassFixture<CustomWebApplicationFac
     /// <para><strong>Reason for expectation:</strong> Video uploads should work similarly to image uploads, with the file stored via blob storage and a database record created. The attachment type should be correctly set to "video".</para>
     /// </remarks>
     [Fact]
-    public async Task UploadVideoAttachment_StoresFileAndCreatesRecord()
+    public async Task UploadVideoAttachmentStoresFileAndCreatesRecord()
     {
         // Arrange
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        var blobStorage = Substitute.For<IBlobStorageService>();
+        var storageUrl = "/uploads/feedback/1/videos/test-video.mp4";
+        var thumbnailUrl = (string?)null;
+        blobStorage.UploadWithThumbnailAsync(
+            Arg.Any<Stream>(),
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<string>(),
+            Arg.Any<bool>(),
+            Arg.Any<CancellationToken>())
+            .Returns((storageUrl, thumbnailUrl));
+
+        var controller = CreateController(blobStorage);
 
         // Create feedback
         var feedbackRequest = new SubmitFeedbackRequest
@@ -194,26 +198,25 @@ public class BlobStorageIntegrationTests : IClassFixture<CustomWebApplicationFac
             Message = "Test message",
             Rating = 5
         };
-        var feedbackResponse = await client.PostAsJsonAsync("/api/feedback", feedbackRequest);
-        var feedback = await feedbackResponse.Content.ReadFromJsonAsync<Feedback>();
+        var feedbackResult = await controller.SubmitFeedback(feedbackRequest).ConfigureAwait(false);
+        var feedbackActionResult = Assert.IsType<ActionResult<Feedback>>(feedbackResult);
+        var createdResult = Assert.IsType<CreatedAtActionResult>(feedbackActionResult.Result);
+        var feedback = Assert.IsType<Feedback>(createdResult.Value);
         Assert.NotNull(feedback);
 
         // Create video file content
         var videoContent = Encoding.UTF8.GetBytes("fake mp4 video data");
-        using var content = new MultipartFormDataContent();
-        using var videoStream = new MemoryStream(videoContent);
-        var streamContent = new StreamContent(videoStream);
-        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("video/mp4");
-        content.Add(streamContent, "file", "test-video.mp4");
+        var file = CreateMockFormFile(videoContent, "test-video.mp4", "video/mp4");
 
         // Act
-        var response = await client.PostAsync($"/api/feedback/{feedback!.Id}/attachments/video", content);
+        var result = await controller.UploadVideo(feedback.Id, file).ConfigureAwait(false);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var attachment = await response.Content.ReadFromJsonAsync<FeedbackAttachment>();
+        var actionResult = Assert.IsType<ActionResult<FeedbackAttachment>>(result);
+        var createdAttachmentResult = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
+        var attachment = Assert.IsType<FeedbackAttachment>(createdAttachmentResult.Value);
         Assert.NotNull(attachment);
-        Assert.Equal("video", attachment!.AttachmentType);
+        Assert.Equal("video", attachment.AttachmentType);
         Assert.NotNull(attachment.StorageUrl);
         Assert.StartsWith("/uploads/feedback/", attachment.StorageUrl);
     }

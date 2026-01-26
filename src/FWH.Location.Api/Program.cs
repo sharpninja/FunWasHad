@@ -1,9 +1,7 @@
-using FWH.Common.Location;
+using FWH.Common.Chat.Services;
 using FWH.Common.Location.Configuration;
 using FWH.Common.Location.Extensions;
 using FWH.Location.Api.Data;
-using FWH.Common.Chat.Services;
-using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,7 +75,7 @@ var app = builder.Build();
 // Apply database migrations on startup (skip in Test environment)
 if (!app.Environment.IsEnvironment("Test"))
 {
-    await ApplyDatabaseMigrationsAsync(app);
+    await ApplyDatabaseMigrationsAsync(app).ConfigureAwait(false);
 }
 
 // Map Aspire default endpoints (health checks, metrics)
@@ -148,7 +146,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
         }
 
         // Validate connection string format
-        if (connectionString.StartsWith("${{") || connectionString.Contains("{{"))
+        if (connectionString.StartsWith("${{", StringComparison.Ordinal) || connectionString.Contains("{{", StringComparison.Ordinal))
         {
             logger.LogError("Connection string appears to be an unresolved Railway template: {Value}",
                 connectionString.Substring(0, Math.Min(100, connectionString.Length)));
@@ -179,7 +177,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
         var migrationLogger = scope.ServiceProvider.GetRequiredService<ILogger<DatabaseMigrationService>>();
         var migrationService = new DatabaseMigrationService(connectionString, migrationLogger);
 
-        await migrationService.ApplyMigrationsAsync();
+        await migrationService.ApplyMigrationsAsync().ConfigureAwait(false);
 
         logger.LogInformation("Database migrations completed successfully");
     }

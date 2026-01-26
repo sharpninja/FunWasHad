@@ -1,6 +1,3 @@
-using System.Linq;
-using FWH.Common.Workflow;
-using FWH.Common.Workflow.Models;
 using Xunit;
 
 namespace FWH.Common.Workflow.Tests;
@@ -18,7 +15,7 @@ public class PlantUmlParserTests
     /// <para><strong>Reason for expectation:</strong> The parser should extract all workflow elements from the PlantUML syntax. Nodes represent states/actions in the workflow, transitions represent the flow between nodes, and start points indicate where the workflow begins. A valid workflow must have at least one of each to be executable. The start point having a non-null NodeId confirms the parser correctly identified the starting node.</para>
     /// </remarks>
     [Fact]
-    public void Parse_SimpleSequence_ShouldProduceNodesAndTransitions()
+    public void ParseSimpleSequenceShouldProduceNodesAndTransitions()
     {
         var input = @"@startuml
 [*] --> Start
@@ -47,7 +44,7 @@ public class PlantUmlParserTests
     /// <para><strong>Reason for expectation:</strong> An if-else structure requires: a transition into the if block with a condition, a transition for the else branch (possibly with a negated condition), and transitions out of each branch that join at the endif. The Condition property being non-null on at least one transition confirms the parser correctly extracted the conditional logic from the PlantUML syntax.</para>
     /// </remarks>
     [Fact]
-    public void Parse_IfElse_ShouldCreateDecisionAndJoinTransitions()
+    public void ParseIfElseShouldCreateDecisionAndJoinTransitions()
     {
         var input = @"@startuml
 [*]
@@ -79,7 +76,7 @@ endif;
     /// <para><strong>Reason for expectation:</strong> A repeat-while loop requires a conditional transition that determines whether to loop back or exit. The Condition property being non-null confirms the parser correctly extracted the loop condition ("not done") from the PlantUML syntax and created a conditional transition for the loop control flow.</para>
     /// </remarks>
     [Fact]
-    public void Parse_RepeatWhile_ShouldCreateLoopBackEdge()
+    public void ParseRepeatWhileShouldCreateLoopBackEdge()
     {
         var input = @"@startuml
 start;

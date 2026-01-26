@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace FWH.Common.Chat.ViewModels;

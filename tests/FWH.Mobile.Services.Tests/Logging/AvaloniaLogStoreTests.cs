@@ -1,6 +1,5 @@
-using System;
-using Xunit;
 using FWH.Mobile.Logging;
+using Xunit;
 
 namespace FWH.Mobile.Services.Tests.Logging;
 
@@ -17,7 +16,7 @@ public sealed class AvaloniaLogStoreTests
     /// <para><strong>Reason for expectation:</strong> With valid input (positive maxEntries), the constructor should successfully create the store and initialize it with an empty collection. The empty Entries confirms the store starts in a clean state, ready to accept log entries. This is a basic sanity check for object construction.</para>
     /// </remarks>
     [Fact]
-    public void Constructor_WithValidMaxEntries_Succeeds()
+    public void ConstructorWithValidMaxEntriesSucceeds()
     {
         var store = new AvaloniaLogStore(maxEntries: 100);
 
@@ -38,7 +37,7 @@ public sealed class AvaloniaLogStoreTests
     }
 
     [Fact]
-    public void Add_WithNullEntry_ThrowsArgumentNullException()
+    public void AddWithNullEntryThrowsArgumentNullException()
     {
         var store = new AvaloniaLogStore(maxEntries: 10);
 

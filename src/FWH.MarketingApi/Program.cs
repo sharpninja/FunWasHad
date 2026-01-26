@@ -1,6 +1,5 @@
 using FWH.MarketingApi.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,7 +67,7 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 // Apply database migrations on startup
-await ApplyDatabaseMigrationsAsync(app);
+await ApplyDatabaseMigrationsAsync(app).ConfigureAwait(false);
 
 // Map Aspire default endpoints (health checks, metrics)
 app.MapDefaultEndpoints();
@@ -139,7 +138,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
         var migrationLogger = scope.ServiceProvider.GetRequiredService<ILogger<DatabaseMigrationService>>();
         var migrationService = new DatabaseMigrationService(connectionString, migrationLogger);
 
-        await migrationService.ApplyMigrationsAsync();
+        await migrationService.ApplyMigrationsAsync().ConfigureAwait(false);
 
         logger.LogInformation("Database migrations completed successfully");
     }

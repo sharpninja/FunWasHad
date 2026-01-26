@@ -1,4 +1,3 @@
-using System;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FWH.Common.Chat.Services;
@@ -24,7 +23,7 @@ public class CameraServiceFactory
     {
         // Try to get platform-specific implementations from DI
         // The platform-specific projects will register their implementations with a key
-        
+
         if (_platformService.IsAndroid)
         {
             // Try to get Android-specific service

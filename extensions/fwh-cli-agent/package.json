@@ -25,6 +25,11 @@
           "default": "CLI.md",
           "description": "Path to CLI.md relative to workspace root. Used when cli-agent.json CliAgent.CliMdPath is not set."
         },
+        "fwhCliAgent.promptsMdPath": {
+          "type": "string",
+          "default": "scripts/modules/FWH.Prompts/prompts.md",
+          "description": "Path to prompts.md (FWH.Prompts) relative to workspace root. Used when cli-agent.json CliAgent.PromptsMdPath is not set. MVP-SUPPORT-005."
+        },
         "fwhCliAgent.executeMode": {
           "type": "string",
           "enum": [
@@ -58,8 +63,32 @@
       {
         "command": "fwhCliAgent.showOutput",
         "title": "FWH CLI Agent: Show Cursor CLI output"
+      },
+      {
+        "command": "fwhCliAgent.openPromptForm",
+        "title": "FWH CLI Agent: Open prompt form"
+      },
+      {
+        "command": "fwhCliAgent.refreshPromptsList",
+        "title": "FWH CLI Agent: Refresh prompts list"
       }
-    ]
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "fwhCliAgent.promptsList",
+          "name": "Prompts"
+        }
+      ]
+    },
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "fwhCliAgent.openPromptForm",
+          "when": "view == fwhCliAgent.promptsList"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

@@ -45,7 +45,7 @@ public class LocationApiClientIntegrationTests
     /// <para><strong>Reason for expectation:</strong> With valid options (non-empty BaseAddress, positive Timeout), the constructor should successfully create the client instance. The non-null assertion confirms that object creation succeeded and the client is ready to use. This is a basic sanity check to ensure the constructor works correctly with valid input.</para>
     /// </remarks>
     [Fact]
-    public void LocationApiClient_Constructor_WithValidOptions_Succeeds()
+    public void LocationApiClientConstructorWithValidOptionsSucceeds()
     {
         // Arrange
         var httpClient = new HttpClient();
@@ -73,7 +73,7 @@ public class LocationApiClientIntegrationTests
     /// <para><strong>Reason for expectation:</strong> Input validation is critical for API correctness. Empty base addresses cannot be used to construct HTTP requests and would cause errors when the client tries to make API calls. Throwing InvalidOperationException immediately provides clear feedback about the invalid configuration and follows .NET Framework Design Guidelines for parameter validation.</para>
     /// </remarks>
     [Fact]
-    public void LocationApiClient_Constructor_WithEmptyBaseAddress_Throws()
+    public void LocationApiClientConstructorWithEmptyBaseAddressThrows()
     {
         // Arrange
         var httpClient = new HttpClient();
@@ -175,7 +175,7 @@ public class LocationApiClientIntegrationTests
     /// <para><strong>Reason for expectation:</strong> The client should either validate coordinates before making API calls (returning empty results for invalid coordinates) or the API should return empty results for invalid requests. Returning an empty collection is preferable to throwing exceptions as it allows the application to continue operating. The non-null, empty collection confirms that the client handled the invalid input gracefully and didn't crash.</para>
     /// </remarks>
     [Fact]
-    public async Task GetNearbyBusinessesAsync_WithInvalidCoordinates_HandlesGracefully()
+    public async Task GetNearbyBusinessesAsyncWithInvalidCoordinatesHandlesGracefully()
     {
         // Arrange
         var httpClient = CreateHttpClientWithSslValidation();

@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Theme settings for customizing the app appearance when in a city.
 /// </summary>
-public class CityTheme
+internal class CityTheme
 {
     public long Id { get; set; }
     public long CityId { get; set; }

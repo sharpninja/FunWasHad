@@ -1,8 +1,7 @@
-using System.Threading.Tasks;
-using Xunit;
 using FWH.Mobile.Data.Models;
 using FWH.Mobile.Data.Repositories;
 using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Mobile.Data.Tests;
 
@@ -23,10 +22,10 @@ public class NoteRepositoryTests : DataTestBase
     {
         var repo = ServiceProvider.GetRequiredService<INoteRepository>();
         var note = new Note { Title = "T1", Content = "C1" };
-        var created = await repo.CreateAsync(note);
+        var created = await repo.CreateAsync(note).ConfigureAwait(true);
         Assert.True(created.Id > 0);
 
-        var got = await repo.GetByIdAsync(created.Id);
+        var got = await repo.GetByIdAsync(created.Id).ConfigureAwait(true);
         Assert.NotNull(got);
         Assert.Equal("T1", got!.Title);
     }

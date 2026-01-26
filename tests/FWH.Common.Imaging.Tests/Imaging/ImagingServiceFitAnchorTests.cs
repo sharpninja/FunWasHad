@@ -1,10 +1,7 @@
-using System;
-using System.Collections.Generic;
-using Xunit;
-using SkiaSharp;
-using Microsoft.Extensions.DependencyInjection;
-using FWH.Common.Imaging;
 using FWH.Common.Imaging.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using SkiaSharp;
+using Xunit;
 
 namespace FWH.Common.Imaging.Tests.Imaging;
 
@@ -33,7 +30,7 @@ public class ImagingServiceFitAnchorTests
     /// </remarks>
     [Theory]
     [MemberData(nameof(FitAnchorData))]
-    public void RenderSvgOverlay_FitModeAnchor_ComposesOverlay(FitMode fitMode, Anchor anchor)
+    public void RenderSvgOverlayFitModeAnchorComposesOverlay(FitMode fitMode, Anchor anchor)
     {
         var services = new ServiceCollection();
         services.AddImagingServices();
@@ -146,7 +143,7 @@ public class ImagingServiceFitAnchorTests
     /// <para><strong>Reason for expectation:</strong> The renderer should apply 10 pixels of padding, reducing the available area from 120x80 to 100x60. The padding area (0-10 pixels from edges) should be filled with the background color (green). The overlay should be rendered within the padded area (starting at pixel 10,10). The corner pixel being green confirms padding and background are applied, and the inside pixel not being green confirms the overlay/base bitmap is rendered within the padded area.</para>
     /// </remarks>
     [Fact]
-    public void RenderSvgOverlay_PaddingAndBackground_AppliedCorrectly()
+    public void RenderSvgOverlayPaddingAndBackgroundAppliedCorrectly()
     {
         var services = new ServiceCollection();
         services.AddImagingServices();

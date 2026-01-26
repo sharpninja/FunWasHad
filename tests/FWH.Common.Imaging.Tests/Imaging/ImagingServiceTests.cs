@@ -1,8 +1,7 @@
-using Xunit;
-using SkiaSharp;
-using Microsoft.Extensions.DependencyInjection;
-using FWH.Common.Imaging;
 using FWH.Common.Imaging.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using SkiaSharp;
+using Xunit;
 
 namespace FWH.Common.Imaging.Tests.Imaging;
 
@@ -19,7 +18,7 @@ public class ImagingServiceTests
     /// <para><strong>Reason for expectation:</strong> The RenderSvgOverlay method should render the SVG at the specified coordinates, rounding fractional coordinates to the nearest pixel. Pixels within the overlay area (20-29, 30-39) should be blue, while pixels outside should retain the base bitmap color (red). The specific pixel checks confirm accurate positioning and that the overlay doesn't affect unrelated areas of the image.</para>
     /// </remarks>
     [Fact]
-    public void RenderSvgOverlay_CompositesSvgOverBaseBitmap_AtCorrectPixel()
+    public void RenderSvgOverlayCompositesSvgOverBaseBitmapAtCorrectPixel()
     {
         var services = new ServiceCollection();
         services.AddImagingServices();

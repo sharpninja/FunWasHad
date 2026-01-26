@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Concurrent;
 using FWH.Common.Workflow.Models;
 
@@ -14,11 +13,11 @@ public class InMemoryWorkflowDefinitionStore : IWorkflowDefinitionStore
 
     public void Store(WorkflowDefinition definition)
     {
-        if (definition == null) throw new ArgumentNullException(nameof(definition));
+        ArgumentNullException.ThrowIfNull(definition);
         _definitions[definition.Id] = definition;
     }
 
-    public WorkflowDefinition? Get(string workflowId)
+    public WorkflowDefinition? GetById(string workflowId)
     {
         if (string.IsNullOrWhiteSpace(workflowId)) return null;
         return _definitions.TryGetValue(workflowId, out var def) ? def : null;

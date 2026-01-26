@@ -1,10 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using FWH.Common.Location.Configuration;
 using FWH.Common.Location.Services;
-using FWH.Common.Chat.Services;
-using System;
-using System.Net.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Polly;
 using Polly.CircuitBreaker;

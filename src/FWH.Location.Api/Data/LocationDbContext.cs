@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FWH.Location.Api.Data;
 
-public class LocationDbContext : DbContext
+internal class LocationDbContext : DbContext
 {
     public LocationDbContext(DbContextOptions<LocationDbContext> options) : base(options)
     {

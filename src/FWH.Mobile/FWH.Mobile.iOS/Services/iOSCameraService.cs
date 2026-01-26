@@ -1,17 +1,12 @@
-using Foundation;
 using FWH.Common.Chat.Services;
 using Microsoft.Extensions.Logging;
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using UIKit;
 
 namespace FWH.Mobile.iOS.Services;
 
 /// <summary>
 /// iOS implementation of camera service using UIImagePickerController
 /// </summary>
-public class iOSCameraService : ICameraService
+internal class iOSCameraService : ICameraService
 {
     private readonly ILogger<iOSCameraService>? _logger;
     private TaskCompletionSource<byte[]?>? _photoTcs;

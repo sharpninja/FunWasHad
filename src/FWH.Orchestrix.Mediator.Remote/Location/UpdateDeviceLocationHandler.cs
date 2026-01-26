@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using FWH.Orchestrix.Contracts.Location;
-using Microsoft.Extensions.Logging;
 using FWH.Orchestrix.Contracts.Mediator;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Orchestrix.Mediator.Remote.Location;
 
@@ -24,6 +24,7 @@ public class UpdateDeviceLocationHandler : IMediatorHandler<UpdateDeviceLocation
         IHttpClientFactory httpClientFactory,
         ILogger<UpdateDeviceLocationHandler> logger)
     {
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
         _httpClient = httpClientFactory.CreateClient("LocationApi");
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -32,6 +33,7 @@ public class UpdateDeviceLocationHandler : IMediatorHandler<UpdateDeviceLocation
         UpdateDeviceLocationRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation("Updating device location remotely for device {DeviceId}",
@@ -50,11 +52,11 @@ public class UpdateDeviceLocationHandler : IMediatorHandler<UpdateDeviceLocation
                     request.Heading,
                     request.Timestamp
                 },
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<LocationCreatedDto>(cancellationToken);
+                var result = await response.Content.ReadFromJsonAsync<LocationCreatedDto>(cancellationToken).ConfigureAwait(false);
                 return new UpdateDeviceLocationResponse
                 {
                     Success = true,
@@ -62,7 +64,7 @@ public class UpdateDeviceLocationHandler : IMediatorHandler<UpdateDeviceLocation
                 };
             }
 
-            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogWarning("Failed to update device location: {StatusCode} - {Error}",
                 response.StatusCode, error);
 

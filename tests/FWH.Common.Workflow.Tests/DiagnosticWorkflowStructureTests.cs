@@ -1,8 +1,4 @@
-using System;
-using System.IO;
 using Xunit;
-using Xunit.Abstractions;
-using FWH.Common.Workflow;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -29,7 +25,7 @@ public class DiagnosticWorkflowStructureTests
     /// <para><strong>Reason for expectation:</strong> The parser should successfully parse the workflow.puml file and extract all components. The test output provides a human-readable representation of the parsed structure, which is useful for debugging and validation. The test always passes because its purpose is diagnostic output rather than assertion-based validation.</para>
     /// </remarks>
     [Fact]
-    public void Debug_ActualWorkflow_Structure()
+    public void DebugActualWorkflowStructure()
     {
         // Arrange - Load actual workflow.puml
         var currentDir = Directory.GetCurrentDirectory();
@@ -133,7 +129,7 @@ public class DiagnosticWorkflowStructureTests
     /// <para><strong>Reason for expectation:</strong> The parser should recognize "start;" as a start point indicator and "stop;" as an end point. It should parse the action nodes correctly. The output provides visibility into how the parser interprets this syntax variant, which is useful for debugging parser behavior.</para>
     /// </remarks>
     [Fact]
-    public void Debug_SimpleWorkflow_WithStartKeyword()
+    public void DebugSimpleWorkflowWithStartKeyword()
     {
         // Test with a simple workflow that uses start keyword
         var puml = @"@startuml

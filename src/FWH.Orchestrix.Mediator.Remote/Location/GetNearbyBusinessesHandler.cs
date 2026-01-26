@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using FWH.Orchestrix.Contracts.Location;
-using Microsoft.Extensions.Logging;
 using FWH.Orchestrix.Contracts.Mediator;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Orchestrix.Mediator.Remote.Location;
 
@@ -17,6 +17,7 @@ public class GetNearbyBusinessesHandler : IMediatorHandler<GetNearbyBusinessesRe
         IHttpClientFactory httpClientFactory,
         ILogger<GetNearbyBusinessesHandler> logger)
     {
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
         _httpClient = httpClientFactory.CreateClient("LocationApi");
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -25,6 +26,7 @@ public class GetNearbyBusinessesHandler : IMediatorHandler<GetNearbyBusinessesRe
         GetNearbyBusinessesRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation("Getting nearby businesses remotely at ({Lat}, {Lon})",
@@ -36,11 +38,11 @@ public class GetNearbyBusinessesHandler : IMediatorHandler<GetNearbyBusinessesRe
                 query += $"&tags={string.Join(",", request.Tags.Select(Uri.EscapeDataString))}";
             }
 
-            var response = await _httpClient.GetAsync($"/api/locations/nearby{query}", cancellationToken);
+            var response = await _httpClient.GetAsync(new Uri($"/api/locations/nearby{query}", UriKind.Relative), cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                var businesses = await response.Content.ReadFromJsonAsync<List<BusinessDto>>(cancellationToken);
+                var businesses = await response.Content.ReadFromJsonAsync<List<BusinessDto>>(cancellationToken).ConfigureAwait(false);
                 return new GetNearbyBusinessesResponse
                 {
                     Success = true,
@@ -49,7 +51,7 @@ public class GetNearbyBusinessesHandler : IMediatorHandler<GetNearbyBusinessesRe
                 };
             }
 
-            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogWarning("Failed to get nearby businesses: {StatusCode} - {Error}",
                 response.StatusCode, error);
 

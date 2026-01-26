@@ -1,8 +1,4 @@
 using Xunit;
-using System;
-using System.Linq;
-using FWH.Common.Workflow;
-using FWH.Common.Workflow.Models;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -22,7 +18,7 @@ public class PlantUmlParserEdgeCaseTests
     /// <para><strong>Reason for expectation:</strong> The parser should recognize valid PlantUML syntax (start/end markers) even without content. It should create a workflow object with the provided Id and Name, but with empty collections since no nodes or transitions were defined. This allows workflows to be created incrementally and validates that the parser doesn't fail on minimal input.</para>
     /// </remarks>
     [Fact]
-    public void Parser_EmptyPlantUml_ReturnsEmptyWorkflow()
+    public void ParserEmptyPlantUmlReturnsEmptyWorkflow()
     {
         // Arrange
         var emptyPuml = "@startuml\n@enduml";
@@ -50,7 +46,7 @@ public class PlantUmlParserEdgeCaseTests
     /// <para><strong>Reason for expectation:</strong> Whitespace between markers should be ignored - it's formatting, not content. The parser should recognize that no actual workflow elements (nodes, transitions) are present and return an empty workflow, similar to the empty PlantUML case. This ensures the parser is tolerant of formatting variations.</para>
     /// </remarks>
     [Fact]
-    public void Parser_OnlyWhitespace_ReturnsEmptyWorkflow()
+    public void ParserOnlyWhitespaceReturnsEmptyWorkflow()
     {
         // Arrange
         var whitespacePuml = "@startuml\n\n   \n\t\n@enduml";
@@ -75,7 +71,7 @@ public class PlantUmlParserEdgeCaseTests
     /// <para><strong>Reason for expectation:</strong> Error recovery is important for usability - the parser should attempt to fix common errors rather than failing. Auto-closing the if block allows the workflow to be parsed and used, even if it's not perfectly formed. The presence of at least 2 nodes confirms that the action nodes were parsed, and the parser created the necessary synthetic nodes to complete the conditional structure.</para>
     /// </remarks>
     [Fact]
-    public void Parser_MismatchedIfEndif_AutoCloses()
+    public void ParserMismatchedIfEndifAutoCloses()
     {
         // Arrange - Missing endif
         var malformedPuml = @"
@@ -107,7 +103,7 @@ if (x) then
     /// <para><strong>Reason for expectation:</strong> Error recovery is important for usability - the parser should attempt to fix common errors rather than failing. Auto-closing the repeat block allows the workflow to be parsed and used, even if it's not perfectly formed. The presence of at least 2 nodes confirms that the action nodes were parsed, and the parser created the necessary synthetic nodes to complete the loop structure.</para>
     /// </remarks>
     [Fact]
-    public void Parser_MismatchedRepeatWhile_AutoCloses()
+    public void ParserMismatchedRepeatWhileAutoCloses()
     {
         // Arrange - Missing repeat while
         var malformedPuml = @"
@@ -127,7 +123,7 @@ repeat
     }
 
     [Fact]
-    public void Parser_NestedLoopsThreeLevels_ParsesCorrectly()
+    public void ParserNestedLoopsThreeLevelsParsesCorrectly()
     {
         // Arrange
         var nestedPuml = @"
@@ -281,7 +277,7 @@ note right: {""action"": ""SendMessage"", ""params"": {""text"": ""Hello""}}
     }
 
     [Fact]
-    public void Parser_SingleQuoteComments_IgnoredCompletely()
+    public void ParserSingleQuoteCommentsIgnoredCompletely()
     {
         // Arrange
         var commentedPuml = @"
@@ -303,7 +299,7 @@ note right: {""action"": ""SendMessage"", ""params"": {""text"": ""Hello""}}
     }
 
     [Fact]
-    public void Parser_DoubleSlashComments_IgnoredCompletely()
+    public void ParserDoubleSlashCommentsIgnoredCompletely()
     {
         // Arrange
         var commentedPuml = @"
@@ -396,7 +392,7 @@ endif
     }
 
     [Fact]
-    public void Parser_NestedIfStatements_ParsesCorrectly()
+    public void ParserNestedIfStatementsParsesCorrectly()
     {
         // Arrange
         var nestedIfPuml = @"
@@ -426,7 +422,7 @@ endif
     }
 
     [Fact]
-    public void Parser_BlockNoteWithMultipleLines_PreservesAllLines()
+    public void ParserBlockNoteWithMultipleLinesPreservesAllLines()
     {
         // Arrange
         var blockNotePuml = @"
@@ -604,7 +600,7 @@ activityDiagram {
     /// <para><strong>Reason for expectation:</strong> The parser should recognize all arrow styles (->, -->, <-, <--) as valid transition syntax. Each arrow should create a transition between the nodes, regardless of arrow direction or style. The node count >= 4 and transition count >= 4 confirm that all arrows were parsed and transitions were created, validating that the parser supports all common arrow syntaxes.</para>
     /// </remarks>
     [Fact]
-    public void Parser_MixedArrowStyles_AllParsed()
+    public void ParserMixedArrowStylesAllParsed()
     {
         // Arrange
         var arrowsPuml = @"

@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using FWH.Orchestrix.Contracts.Marketing;
-using Microsoft.Extensions.Logging;
 using FWH.Orchestrix.Contracts.Mediator;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Orchestrix.Mediator.Remote.Marketing;
 
@@ -17,6 +17,7 @@ public class GetBusinessCouponsHandler : IMediatorHandler<GetBusinessCouponsRequ
         IHttpClientFactory httpClientFactory,
         ILogger<GetBusinessCouponsHandler> logger)
     {
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
         _httpClient = httpClientFactory.CreateClient("MarketingApi");
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -25,16 +26,17 @@ public class GetBusinessCouponsHandler : IMediatorHandler<GetBusinessCouponsRequ
         GetBusinessCouponsRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation("Getting business coupons remotely for business {BusinessId}",
                 request.BusinessId);
 
-            var response = await _httpClient.GetAsync($"/api/marketing/{request.BusinessId}/coupons", cancellationToken);
+            var response = await _httpClient.GetAsync(new Uri($"/api/marketing/{request.BusinessId}/coupons", UriKind.Relative), cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                var coupons = await response.Content.ReadFromJsonAsync<List<CouponDto>>(cancellationToken);
+                var coupons = await response.Content.ReadFromJsonAsync<List<CouponDto>>(cancellationToken).ConfigureAwait(false);
                 return new GetBusinessCouponsResponse
                 {
                     Success = true,
@@ -42,7 +44,7 @@ public class GetBusinessCouponsHandler : IMediatorHandler<GetBusinessCouponsRequ
                 };
             }
 
-            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogWarning("Failed to get business coupons: {StatusCode} - {Error}",
                 response.StatusCode, error);
 

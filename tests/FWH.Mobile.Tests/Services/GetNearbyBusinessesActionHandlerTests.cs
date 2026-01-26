@@ -41,7 +41,7 @@ public class GetNearbyBusinessesActionHandlerTests
     }
 
     [Fact]
-    public void Constructor_WithNullGpsService_ThrowsArgumentNullException()
+    public void ConstructorWithNullGpsServiceThrowsArgumentNullException()
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
@@ -115,7 +115,7 @@ public class GetNearbyBusinessesActionHandlerTests
         Assert.Equal("permission_denied", result["status"]);
         Assert.Contains("permission", result["error"].ToLower());
 
-        _mockNotificationService.Received(1).ShowError(
+        _mockNotificationService.Received().ShowError(
             Arg.Any<string>(),
             Arg.Any<string>());
     }
@@ -126,7 +126,7 @@ public class GetNearbyBusinessesActionHandlerTests
         // Arrange
         _mockGpsService.IsLocationAvailable.Returns(true);
         _mockGpsService.GetCurrentLocationAsync(Arg.Any<CancellationToken>())
-            .Returns((GpsCoordinates?)null);
+            .Returns(Task.FromResult<GpsCoordinates?>((GpsCoordinates?)null));
 
         var context = CreateTestContext();
         var parameters = new Dictionary<string, string>();
@@ -139,7 +139,7 @@ public class GetNearbyBusinessesActionHandlerTests
         Assert.Equal("location_unavailable", result["status"]);
         Assert.Contains("GPS", result["error"]);
 
-        _mockNotificationService.Received(1).ShowError(
+        _mockNotificationService.Received().ShowError(
             Arg.Any<string>(),
             Arg.Any<string>());
     }
@@ -150,7 +150,7 @@ public class GetNearbyBusinessesActionHandlerTests
         // Arrange
         _mockGpsService.IsLocationAvailable.Returns(true);
         _mockGpsService.GetCurrentLocationAsync(Arg.Any<CancellationToken>())
-            .Returns(new GpsCoordinates(91, 0)); // Invalid latitude
+            .Returns(Task.FromResult<GpsCoordinates?>(new GpsCoordinates(91, 0))); // Invalid latitude
 
         var context = CreateTestContext();
         var parameters = new Dictionary<string, string>();
@@ -177,14 +177,14 @@ public class GetNearbyBusinessesActionHandlerTests
 
         _mockGpsService.IsLocationAvailable.Returns(true);
         _mockGpsService.GetCurrentLocationAsync(Arg.Any<CancellationToken>())
-            .Returns(coordinates);
+            .Returns(Task.FromResult<GpsCoordinates?>(coordinates));
         _mockLocationService.GetNearbyBusinessesAsync(
                 Arg.Any<double>(),
                 Arg.Any<double>(),
                 Arg.Any<int>(),
                 Arg.Any<IEnumerable<string>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(businesses);
+            .Returns(Task.FromResult<IEnumerable<BusinessLocation>>(businesses));
 
         var context = CreateTestContext();
         var parameters = new Dictionary<string, string>();
@@ -203,7 +203,7 @@ public class GetNearbyBusinessesActionHandlerTests
         Assert.Equal("100", result["closest_distance"]);
         Assert.Contains("Business A", result["businesses"]);
 
-        _mockNotificationService.Received(1).ShowSuccess(
+        _mockNotificationService.Received().ShowSuccess(
             Arg.Any<string>(),
             Arg.Any<string>());
     }
@@ -217,14 +217,14 @@ public class GetNearbyBusinessesActionHandlerTests
 
         _mockGpsService.IsLocationAvailable.Returns(true);
         _mockGpsService.GetCurrentLocationAsync(Arg.Any<CancellationToken>())
-            .Returns(coordinates);
+            .Returns(Task.FromResult<GpsCoordinates?>(coordinates));
         _mockLocationService.GetNearbyBusinessesAsync(
                 Arg.Any<double>(),
                 Arg.Any<double>(),
                 Arg.Any<int>(),
                 Arg.Any<IEnumerable<string>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(businesses);
+            .Returns(Task.FromResult<IEnumerable<BusinessLocation>>(businesses));
 
         var context = CreateTestContext();
         var parameters = new Dictionary<string, string>();
@@ -250,14 +250,14 @@ public class GetNearbyBusinessesActionHandlerTests
         var coordinates = new GpsCoordinates(37.7749, -122.4194);
         _mockGpsService.IsLocationAvailable.Returns(true);
         _mockGpsService.GetCurrentLocationAsync(Arg.Any<CancellationToken>())
-            .Returns(coordinates);
+            .Returns(Task.FromResult<GpsCoordinates?>(coordinates));
         _mockLocationService.GetNearbyBusinessesAsync(
                 Arg.Any<double>(),
                 Arg.Any<double>(),
                 Arg.Any<int>(),
                 Arg.Any<IEnumerable<string>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new List<BusinessLocation>());
+            .Returns(Task.FromResult<IEnumerable<BusinessLocation>>(new List<BusinessLocation>()));
 
         var context = CreateTestContext();
         var parameters = new Dictionary<string, string>
@@ -272,7 +272,7 @@ public class GetNearbyBusinessesActionHandlerTests
         Assert.NotNull(result);
         Assert.Equal("2000", result["radius"]);
 
-        await _mockLocationService.Received(1).GetNearbyBusinessesAsync(
+        await _mockLocationService.Received().GetNearbyBusinessesAsync(
             Arg.Any<double>(),
             Arg.Any<double>(),
             2000,
@@ -287,14 +287,14 @@ public class GetNearbyBusinessesActionHandlerTests
         var coordinates = new GpsCoordinates(37.7749, -122.4194);
         _mockGpsService.IsLocationAvailable.Returns(true);
         _mockGpsService.GetCurrentLocationAsync(Arg.Any<CancellationToken>())
-            .Returns(coordinates);
+            .Returns(Task.FromResult<GpsCoordinates?>(coordinates));
         _mockLocationService.GetNearbyBusinessesAsync(
                 Arg.Any<double>(),
                 Arg.Any<double>(),
                 Arg.Any<int>(),
                 Arg.Any<IEnumerable<string>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new List<BusinessLocation>());
+            .Returns(Task.FromResult<IEnumerable<BusinessLocation>>(new List<BusinessLocation>()));
 
         var context = CreateTestContext();
         var parameters = new Dictionary<string, string>
@@ -306,7 +306,7 @@ public class GetNearbyBusinessesActionHandlerTests
         var result = await _handler.HandleAsync(context, parameters);
 
         // Assert
-        await _mockLocationService.Received(1).GetNearbyBusinessesAsync(
+        await _mockLocationService.Received().GetNearbyBusinessesAsync(
             Arg.Any<double>(),
             Arg.Any<double>(),
             Arg.Any<int>(),
@@ -335,7 +335,7 @@ public class GetNearbyBusinessesActionHandlerTests
         Assert.NotNull(result);
         Assert.Equal("cancelled", result["status"]);
 
-        _mockNotificationService.Received(1).ShowWarning(
+        _mockNotificationService.Received().ShowWarning(
             Arg.Any<string>(),
             Arg.Any<string>());
     }
@@ -375,7 +375,7 @@ public class GetNearbyBusinessesActionHandlerTests
         Assert.Equal("GetCurrentLocationAsync", result["operation"]);
         Assert.Contains("PermissionStatus", result["diagnostics"]);
 
-        _mockNotificationService.Received(1).ShowError(
+        _mockNotificationService.Received().ShowError(
             Arg.Is<string>(msg => msg.Contains("Location service error")),
             Arg.Any<string>());
     }
@@ -399,7 +399,7 @@ public class GetNearbyBusinessesActionHandlerTests
         Assert.Equal("error", result["status"]);
         Assert.Contains("GPS hardware failure", result["error"]);
 
-        _mockNotificationService.Received(1).ShowError(
+        _mockNotificationService.Received().ShowError(
             Arg.Any<string>(),
             Arg.Any<string>());
     }
@@ -411,7 +411,7 @@ public class GetNearbyBusinessesActionHandlerTests
         var coordinates = new GpsCoordinates(37.7749, -122.4194);
         _mockGpsService.IsLocationAvailable.Returns(true);
         _mockGpsService.GetCurrentLocationAsync(Arg.Any<CancellationToken>())
-            .Returns(coordinates);
+            .Returns(Task.FromResult<GpsCoordinates?>(coordinates));
         _mockLocationService.GetNearbyBusinessesAsync(
                 Arg.Any<double>(),
                 Arg.Any<double>(),
@@ -447,14 +447,14 @@ public class GetNearbyBusinessesActionHandlerTests
 
         _mockGpsService.IsLocationAvailable.Returns(true);
         _mockGpsService.GetCurrentLocationAsync(Arg.Any<CancellationToken>())
-            .Returns(coordinates);
+            .Returns(Task.FromResult<GpsCoordinates?>(coordinates));
         _mockLocationService.GetNearbyBusinessesAsync(
                 Arg.Any<double>(),
                 Arg.Any<double>(),
                 Arg.Any<int>(),
                 Arg.Any<IEnumerable<string>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(businesses);
+            .Returns(Task.FromResult<IEnumerable<BusinessLocation>>(businesses));
 
         var context = CreateTestContext();
         var parameters = new Dictionary<string, string>();
@@ -475,7 +475,7 @@ public class GetNearbyBusinessesActionHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WithPermissionGrantedOnSecondAttempt_Succeeds()
+    public async Task HandleAsyncWithPermissionGrantedOnSecondAttemptSucceeds()
     {
         // Arrange
         var coordinates = new GpsCoordinates(37.7749, -122.4194);
@@ -486,7 +486,7 @@ public class GetNearbyBusinessesActionHandlerTests
             .Returns(Task.FromResult(true));
 
         _mockGpsService.GetCurrentLocationAsync(Arg.Any<CancellationToken>())
-            .Returns(coordinates);
+            .Returns(Task.FromResult<GpsCoordinates?>(coordinates));
 
         _mockLocationService.GetNearbyBusinessesAsync(
                 Arg.Any<double>(),
@@ -494,7 +494,7 @@ public class GetNearbyBusinessesActionHandlerTests
                 Arg.Any<int>(),
                 Arg.Any<IEnumerable<string>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(new List<BusinessLocation>());
+            .Returns(Task.FromResult<IEnumerable<BusinessLocation>>(new List<BusinessLocation>()));
 
         var context = CreateTestContext();
         var parameters = new Dictionary<string, string>();

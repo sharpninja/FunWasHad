@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Response model for business marketing data.
 /// </summary>
-public class BusinessMarketingResponse
+internal class BusinessMarketingResponse
 {
     public long BusinessId { get; set; }
     public required string BusinessName { get; set; }

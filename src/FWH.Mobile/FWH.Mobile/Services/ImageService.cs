@@ -2,10 +2,6 @@ using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
 
 namespace FWH.Mobile.Services;
 
@@ -38,13 +34,13 @@ public class ImageService : IImageService
             // First, try to get from database
             var existingImage = await _dbContext.Images
                 .Where(i => i.SourceUrl == sourceUrl && i.ImageType == imageType)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync().ConfigureAwait(false);
 
             if (existingImage != null)
             {
                 // Update last accessed time
                 existingImage.LastAccessedAt = DateTimeOffset.UtcNow;
-                await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
                 _logger.LogDebug("Retrieved image from cache: {SourceUrl}", sourceUrl);
                 return existingImage.ImageData;
             }
@@ -59,14 +55,14 @@ public class ImageService : IImageService
             using var httpClient = _httpClientFactory.CreateClient();
             httpClient.Timeout = TimeSpan.FromSeconds(30);
 
-            var response = await httpClient.GetAsync(sourceUrl);
+            var response = await httpClient.GetAsync(new Uri(sourceUrl)).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Failed to download image: {SourceUrl}, Status: {StatusCode}", sourceUrl, response.StatusCode);
                 return null;
             }
 
-            var imageData = await response.Content.ReadAsByteArrayAsync();
+            var imageData = await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
             var contentType = response.Content.Headers.ContentType?.MediaType ?? "image/png";
 
             // Store in database
@@ -76,7 +72,7 @@ public class ImageService : IImageService
                 sourceUrl,
                 entityType,
                 entityId,
-                contentType);
+                contentType).ConfigureAwait(false);
 
             _logger.LogInformation("Downloaded and stored image: {SourceUrl}, Size: {Size} bytes, ImageId: {ImageId}",
                 sourceUrl, imageData.Length, imageId);
@@ -110,13 +106,13 @@ public class ImageService : IImageService
             {
                 existingImage = await _dbContext.Images
                     .Where(i => i.SourceUrl == sourceUrl && i.ImageType == imageType)
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync().ConfigureAwait(false);
             }
             else if (entityType != null && entityId.HasValue)
             {
                 existingImage = await _dbContext.Images
                     .Where(i => i.ImageType == imageType && i.EntityType == entityType && i.EntityId == entityId)
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync().ConfigureAwait(false);
             }
 
             if (existingImage != null)
@@ -127,7 +123,7 @@ public class ImageService : IImageService
                 existingImage.FileName = fileName;
                 existingImage.FileSizeBytes = imageData.Length;
                 existingImage.LastAccessedAt = DateTimeOffset.UtcNow;
-                await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
                 _logger.LogDebug("Updated existing image: ImageId: {ImageId}", existingImage.Id);
                 return existingImage.Id;
             }
@@ -148,7 +144,7 @@ public class ImageService : IImageService
             };
 
             _dbContext.Images.Add(image);
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
             _logger.LogInformation("Stored new image: ImageId: {ImageId}, Type: {ImageType}, Size: {Size} bytes",
                 image.Id, imageType, imageData.Length);
@@ -168,12 +164,12 @@ public class ImageService : IImageService
         {
             var image = await _dbContext.Images
                 .Where(i => i.ImageType == imageType && i.EntityType == entityType && i.EntityId == entityId)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync().ConfigureAwait(false);
 
             if (image != null)
             {
                 image.LastAccessedAt = DateTimeOffset.UtcNow;
-                await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
                 return image.ImageData;
             }
 
@@ -191,11 +187,11 @@ public class ImageService : IImageService
     {
         try
         {
-            var image = await _dbContext.Images.FindAsync(imageId);
+            var image = await _dbContext.Images.FindAsync(imageId).ConfigureAwait(false);
             if (image != null)
             {
                 _dbContext.Images.Remove(image);
-                await _dbContext.SaveChangesAsync();
+                await _dbContext.SaveChangesAsync().ConfigureAwait(false);
                 _logger.LogInformation("Deleted image: ImageId: {ImageId}", imageId);
             }
         }
@@ -208,14 +204,14 @@ public class ImageService : IImageService
 
     public async Task<string?> GetImageUriAsync(string sourceUrl, string imageType, string? entityType = null, long? entityId = null)
     {
-        var imageData = await GetImageAsync(sourceUrl, imageType, entityType, entityId);
+        var imageData = await GetImageAsync(sourceUrl, imageType, entityType, entityId).ConfigureAwait(false);
         if (imageData == null)
             return null;
 
         // Get content type from database
         var image = await _dbContext.Images
             .Where(i => i.SourceUrl == sourceUrl && i.ImageType == imageType)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync().ConfigureAwait(false);
 
         var contentType = image?.ContentType ?? "image/png";
         var base64 = Convert.ToBase64String(imageData);

@@ -1,5 +1,3 @@
-using System;
-
 namespace FWH.Common.Chat.ViewModels;
 
 public class ImageChatEntry : ChatEntry<ImagePayload>

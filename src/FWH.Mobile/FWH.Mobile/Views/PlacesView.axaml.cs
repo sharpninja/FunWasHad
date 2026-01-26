@@ -6,7 +6,6 @@ using FWH.Mobile.ViewModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Linq;
 
 namespace FWH.Mobile.Views;
 
@@ -31,7 +30,7 @@ public partial class PlacesView : UserControl
             {
                 var recentLocation = await dbContext.DeviceLocationHistory
                     .OrderByDescending(l => l.Timestamp)
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync().ConfigureAwait(false);
 
                 deviceId = recentLocation?.DeviceId ?? "default-device";
             }
@@ -47,7 +46,7 @@ public partial class PlacesView : UserControl
             DataContext = viewModel;
 
             // Refresh places when view becomes visible
-            await viewModel.LoadPlacesAsync();
+            await viewModel.LoadPlacesAsync().ConfigureAwait(false);
         };
     }
 }

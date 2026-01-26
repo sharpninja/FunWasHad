@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace FWH.Common.Workflow.Models;
 
 public record WorkflowDefinition(

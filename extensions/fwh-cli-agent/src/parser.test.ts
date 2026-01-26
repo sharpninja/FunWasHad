@@ -12,6 +12,8 @@ import {
   removeCliBlock,
   pathsEqual,
   isUnderWorkspaceRoot,
+  parsePromptsMd,
+  listPromptNamesFromCliMd,
 } from './parser';
 
 describe('parser', () => {
@@ -163,6 +165,55 @@ describe('parser', () => {
 
     it('workspace root itself is under', () => {
       assert.strictEqual(isUnderWorkspaceRoot('/ws', '/ws'), true);
+    });
+  });
+
+  describe('parsePromptsMd (MVP-SUPPORT-005)', () => {
+    it('parses one prompt with parameters', () => {
+      const md = [
+        '## foo',
+        'Do {X} with {Y}.',
+        '### Parameters',
+        '| Parameter | Description | Required | Default |',
+        '|-----------|-------------|----------|---------|',
+        '| X | thing | Yes | |',
+        '| Y | other | No | y-default |',
+      ].join('\n');
+      const r = parsePromptsMd(md);
+      assert.strictEqual(r.length, 1);
+      assert.strictEqual(r[0].name, 'foo');
+      assert.ok(r[0].template.includes('{X}') && r[0].template.includes('{Y}'));
+      assert.strictEqual(r[0].parameters.length, 2);
+      assert.strictEqual(r[0].parameters[0].name, 'X');
+      assert.strictEqual(r[0].parameters[0].required, true);
+      assert.strictEqual(r[0].parameters[1].default, 'y-default');
+    });
+
+    it('skips blocks without ## name', () => {
+      const md = '# Title\n\nNo ## here.\n\n---\n\n## ok\nBody.';
+      const r = parsePromptsMd(md);
+      assert.strictEqual(r.length, 1);
+      assert.strictEqual(r[0].name, 'ok');
+    });
+
+    it('extracts placeholders not in Parameters table', () => {
+      const md = '## p\nText {A} and {B}.\n### Parameters\n| Parameter | Description | Required | Default |\n| A | a | No | |';
+      const r = parsePromptsMd(md);
+      assert.strictEqual(r.length, 1);
+      const names = r[0].parameters.map((x) => x.name).sort();
+      assert.deepStrictEqual(names, ['A', 'B']);
+    });
+  });
+
+  describe('listPromptNamesFromCliMd (MVP-SUPPORT-005)', () => {
+    it('returns unique names from ### Prompt: name (date)', () => {
+      const c = '### Prompt: code-review (2026-01-01)\n```prompt\nx\n```\n### Prompt: foo (x)\n```\n### Prompt: code-review (2026-01-02)';
+      const r = listPromptNamesFromCliMd(c);
+      assert.deepStrictEqual(r.sort(), ['code-review', 'foo']);
+    });
+
+    it('returns empty when no matches', () => {
+      assert.deepStrictEqual(listPromptNamesFromCliMd('## Prompts\n\nNothing here.'), []);
     });
   });
 });

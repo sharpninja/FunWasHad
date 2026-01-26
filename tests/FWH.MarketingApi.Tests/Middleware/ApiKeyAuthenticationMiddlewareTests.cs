@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using FWH.MarketingApi.Middleware;
@@ -39,7 +37,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> When a valid API key is provided, the middleware should authenticate the request and allow it to proceed to the controller. The _next delegate should be invoked exactly once.</para>
     /// </remarks>
     [Fact]
-    public async Task InvokeAsync_ValidApiKey_AllowsRequest()
+    public async Task InvokeAsyncValidApiKeyAllowsRequest()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -55,10 +53,10 @@ public class ApiKeyAuthenticationMiddlewareTests
         var middleware = new ApiKeyAuthenticationMiddleware(_next, _configuration, _logger);
 
         // Act
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context).ConfigureAwait(true);
 
         // Assert
-        await _next.Received(1).Invoke(context);
+        await _next.Received().Invoke(context).ConfigureAwait(true);
         Assert.Equal(200, context.Response.StatusCode);
     }
 
@@ -73,7 +71,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> Security requires that all API requests include valid authentication. Missing API keys should result in immediate rejection with 401 status, preventing unauthorized access to protected endpoints.</para>
     /// </remarks>
     [Fact]
-    public async Task InvokeAsync_MissingApiKey_Returns401()
+    public async Task InvokeAsyncMissingApiKeyReturns401()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -89,10 +87,10 @@ public class ApiKeyAuthenticationMiddlewareTests
         var middleware = new ApiKeyAuthenticationMiddleware(_next, _configuration, _logger);
 
         // Act
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context).ConfigureAwait(true);
 
         // Assert
-        await _next.DidNotReceive().Invoke(Arg.Any<HttpContext>());
+        await _next.DidNotReceive().Invoke(Arg.Any<HttpContext>()).ConfigureAwait(true);
         Assert.Equal(StatusCodes.Status401Unauthorized, context.Response.StatusCode);
     }
 
@@ -107,7 +105,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> API key validation must be strict - any mismatch should result in rejection. This prevents unauthorized access even if an attacker knows the key format.</para>
     /// </remarks>
     [Fact]
-    public async Task InvokeAsync_InvalidApiKey_Returns401()
+    public async Task InvokeAsyncInvalidApiKeyReturns401()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -123,10 +121,10 @@ public class ApiKeyAuthenticationMiddlewareTests
         var middleware = new ApiKeyAuthenticationMiddleware(_next, _configuration, _logger);
 
         // Act
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context).ConfigureAwait(true);
 
         // Assert
-        await _next.DidNotReceive().Invoke(Arg.Any<HttpContext>());
+        await _next.DidNotReceive().Invoke(Arg.Any<HttpContext>()).ConfigureAwait(true);
         Assert.Equal(StatusCodes.Status401Unauthorized, context.Response.StatusCode);
     }
 
@@ -141,7 +139,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> Health checks are infrastructure endpoints that must be publicly accessible. The middleware should skip authentication for paths starting with /health to allow monitoring systems to function.</para>
     /// </remarks>
     [Fact]
-    public async Task InvokeAsync_HealthCheckEndpoint_BypassesAuthentication()
+    public async Task InvokeAsyncHealthCheckEndpointBypassesAuthentication()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -157,10 +155,10 @@ public class ApiKeyAuthenticationMiddlewareTests
         var middleware = new ApiKeyAuthenticationMiddleware(_next, _configuration, _logger);
 
         // Act
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context).ConfigureAwait(true);
 
         // Assert
-        await _next.Received(1).Invoke(context);
+        await _next.Received().Invoke(context).ConfigureAwait(true);
         Assert.Equal(200, context.Response.StatusCode);
     }
 
@@ -175,7 +173,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> Swagger endpoints are development tools that should be accessible without authentication. The middleware should skip authentication for paths starting with /swagger.</para>
     /// </remarks>
     [Fact]
-    public async Task InvokeAsync_SwaggerEndpoint_BypassesAuthentication()
+    public async Task InvokeAsyncSwaggerEndpointBypassesAuthentication()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -191,10 +189,10 @@ public class ApiKeyAuthenticationMiddlewareTests
         var middleware = new ApiKeyAuthenticationMiddleware(_next, _configuration, _logger);
 
         // Act
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context).ConfigureAwait(true);
 
         // Assert
-        await _next.Received(1).Invoke(context);
+        await _next.Received().Invoke(context).ConfigureAwait(true);
         Assert.Equal(200, context.Response.StatusCode);
     }
 
@@ -209,7 +207,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> When both API key and signature are valid, the request should be authenticated and allowed to proceed. This provides stronger security than API key alone.</para>
     /// </remarks>
     [Fact]
-    public async Task InvokeAsync_ValidApiKeyAndSignature_AllowsRequest()
+    public async Task InvokeAsyncValidApiKeyAndSignatureAllowsRequest()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -233,10 +231,10 @@ public class ApiKeyAuthenticationMiddlewareTests
         var middleware = new ApiKeyAuthenticationMiddleware(_next, _configuration, _logger);
 
         // Act
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context).ConfigureAwait(true);
 
         // Assert
-        await _next.Received(1).Invoke(context);
+        await _next.Received().Invoke(context).ConfigureAwait(true);
         Assert.Equal(200, context.Response.StatusCode);
     }
 
@@ -251,7 +249,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> When a signature is provided, it must be valid. Invalid signatures should result in rejection to prevent tampered or malicious requests from being processed.</para>
     /// </remarks>
     [Fact]
-    public async Task InvokeAsync_ValidApiKeyButInvalidSignature_Returns401()
+    public async Task InvokeAsyncValidApiKeyButInvalidSignatureReturns401()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -269,10 +267,10 @@ public class ApiKeyAuthenticationMiddlewareTests
         var middleware = new ApiKeyAuthenticationMiddleware(_next, _configuration, _logger);
 
         // Act
-        await middleware.InvokeAsync(context);
+        await middleware.InvokeAsync(context).ConfigureAwait(true);
 
         // Assert
-        await _next.DidNotReceive().Invoke(Arg.Any<HttpContext>());
+        await _next.DidNotReceive().Invoke(Arg.Any<HttpContext>()).ConfigureAwait(true);
         Assert.Equal(StatusCodes.Status401Unauthorized, context.Response.StatusCode);
     }
 
@@ -287,7 +285,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> The middleware cannot function without an API key. It should fail fast during construction rather than at runtime, making configuration errors immediately apparent.</para>
     /// </remarks>
     [Fact]
-    public void Constructor_MissingApiKey_ThrowsInvalidOperationException()
+    public void ConstructorMissingApiKeyThrowsInvalidOperationException()
     {
         // Arrange
         _configuration["ApiSecurity:ApiKey"].Returns((string?)null);
@@ -311,7 +309,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> The middleware requires both API key and secret to function properly. Missing secret should cause immediate failure with a clear error message.</para>
     /// </remarks>
     [Fact]
-    public void Constructor_MissingApiSecret_ThrowsInvalidOperationException()
+    public void ConstructorMissingApiSecretThrowsInvalidOperationException()
     {
         // Arrange
         _configuration["ApiSecurity:ApiKey"].Returns("test-key");

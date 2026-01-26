@@ -8,7 +8,7 @@
   "properties": {
     "CliAgent": {
       "type": "object",
-      "description": "Root key for CLI Agent settings. Read by: extensions/fwh-cli-agent, scripts/modules/FWH.Prompts, src/FWH.CLI.Agent.",
+      "description": "Root key for CLI Agent settings. Read by: extensions/fwh-cli-agent, scripts/modules/FWH.Prompts.",
       "additionalProperties": true,
       "properties": {
         "CliMdPath": {

@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using FWH.Orchestrix.Contracts.Marketing;
-using Microsoft.Extensions.Logging;
 using FWH.Orchestrix.Contracts.Mediator;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Orchestrix.Mediator.Remote.Marketing;
 
@@ -17,6 +17,7 @@ public class UploadFeedbackAttachmentHandler : IMediatorHandler<UploadFeedbackAt
         IHttpClientFactory httpClientFactory,
         ILogger<UploadFeedbackAttachmentHandler> logger)
     {
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
         _httpClient = httpClientFactory.CreateClient("MarketingApi");
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -25,6 +26,7 @@ public class UploadFeedbackAttachmentHandler : IMediatorHandler<UploadFeedbackAt
         UploadFeedbackAttachmentRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation("Uploading {AttachmentType} attachment remotely for feedback {FeedbackId}",
@@ -35,15 +37,15 @@ public class UploadFeedbackAttachmentHandler : IMediatorHandler<UploadFeedbackAt
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(request.ContentType);
             content.Add(fileContent, "file", request.FileName);
 
-            var endpoint = request.AttachmentType.ToLower() == "image"
+            var endpoint = string.Equals(request.AttachmentType, "image", StringComparison.OrdinalIgnoreCase)
                 ? $"/api/feedback/{request.FeedbackId}/attachments/image"
                 : $"/api/feedback/{request.FeedbackId}/attachments/video";
 
-            var response = await _httpClient.PostAsync(endpoint, content, cancellationToken);
+            var response = await _httpClient.PostAsync(new Uri(endpoint, UriKind.Relative), content, cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<AttachmentCreatedDto>(cancellationToken);
+                var result = await response.Content.ReadFromJsonAsync<AttachmentCreatedDto>(cancellationToken).ConfigureAwait(false);
                 return new UploadFeedbackAttachmentResponse
                 {
                     Success = true,
@@ -52,7 +54,7 @@ public class UploadFeedbackAttachmentHandler : IMediatorHandler<UploadFeedbackAt
                 };
             }
 
-            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogWarning("Failed to upload feedback attachment: {StatusCode} - {Error}",
                 response.StatusCode, error);
 

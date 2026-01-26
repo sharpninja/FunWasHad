@@ -1,4 +1,3 @@
-using System;
 using System.Collections.ObjectModel;
 
 namespace FWH.Common.Chat.ViewModels;

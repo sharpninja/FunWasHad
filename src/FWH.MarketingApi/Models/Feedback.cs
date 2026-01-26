@@ -1,11 +1,9 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace FWH.MarketingApi.Models;
 
 /// <summary>
 /// User feedback submitted to a business.
 /// </summary>
-public class Feedback
+internal class Feedback
 {
     public long Id { get; set; }
     public long BusinessId { get; set; }

@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Join entity for the many-to-many relationship between Airport and TourismMarket.
 /// </summary>
-public class AirportTourismMarket
+internal class AirportTourismMarket
 {
     public long Id { get; set; }
     public long AirportId { get; set; }

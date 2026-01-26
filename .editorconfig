@@ -165,3 +165,8 @@ csharp_style_expression_bodied_indexers = true:silent
 csharp_style_expression_bodied_accessors = true:silent
 csharp_style_expression_bodied_lambdas = true:silent
 csharp_style_expression_bodied_local_functions = false:silent
+
+# Code analysis (CA) rules: AnalysisLevel=9.0-all in Directory.Build.props.
+# Override specific dotnet_diagnostics.CAxxxx.severity = none|silent|suggestion|warning|error here if needed.
+dotnet_diagnostics.CA1707.severity = none
+dotnet_diagnostics.CA2007.severity = none

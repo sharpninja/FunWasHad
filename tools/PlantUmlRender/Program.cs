@@ -92,7 +92,7 @@ static class Program
             }
         }
 
-        var failedCount = await RenderAll(outputDir, wantSvg, wantPng, files.Select(f => new FileInfo(f)).ToArray(), CancellationToken.None);
+        var failedCount = await RenderAll(outputDir, wantSvg, wantPng, files.Select(f => new FileInfo(f)).ToArray(), CancellationToken.None).ConfigureAwait(false);
         return failedCount > 0 ? 1 : 0;
     }
 
@@ -135,7 +135,7 @@ static class Program
                 return;
             }
 
-            var text = await File.ReadAllTextAsync(file.FullName, cti);
+            var text = await File.ReadAllTextAsync(file.FullName, cti).ConfigureAwait(false);
             var block = ExtractStartumlBlock(text);
             if (block == null)
             {
@@ -148,12 +148,12 @@ static class Program
             var baseName = Path.GetFileNameWithoutExtension(file.Name);
             var producedAny = false;
 
-            if (wantPng) producedAny |= await RenderOne(file, text, OutputFormat.Png, baseName, outputDir, (t, f, c) => renderer.RenderAsync(t, f, c), cti);
-            if (wantSvg) producedAny |= await RenderOne(file, text, OutputFormat.Svg, baseName, outputDir, (t, f, c) => renderer.RenderAsync(t, f, c), cti);
+            if (wantPng) producedAny |= await RenderOne(file, text, OutputFormat.Png, baseName, outputDir, (t, f, c) => renderer.RenderAsync(t, f, c), cti).ConfigureAwait(false);
+            if (wantSvg) producedAny |= await RenderOne(file, text, OutputFormat.Svg, baseName, outputDir, (t, f, c) => renderer.RenderAsync(t, f, c), cti).ConfigureAwait(false);
 
             if ((wantPng || wantSvg) && !producedAny)
                 Interlocked.Increment(ref failed[0]);
-        });
+        }).ConfigureAwait(false);
         return failed[0];
     }
 
@@ -162,7 +162,7 @@ static class Program
     {
         try
         {
-            var bytes = await renderAsync(text, format, ct);
+            var bytes = await renderAsync(text, format, ct).ConfigureAwait(false);
             if (bytes is not { Length: > 0 })
             {
                 Console.Error.WriteLine($"Empty {format} for {file.Name}");
@@ -170,7 +170,7 @@ static class Program
             }
             var ext = format == OutputFormat.Png ? ".png" : ".svg";
             var outPath = Path.Combine(outputDir.FullName, baseName + ext);
-            await File.WriteAllBytesAsync(outPath, bytes, ct);
+            await File.WriteAllBytesAsync(outPath, bytes, ct).ConfigureAwait(false);
             Console.WriteLine($"Rendered: {outPath}");
             return true;
         }

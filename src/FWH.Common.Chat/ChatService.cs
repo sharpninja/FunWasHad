@@ -1,13 +1,10 @@
-using System;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using FWH.Common.Chat.ViewModels;
 using FWH.Common.Chat.Conversion;
 using FWH.Common.Chat.Duplicate;
-using FWH.Common.Workflow.Models;
+using FWH.Common.Chat.ViewModels;
 using FWH.Common.Workflow;
+using FWH.Common.Workflow.Models;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Common.Chat;
 
@@ -30,7 +27,7 @@ public class ChatService
     private string? _currentCorrelationId;
 
     public ChatService(
-        IServiceProvider serviceProvider, 
+        IServiceProvider serviceProvider,
         IWorkflowToChatConverter converter,
         IChatDuplicateDetector duplicateDetector,
         ILogger<ChatService>? logger = null)
@@ -51,13 +48,13 @@ public class ChatService
 
         var chat = _chatViewModel.ChatList;
         chat.Reset();
-        
+
         // Add initial welcome message
         chat.AddEntry(new TextChatEntry(
             FWH.Common.Chat.ViewModels.ChatAuthors.Bot,
             "Welcome! Let's capture your fun experiences."));
 
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     /// <summary>
@@ -76,13 +73,13 @@ public class ChatService
         }
 
         correlationId ??= Guid.NewGuid().ToString();
-        
+
         // Store current workflow context for text submission handler
         _currentWorkflowId = workflowId;
         _currentUserId = userId;
         _currentTenantId = tenantId;
         _currentCorrelationId = correlationId;
-        
+
         _logger.LogDebug("RenderWorkflowStateAsync START - WorkflowId={WorkflowId} CorrelationId={CorrelationId}", workflowId, correlationId);
 
         var scopeDict = new System.Collections.Generic.Dictionary<string, object> { ["WorkflowId"] = workflowId, ["Operation"] = "RenderState", ["CorrelationId"] = correlationId };
@@ -94,9 +91,9 @@ public class ChatService
         WorkflowStatePayload payload;
         try
         {
-            payload = await _workflowService.GetCurrentStatePayloadAsync(workflowId);
+            payload = await _workflowService.GetCurrentStatePayloadAsync(workflowId).ConfigureAwait(false);
         }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("Unknown workflow"))
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Unknown workflow", StringComparison.Ordinal))
         {
             _logger.LogWarning(ex, "Workflow {WorkflowId} not found", workflowId);
             // Add error message to chat instead of crashing
@@ -113,7 +110,7 @@ public class ChatService
 
         var entry = _converter.ConvertToEntry(payload, workflowId);
 
-        _logger.LogDebug("RenderWorkflowStateAsync - Built entry for WorkflowId={WorkflowId} IsChoice={IsChoice} PayloadType={PayloadType}", 
+        _logger.LogDebug("RenderWorkflowStateAsync - Built entry for WorkflowId={WorkflowId} IsChoice={IsChoice} PayloadType={PayloadType}",
             workflowId, payload.IsChoice, entry.Payload.PayloadType);
 
         // If entry is a choice, subscribe to ChatInput.ChoiceSubmitted once so the selection is handled exactly once.
@@ -135,7 +132,7 @@ public class ChatService
                 try
                 {
                     var chosenValue = selected?.ChoiceValue ?? selected?.DisplayOrder as object;
-                    var advanced = await _workflowService.AdvanceByChoiceValueAsync(workflowId, chosenValue);
+                    var advanced = await _workflowService.AdvanceByChoiceValueAsync(workflowId, chosenValue).ConfigureAwait(false);
                     if (!advanced)
                     {
                         _logger.LogWarning("AdvanceByChoiceValueAsync returned false for workflow {WorkflowId} with value {Value}", workflowId, chosenValue);
@@ -145,7 +142,7 @@ public class ChatService
                     _logger.LogDebug("Selection handler ADVANCED - WorkflowId={WorkflowId} ChosenValue={Value}", workflowId, chosenValue);
 
                     // after advancing, render the new state
-                    await RenderWorkflowStateAsync(workflowId, userId, tenantId, correlationId);
+                    await RenderWorkflowStateAsync(workflowId, userId, tenantId, correlationId).ConfigureAwait(false);
 
                     // Diagnostic: emit debug-scoped chat list contents
                     try
@@ -190,7 +187,7 @@ public class ChatService
         {
             var chatList = _chatViewModel.ChatList;
             var last = chatList.Current;
-            
+
             if (!_duplicateDetector.IsDuplicate(entry, last))
             {
                 chatList.AddEntry(entry);
@@ -213,7 +210,7 @@ public class ChatService
     /// </summary>
     public void PopulateFromWorkflow(WorkflowDefinition def)
     {
-        if (def == null) throw new ArgumentNullException(nameof(def));
+        ArgumentNullException.ThrowIfNull(def);
 
         var chat = _chatViewModel.ChatList;
 
@@ -235,8 +232,8 @@ public class ChatService
         for (int i = 0; i < lines.Length; i++)
         {
             var l = lines[i].Trim();
-            if (l.StartsWith("|")) l = l[1..].TrimStart();
-            if (l.StartsWith("\"") && l.EndsWith("\"")) l = l[1..^1];
+            if (l.StartsWith('|')) l = l[1..].TrimStart();
+            if (l.StartsWith('"') && l.EndsWith('"')) l = l[1..^1];
             lines[i] = l;
         }
         return string.Join('\n', lines).Trim();
@@ -262,27 +259,27 @@ public class ChatService
         {
             // Add user's text response to chat
             _chatViewModel.ChatList.AddEntry(new TextChatEntry(
-                FWH.Common.Chat.ViewModels.ChatAuthors.User, 
+                FWH.Common.Chat.ViewModels.ChatAuthors.User,
                 text));
 
             // Get current state to check if we can advance
-            var currentState = await _workflowService.GetCurrentStatePayloadAsync(_currentWorkflowId);
-            
+            var currentState = await _workflowService.GetCurrentStatePayloadAsync(_currentWorkflowId).ConfigureAwait(false);
+
             if (!currentState.IsChoice)
             {
                 // For non-choice nodes, try to auto-advance with null (single path)
                 _logger.LogDebug("Attempting to advance non-choice workflow state");
-                var advanced = await _workflowService.AdvanceByChoiceValueAsync(_currentWorkflowId, null);
-                
+                var advanced = await _workflowService.AdvanceByChoiceValueAsync(_currentWorkflowId, null).ConfigureAwait(false);
+
                 if (advanced)
                 {
                     _logger.LogDebug("Workflow advanced successfully after user text input");
                     // Render the next state
                     await RenderWorkflowStateAsync(
-                        _currentWorkflowId, 
-                        _currentUserId, 
-                        _currentTenantId, 
-                        _currentCorrelationId);
+                        _currentWorkflowId,
+                        _currentUserId,
+                        _currentTenantId,
+                        _currentCorrelationId).ConfigureAwait(false);
                 }
                 else
                 {
@@ -321,17 +318,17 @@ public class ChatService
             // Image was captured, advance the workflow
             // Camera nodes are treated as non-choice nodes that auto-advance
             _logger.LogDebug("Attempting to advance workflow after image capture");
-            var advanced = await _workflowService.AdvanceByChoiceValueAsync(_currentWorkflowId, null);
-            
+            var advanced = await _workflowService.AdvanceByChoiceValueAsync(_currentWorkflowId, null).ConfigureAwait(false);
+
             if (advanced)
             {
                 _logger.LogDebug("Workflow advanced successfully after image capture");
                 // Render the next state
                 await RenderWorkflowStateAsync(
-                    _currentWorkflowId, 
-                    _currentUserId, 
-                    _currentTenantId, 
-                    _currentCorrelationId);
+                    _currentWorkflowId,
+                    _currentUserId,
+                    _currentTenantId,
+                    _currentCorrelationId).ConfigureAwait(false);
             }
             else
             {

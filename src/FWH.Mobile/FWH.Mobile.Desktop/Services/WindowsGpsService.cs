@@ -1,11 +1,7 @@
-using Windows.Devices.Geolocation;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using Windows.Devices.Geolocation;
 
 namespace FWH.Mobile.Desktop.Services;
 
@@ -13,7 +9,7 @@ namespace FWH.Mobile.Desktop.Services;
 /// Windows implementation of GPS service using Windows.Devices.Geolocation.
 /// Requires Windows 10/11 and appropriate capabilities in Package.appxmanifest.
 /// </summary>
-public class WindowsGpsService : IGpsService
+internal class WindowsGpsService : IGpsService
 {
     private readonly Geolocator _geolocator;
     private readonly ILogger<WindowsGpsService>? _logger;
@@ -97,7 +93,7 @@ public class WindowsGpsService : IGpsService
                 }
 
                 // Try to request permission
-                var granted = await RequestLocationPermissionAsync();
+                var granted = await RequestLocationPermissionAsync().ConfigureAwait(false);
                 diagnostics["PermissionRequested"] = true;
                 diagnostics["PermissionGranted"] = granted;
 
@@ -142,7 +138,7 @@ public class WindowsGpsService : IGpsService
 
             // Get current position with cancellation support
             var position = await _geolocator.GetGeopositionAsync()
-                .AsTask(linkedCts.Token);
+                .AsTask(linkedCts.Token).ConfigureAwait(false);
 
             if (position?.Coordinate == null)
             {

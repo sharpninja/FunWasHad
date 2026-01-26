@@ -1,42 +1,33 @@
-using System;
-using System.Linq;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
-using Avalonia.Threading;
+using FWH.Common.Chat;
+using FWH.Common.Chat.Extensions;
+using FWH.Common.Chat.Services;
+using FWH.Common.Chat.ViewModels;
+using FWH.Common.Imaging.Extensions;
+using FWH.Common.Location;
+using FWH.Common.Location.Extensions;
+using FWH.Common.Workflow;
+using FWH.Common.Workflow.Extensions;
+using FWH.Mobile.Configuration;
+using FWH.Mobile.Data.Extensions;
+using FWH.Mobile.Options;
+using FWH.Mobile.Services;
+using FWH.Mobile.ViewModels;
+using FWH.Mobile.Views;
+using FWH.Orchestrix.Mediator.Remote.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
-using FWH.Mobile.Configuration;
-using FWH.Mobile.ViewModels;
-using FWH.Mobile.Views;
-using FWH.Common.Chat.Services;
-using FWH.Common.Chat.ViewModels;
-using FWH.Common.Workflow;
-using FWH.Common.Workflow.Extensions;
-using FWH.Common.Chat;
-using FWH.Common.Chat.Extensions;
-using FWH.Common.Location;
-using FWH.Common.Location.Extensions;
-using FWH.Mobile.Data.Extensions;
-using FWH.Common.Imaging.Extensions;
-using FWH.Mobile.Services;
-using FWH.Mobile.Options;
-using FWH.Orchestrix.Mediator.Remote.Extensions;
 
 namespace FWH.Mobile;
 
 public partial class App : Application
 {
-    private static bool _isDatabaseInitialized = false;
+    private static bool _isDatabaseInitialized;
     private static readonly SemaphoreSlim _initializationLock = new SemaphoreSlim(1, 1);
 
     static App()
@@ -115,8 +106,8 @@ public partial class App : Application
         else
         {
             // Use configured URLs from appsettings (supports both full URLs for staging and IP/port for development)
-            locationApiBaseAddress = apiSettings.GetLocationApiBaseUrl();
-            marketingApiBaseAddress = apiSettings.GetMarketingApiBaseUrl();
+            locationApiBaseAddress = apiSettings.GetResolvedLocationApiBaseUrl().AbsoluteUri;
+            marketingApiBaseAddress = apiSettings.GetResolvedMarketingApiBaseUrl().AbsoluteUri;
         }
 
         // Register API authentication service
@@ -410,7 +401,7 @@ public partial class App : Application
         if (_isDatabaseInitialized)
             return;
 
-        await _initializationLock.WaitAsync();
+        await _initializationLock.WaitAsync().ConfigureAwait(false);
         try
         {
             if (_isDatabaseInitialized)
@@ -425,7 +416,7 @@ public partial class App : Application
             logger.LogDebug("Initializing database at: {ConnectionInfo}", connectionInfo);
 
             // Ensure database exists and apply any pending migrations
-            await migrationService.EnsureDatabaseAsync();
+            await migrationService.EnsureDatabaseAsync().ConfigureAwait(false);
 
             logger.LogInformation("Database initialization completed successfully");
 
@@ -550,7 +541,7 @@ public partial class App : Application
             var trackingService = ServiceProvider.GetRequiredService<ILocationTrackingService>();
 
             // Start tracking with default settings (50m threshold, 30s interval)
-            await trackingService.StartTrackingAsync();
+            await trackingService.StartTrackingAsync().ConfigureAwait(false);
 
             var logger = ServiceProvider.GetRequiredService<ILogger<App>>();
             logger.LogInformation("Location tracking started successfully");
@@ -579,14 +570,14 @@ public partial class App : Application
     {
         // Always start chat to ensure initial messages are shown even if workflow file is missing
         var chatService = ServiceProvider.GetRequiredService<ChatService>();
-        await chatService.StartAsync();
+        await chatService.StartAsync().ConfigureAwait(false);
 
         string? pumlContent = null;
 
         try
         {
             // Try to load workflow.puml from platform-specific location
-            pumlContent = await LoadWorkflowFileAsync();
+            pumlContent = await LoadWorkflowFileAsync().ConfigureAwait(false);
 
             if (string.IsNullOrEmpty(pumlContent))
             {
@@ -599,10 +590,10 @@ public partial class App : Application
             var workflow = await workflowService.ImportWorkflowAsync(
                 pumlContent,
                 "fun-was-had-main",
-                "Fun Was Had");
+                "Fun Was Had").ConfigureAwait(false);
 
             // Render the first activity node from the workflow
-            await chatService.RenderWorkflowStateAsync(workflow.Id);
+            await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -636,7 +627,7 @@ public partial class App : Application
                     using (stream)
                     using (var reader = new StreamReader(stream))
                     {
-                        return await reader.ReadToEndAsync();
+                        return await reader.ReadToEndAsync().ConfigureAwait(false);
                     }
                 }
             }
@@ -662,7 +653,7 @@ public partial class App : Application
 
             if (File.Exists(pumlPath))
             {
-                return await File.ReadAllTextAsync(pumlPath);
+                return await File.ReadAllTextAsync(pumlPath).ConfigureAwait(false);
             }
         }
         catch (Exception ex)

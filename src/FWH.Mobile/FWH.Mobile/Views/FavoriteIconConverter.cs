@@ -1,9 +1,4 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Net.Http;
-using System.Threading.Tasks;
 using Avalonia.Data.Converters;
 using Avalonia.Media.Imaging;
 using FWH.Mobile.Services;
@@ -84,8 +79,8 @@ public class UrlToImageConverter : IValueConverter
                 {
                     // Extract image type from parameter if provided
                     var imageType = parameter?.ToString() ?? "general";
-                    var imageData = await imageService.GetImageAsync(url, imageType);
-                    
+                    var imageData = await imageService.GetImageAsync(url, imageType).ConfigureAwait(false);
+
                     if (imageData != null && imageData.Length > 0)
                     {
                         using var stream = new System.IO.MemoryStream(imageData);
@@ -122,10 +117,10 @@ public class UrlToImageConverter : IValueConverter
             {
                 try
                 {
-                    var response = await httpClient.GetAsync(url);
+                    var response = await httpClient.GetAsync(new Uri(url)).ConfigureAwait(false);
                     if (response.IsSuccessStatusCode)
                     {
-                        var stream = await response.Content.ReadAsStreamAsync();
+                        var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                         return new Bitmap(stream);
                     }
                 }

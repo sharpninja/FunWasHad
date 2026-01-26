@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FWH.MarketingApi.Data;
 
-public class MarketingDbContext : DbContext
+internal class MarketingDbContext : DbContext
 {
     public MarketingDbContext(DbContextOptions<MarketingDbContext> options) : base(options)
     {

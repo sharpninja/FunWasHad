@@ -1,4 +1,3 @@
-using System;
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
 
@@ -10,8 +9,7 @@ public sealed class AvaloniaLogStore
 
     public AvaloniaLogStore(int maxEntries = 1000)
     {
-        if (maxEntries <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maxEntries));
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxEntries);
 
         _maxEntries = maxEntries;
     }

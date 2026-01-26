@@ -1,7 +1,5 @@
-using UIKit;
-
 namespace FWH.Mobile.iOS;
-public class Application
+internal class Application
 {
     // This is the main entry point of the application.
     static void Main(string[] args)

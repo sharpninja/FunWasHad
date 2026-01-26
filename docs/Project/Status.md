@@ -12,7 +12,7 @@ This document tracks the current status of each MVP project in the FunWasHad sol
 |---------|--------|---------------|-----------------|-------------|
 | MVP-App | 🔴 Planning | 2 | 3 | 5 |
 | MVP-Marketing | 🔴 Planning | 0 | 2 | 2 |
-| MVP-Support | 🔴 Planning | 1 | 2 | 3 |
+| MVP-Support | 🔴 Planning | 1 | 3 | 4 |
 | MVP-Legal | 🔴 Planning | 1 | 0 | 1 |
 
 **Legend:**
@@ -108,23 +108,24 @@ gantt
 **Status:** 🔴 Planning  
 **Focus:** Infrastructure and support services
 
-### High Priority Items (0)
-*None currently*
+### High Priority Items (1)
+- [ ] Update extension to execute prompts via Cursor agent in WSL
 
-### Medium Priority Items (2)
+### Medium Priority Items (3)
 - [ ] Railway deployment for Social Media API
 - [ ] Extract Cursor CLI (PowerShell module, FWH.Documentation.Sync) to `sharpninja/cursor-cli` on GitHub *(FWH.CLI.Agent removed per MVP-SUPPORT-007)*
+- [ ] Convert solution to XML format
 
 ### Progress Summary
-- **Total Items:** 2
+- **Total Items:** 4
 - **Completed:** 0
 - **In Progress:** 0
-- **Pending:** 2
+- **Pending:** 4
 
 ### Notes
+- Extension update for Cursor agent integration is high priority
 - Social Media API project is planned but not yet created
-- Deployment infrastructure pending
-- Cursor CLI (powershell prompts, doc-sync) to be moved to sibling repo sharpninja/cursor-cli (FWH.CLI.Agent removed per MVP-SUPPORT-007)
+- Cursor CLI (powershell prompts, doc-sync) to be moved to sibling repo sharpninja/cursor-cli
 
 ---
 
@@ -157,7 +158,7 @@ gantt
 - **Active Projects:** 0
 - **Planning Projects:** 3
 - **Not Started Projects:** 1
-- **Total TODO Items:** 10
+- **Total TODO Items:** 11
 - **Completed Items:** 0
 - **Completion Rate:** 0%
 

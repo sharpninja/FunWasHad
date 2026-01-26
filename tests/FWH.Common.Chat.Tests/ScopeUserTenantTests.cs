@@ -1,12 +1,9 @@
-using System.Threading.Tasks;
-using Xunit;
-using Microsoft.Extensions.DependencyInjection;
 using FWH.Common.Chat.Tests.TestFixtures;
-using FWH.Mobile.Data.Repositories;
-using FWH.Mobile.Data.Data;
-using FWH.Common.Workflow;
 using FWH.Common.Chat.ViewModels;
-using FWH.Common.Chat;
+using FWH.Common.Workflow;
+using FWH.Mobile.Data.Repositories;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Common.Chat.Tests;
 
@@ -26,7 +23,7 @@ public class ScopeUserTenantTests : IClassFixture<SqliteTestFixture>
     /// <para><strong>Reason for expectation:</strong> The ChatService should create logging scopes with UserId and TenantId when RenderWorkflowStateAsync is called. These scopes should propagate through the workflow controller, action executor, and repository operations. The logger provider should capture log entries with these scopes intact. The presence of all three scope keys (UserId, TenantId, WorkflowId) confirms that scope propagation works correctly throughout the execution pipeline, enabling proper audit trails and multi-tenant logging.</para>
     /// </remarks>
     [Fact]
-    public async Task UserIdAndTenantId_AppearInScopes_EndToEnd()
+    public async Task UserIdAndTenantIdAppearInScopesEndToEnd()
     {
         var sp = _fixture.CreateServiceProvider(services =>
         {
@@ -43,12 +40,12 @@ public class ScopeUserTenantTests : IClassFixture<SqliteTestFixture>
         var chatList = sp.GetRequiredService<ChatListViewModel>();
 
         var plant = "@startuml\n[*] --> A\n:A;\nA --> B\nA --> C\n@enduml";
-        var def = await wfSvc.ImportWorkflowAsync(plant, "wf_scope", "ScopeTest");
+        var def = await wfSvc.ImportWorkflowAsync(plant, "wf_scope", "ScopeTest").ConfigureAwait(true);
 
         var userId = "user-7";
         var tenantId = "tenant-x";
 
-        await chatSvc.RenderWorkflowStateAsync(def.Id, userId: userId, tenantId: tenantId);
+        await chatSvc.RenderWorkflowStateAsync(def.Id, userId: userId, tenantId: tenantId).ConfigureAwait(true);
 
         // after initial render we should have a choice entry
         var choiceEntry = chatList.Entries.Last() as ChoiceChatEntry;
@@ -56,12 +53,12 @@ public class ScopeUserTenantTests : IClassFixture<SqliteTestFixture>
 
         // select first to trigger advance and repository update
         var first = choiceEntry!.Choices[0];
-        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)first.SelectChoiceCommand).ExecuteAsync(first);
+        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)first.SelectChoiceCommand).ExecuteAsync(first).ConfigureAwait(true);
 
         var log = await _fixture.LoggerProvider.WaitForEntryAsync(e =>
             e.ScopesParsed.Any(d => d.ContainsKey("UserId") && d["UserId"]?.ToString() == userId)
             && e.ScopesParsed.Any(d => d.ContainsKey("TenantId") && d["TenantId"]?.ToString() == tenantId)
-        );
+        ).ConfigureAwait(true);
 
         Assert.NotNull(log);
         Assert.Contains(log!.ScopesParsed, d => d.ContainsKey("WorkflowId") && d["WorkflowId"]?.ToString() == def.Id);

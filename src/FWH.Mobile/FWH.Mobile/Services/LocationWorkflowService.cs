@@ -1,10 +1,5 @@
-using System;
-using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
-using FWH.Common.Location.Models;
 using FWH.Common.Workflow;
 using FWH.Mobile.Data.Repositories;
 using Microsoft.Extensions.Logging;
@@ -43,6 +38,7 @@ public class LocationWorkflowService
     /// <param name="eventArgs">Event arguments containing address and location information</param>
     public async Task HandleNewLocationAddressAsync(LocationAddressChangedEventArgs eventArgs)
     {
+        ArgumentNullException.ThrowIfNull(eventArgs);
         try
         {
             _logger.LogInformation("Handling new location address: {Address}", eventArgs.CurrentAddress);
@@ -55,7 +51,7 @@ public class LocationWorkflowService
             var since = DateTimeOffset.UtcNow.AddHours(-AddressTimeWindowHours);
             var existingWorkflows = await _workflowRepository.FindByNamePatternAsync(
                 workflowId,
-                since);
+                since).ConfigureAwait(false);
 
             var existingWorkflow = existingWorkflows.FirstOrDefault();
 
@@ -68,7 +64,7 @@ public class LocationWorkflowService
                     existingWorkflow.CurrentNodeId);
 
                 // Resume existing workflow
-                await _workflowService.StartInstanceAsync(existingWorkflow.Id);
+                await _workflowService.StartInstanceAsync(existingWorkflow.Id).ConfigureAwait(false);
             }
             else
             {
@@ -78,7 +74,7 @@ public class LocationWorkflowService
                     workflowId);
 
                 // Load workflow definition
-                var pumlContent = await LoadLocationWorkflowFileAsync();
+                var pumlContent = await LoadLocationWorkflowFileAsync().ConfigureAwait(false);
                 if (string.IsNullOrEmpty(pumlContent))
                 {
                     _logger.LogWarning("Failed to load {FileName}, cannot start location workflow", LocationWorkflowFileKey);
@@ -89,10 +85,10 @@ public class LocationWorkflowService
                 var workflow = await _workflowService.ImportWorkflowAsync(
                     pumlContent,
                     workflowId,
-                    $"Location: {eventArgs.CurrentAddress}");
+                    $"Location: {eventArgs.CurrentAddress}").ConfigureAwait(false);
 
                 // Set workflow variables
-                await SetWorkflowVariablesAsync(workflow.Id, eventArgs);
+                await SetWorkflowVariablesAsync(workflow.Id, eventArgs).ConfigureAwait(false);
 
                 _logger.LogInformation(
                     "Started new location workflow {WorkflowId} for address {Address}",
@@ -111,8 +107,7 @@ public class LocationWorkflowService
     /// </summary>
     private static string GenerateAddressHash(string address)
     {
-        using var sha256 = SHA256.Create();
-        var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(address));
+        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(address));
         return Convert.ToHexString(hashBytes).Substring(0, 16).ToLowerInvariant();
     }
 
@@ -140,7 +135,7 @@ public class LocationWorkflowService
         // - timestamp: eventArgs.Timestamp
         // - is_first_visit: (eventArgs.PreviousAddress == null)
 
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
     /// <summary>
@@ -181,7 +176,7 @@ public class LocationWorkflowService
                     using (stream)
                     using (var reader = new StreamReader(stream))
                     {
-                        content = await reader.ReadToEndAsync();
+                        content = await reader.ReadToEndAsync().ConfigureAwait(false);
                     }
                 }
             }
@@ -207,7 +202,7 @@ public class LocationWorkflowService
 
                 if (File.Exists(pumlPath))
                 {
-                    content = await File.ReadAllTextAsync(pumlPath);
+                    content = await File.ReadAllTextAsync(pumlPath).ConfigureAwait(false);
                 }
             }
             catch (Exception ex)

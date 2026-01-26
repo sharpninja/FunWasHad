@@ -3,16 +3,7 @@ using FWH.Common.Location.Models;
 using FWH.Mobile.Configuration;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Entities;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FWH.Mobile.Services;
 
@@ -131,7 +122,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
         if (!_gpsService.IsLocationAvailable)
         {
             _logger.LogWarning("GPS service is not available");
-            var hasPermission = await _gpsService.RequestLocationPermissionAsync();
+            var hasPermission = await _gpsService.RequestLocationPermissionAsync().ConfigureAwait(false);
             if (!hasPermission)
             {
                 _logger.LogWarning("Location permission not yet granted, tracking will start when permission is available");
@@ -207,7 +198,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
         {
             try
             {
-                await _trackingTask;
+                await _trackingTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -229,12 +220,12 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
             try
             {
                 // Get current location
-                var currentLocation = await _gpsService.GetCurrentLocationAsync(cancellationToken);
+                var currentLocation = await _gpsService.GetCurrentLocationAsync(cancellationToken).ConfigureAwait(false);
 
                 if (currentLocation == null || !currentLocation.IsValid())
                 {
                     _logger.LogWarning("Failed to get valid GPS coordinates");
-                    await Task.Delay(PollingInterval, cancellationToken);
+                    await Task.Delay(PollingInterval, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
 
@@ -295,12 +286,12 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 // Check if we should send update
                 if (ShouldSendLocationUpdate(currentLocation))
                 {
-                    await SendLocationUpdateAsync(currentLocation, cancellationToken);
+                    await SendLocationUpdateAsync(currentLocation, cancellationToken).ConfigureAwait(false);
                     _lastLocationTime = currentTime;
                 }
 
                 // Wait for next polling interval
-                await Task.Delay(PollingInterval, cancellationToken);
+                await Task.Delay(PollingInterval, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -320,7 +311,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 // Wait before retrying
                 try
                 {
-                    await Task.Delay(PollingInterval, cancellationToken);
+                    await Task.Delay(PollingInterval, cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -335,7 +326,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 // Wait before retrying
                 try
                 {
-                    await Task.Delay(PollingInterval, cancellationToken);
+                    await Task.Delay(PollingInterval, cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -404,7 +395,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
         else if (_currentMovementState == MovementState.Stationary && _stationaryCountdownCts != null)
         {
             // Still stationary and countdown is active, reset it on any location change
-                _logger.LogTrace("Location changed while stationary, resetting address check countdown");
+            _logger.LogTrace("Location changed while stationary, resetting address check countdown");
             ResetStationaryCountdown();
             StartStationaryCountdown();
         }
@@ -429,12 +420,12 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
         {
             try
             {
-                await Task.Delay(StationaryAddressCheckDelay, _stationaryCountdownCts.Token);
+                await Task.Delay(StationaryAddressCheckDelay, _stationaryCountdownCts.Token).ConfigureAwait(false);
 
                 // Countdown expired, check for address change
                 if (_stationaryLocationForAddressCheck != null)
                 {
-                    await CheckForAddressChangeAsync(_stationaryLocationForAddressCheck);
+                    await CheckForAddressChangeAsync(_stationaryLocationForAddressCheck).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -472,7 +463,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 location.Latitude,
                 location.Longitude,
                 maxDistanceMeters: 500, // Check within 500m for address data
-                cancellationToken: default);
+                cancellationToken: default).ConfigureAwait(false);
 
             // Try to get closest business
             BusinessLocation? closestBusiness = null;
@@ -482,7 +473,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                     location.Latitude,
                     location.Longitude,
                     maxDistanceMeters: 100, // Check within 100m for businesses
-                    cancellationToken: default);
+                    cancellationToken: default).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -524,7 +515,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
             // Save place where user became stationary (only if address changed or this is first time)
             if (_lastKnownAddress != currentAddress || _lastKnownAddress == null)
             {
-                await SaveStationaryPlaceAsync(location, currentAddress, closestBusiness);
+                await SaveStationaryPlaceAsync(location, currentAddress, closestBusiness).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
@@ -563,7 +554,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
             }
 
             _dbContext.StationaryPlaces.Add(place);
-            await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
             _logger.LogInformation("Saved stationary place: {BusinessName} at {Address}",
                 place.BusinessName ?? "Unknown", place.Address);
@@ -576,7 +567,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 {
                     try
                     {
-                        var applied = await _themeService.ApplyBusinessThemeAsync(businessId);
+                        var applied = await _themeService.ApplyBusinessThemeAsync(businessId).ConfigureAwait(false);
                         if (applied)
                         {
                             _logger.LogInformation("Applied business theme for business {BusinessId}", businessId);
@@ -598,7 +589,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                     {
                         try
                         {
-                            var applied = await _themeService.ApplyCityThemeAsync(city, state, country);
+                            var applied = await _themeService.ApplyCityThemeAsync(city, state, country).ConfigureAwait(false);
                             if (applied)
                             {
                                 _logger.LogInformation("Applied city theme for city {CityName}", city);
@@ -807,8 +798,8 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
-            await _dbContext.DeviceLocationHistory.AddAsync(locationEntity, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _dbContext.DeviceLocationHistory.AddAsync(locationEntity, cancellationToken).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogDebug("Location stored locally (ID: {LocationId})", locationEntity.Id);
             _lastReportedLocation = location;
@@ -829,7 +820,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
 
             if (_locationWorkflowService != null)
             {
-                await _locationWorkflowService.HandleNewLocationAddressAsync(e);
+                await _locationWorkflowService.HandleNewLocationAddressAsync(e).ConfigureAwait(false);
             }
             else
             {
@@ -865,7 +856,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 try
                 {
                     // Use synchronous wait with timeout to avoid blocking indefinitely
-                    var stopTask = Task.Run(async () => await StopTrackingAsync());
+                    var stopTask = Task.Run(async () => await StopTrackingAsync().ConfigureAwait(false));
                     stopTask.Wait(TimeSpan.FromSeconds(5));
                 }
                 catch (Exception ex)

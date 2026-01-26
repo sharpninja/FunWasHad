@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace FWH.Common.Chat.Services;
 
 /// <summary>

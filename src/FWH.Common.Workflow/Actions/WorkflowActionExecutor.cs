@@ -1,18 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
-using FWH.Common.Workflow.Models;
-using FWH.Common.Workflow.Instance;
-using System.Diagnostics;
-using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
-using System.Linq;
+using System.Diagnostics;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using FWH.Common.Workflow.Instance;
+using FWH.Common.Workflow.Models;
 using FWH.Orchestrix.Contracts.Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace FWH.Common.Workflow.Actions;
 
@@ -23,8 +18,47 @@ namespace FWH.Common.Workflow.Actions;
 /// - Dispatches to registered typed handlers resolved from a registry.
 /// Handlers may return variable updates which will be applied to the instance manager.
 /// </summary>
-public class WorkflowActionExecutor : IWorkflowActionExecutor
+public partial class WorkflowActionExecutor : IWorkflowActionExecutor
 {
+    [LoggerMessage(LogLevel.Warning, "Invalid JSON action on node {NodeId}")]
+    private static partial void LogInvalidJsonAction(ILogger logger, Exception ex, string nodeId);
+
+    [LoggerMessage(LogLevel.Information, "Action {ActionName} handled by mediator in {ElapsedMs}ms")]
+    private static partial void LogActionHandledByMediator(ILogger logger, string actionName, long elapsedMs);
+
+    [LoggerMessage(LogLevel.Error, "Action {ActionName} execution failed via mediator")]
+    private static partial void LogActionMediatorFailed(ILogger logger, Exception ex, string actionName);
+
+    [LoggerMessage(LogLevel.Debug, "Using direct singleton handler for action {ActionName}")]
+    private static partial void LogUsingDirectHandler(ILogger logger, string actionName);
+
+    [LoggerMessage(LogLevel.Warning, "No handler registered for action {ActionName}")]
+    private static partial void LogNoHandlerRegistered(ILogger logger, string actionName);
+
+    [LoggerMessage(LogLevel.Debug, "Factory produced handler instance {Handler} for action {ActionName}")]
+    private static partial void LogFactoryProducedHandler(ILogger logger, string? handler, string actionName);
+
+    [LoggerMessage(LogLevel.Warning, "Handler factory returned null for action {ActionName}")]
+    private static partial void LogHandlerFactoryReturnedNull(ILogger logger, string actionName);
+
+    [LoggerMessage(LogLevel.Debug, "Invoking handler {HandlerName} for workflow {WorkflowId} node {NodeId}")]
+    private static partial void LogInvokingHandler(ILogger logger, string handlerName, string workflowId, string nodeId);
+
+    [LoggerMessage(LogLevel.Debug, "Action {ActionName} execution cancelled")]
+    private static partial void LogActionCancelled(ILogger logger, string actionName);
+
+    [LoggerMessage(LogLevel.Information, "Action {ActionName} handled by {HandlerName} in {ElapsedMs}ms")]
+    private static partial void LogActionHandled(ILogger logger, string actionName, string handlerName, long elapsedMs);
+
+    [LoggerMessage(LogLevel.Debug, "Action {ActionName} handled by {HandlerName} in {ElapsedMs}ms")]
+    private static partial void LogActionHandledDebug(ILogger logger, string actionName, string handlerName, long elapsedMs);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to set variable {Key} from handler {ActionName}")]
+    private static partial void LogFailedToSetVariable(ILogger logger, Exception ex, string key, string actionName);
+
+    [LoggerMessage(LogLevel.Error, "Action handler for {ActionName} threw an exception")]
+    private static partial void LogActionHandlerThrew(ILogger logger, Exception ex, string actionName);
+
     private readonly ILogger<WorkflowActionExecutor> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly IWorkflowActionHandlerRegistry _registry;
@@ -80,7 +114,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
         }
         catch (JsonException ex)
         {
-            _logger.LogWarning(ex, "Invalid JSON action on node {NodeId}", node.Id);
+            LogInvalidJsonAction(_logger, ex, node.Id);
             return false;
         }
 
@@ -109,7 +143,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
         IDictionary<string, string>? variables = null;
         if (rootInstanceManager != null)
         {
-            variables = rootInstanceManager.GetVariables(workflowId) ?? new ConcurrentDictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+            variables = rootInstanceManager.GetVariables(workflowId) ?? new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
 
         var resolved = ResolveTemplates(parameters, variables);
@@ -133,7 +167,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                 sw.Stop();
                 if (_options.LogExecutionTime)
                 {
-                    _logger.LogInformation("Action {ActionName} handled by mediator in {ElapsedMs}ms", actionName, sw.ElapsedMilliseconds);
+                    LogActionHandledByMediator(_logger, actionName, sw.ElapsedMilliseconds);
                 }
 
                 if (!response.Success || rootInstanceManager == null)
@@ -144,7 +178,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                 // Check for error status if VariableUpdates exists
                 if (response.VariableUpdates != null)
                 {
-                    if (response.VariableUpdates.TryGetValue("status", out var status) && status.Equals("error", StringComparison.InvariantCultureIgnoreCase))
+                    if (response.VariableUpdates.TryGetValue("status", out var status) && status.Equals("error", StringComparison.OrdinalIgnoreCase))
                     {
                         return false;
                     }
@@ -164,7 +198,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Action {ActionName} execution failed via mediator", actionName);
+                LogActionMediatorFailed(_logger, ex, actionName);
                 // Return false but don't throw - allows workflow to continue
                 return false;
             }
@@ -176,7 +210,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
         Func<IServiceProvider, IWorkflowActionHandler> factory = null!;
         if (directHandler != null)
         {
-            _logger.LogDebug("Using direct singleton handler for action {ActionName}", actionName);
+            LogUsingDirectHandler(_logger, actionName);
             factory = _ => directHandler;
         }
         else if (_registry.TryGetFactory(actionName ?? string.Empty, out var regFactory))
@@ -185,7 +219,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
         }
         else
         {
-            _logger.LogWarning("No handler registered for action {ActionName}", actionName);
+            LogNoHandlerRegistered(_logger, actionName);
             return false;
         }
 
@@ -198,7 +232,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                 {
                     using var scope = _serviceProvider.CreateScope();
                     var handler = factoryFunc(scope.ServiceProvider);
-                    _logger.LogDebug("Factory produced handler instance {Handler} for action {ActionName}", handler?.Name, actionName);
+                    LogFactoryProducedHandler(_logger, handler?.Name, actionName);
 
                     // Fallback: if factory returns null, try resolving singleton handlers from the scoped provider
                     if (handler == null)
@@ -212,7 +246,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
 
                     if (handler == null)
                     {
-                        _logger.LogWarning("Handler factory returned null for action {ActionName}", actionName);
+                        LogHandlerFactoryReturnedNull(_logger, actionName);
                         return;
                     }
 
@@ -220,22 +254,22 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                     var ctx = new ActionHandlerContext(workflowId, node, definition, scopedInstanceManager);
 
                     var sw = Stopwatch.StartNew();
-                    IDictionary<string,string>? updates = null;
+                    IDictionary<string, string>? updates = null;
                     try
                     {
-                        _logger.LogDebug("Invoking handler {HandlerName} for workflow {WorkflowId} node {NodeId}", handler.Name, workflowId, node.Id);
+                        LogInvokingHandler(_logger, handler.Name, workflowId, node.Id);
                         updates = await handler.HandleAsync(ctx, resolved, cancellationToken).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
                     {
-                        _logger.LogDebug("Action {ActionName} execution cancelled", actionName);
+                        LogActionCancelled(_logger, actionName);
                         throw; // Re-throw to be caught by outer try-catch
                     }
 
                     sw.Stop();
                     if (_options.LogExecutionTime)
                     {
-                        _logger.LogInformation("Action {ActionName} handled by {HandlerName} in {ElapsedMs}ms", actionName, handler.Name ?? "<null>", sw.ElapsedMilliseconds);
+                        LogActionHandled(_logger, actionName, handler.Name ?? "<null>", sw.ElapsedMilliseconds);
                     }
 
                     if (updates != null)
@@ -248,7 +282,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogWarning(ex, "Failed to set variable {Key} from handler {ActionName}", kv.Key, actionName);
+                                LogFailedToSetVariable(_logger, ex, kv.Key, actionName);
                             }
                         }
                     }
@@ -256,7 +290,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                 else
                 {
                     var handler = factoryFunc(_serviceProvider);
-                    _logger.LogDebug("Factory produced handler instance {Handler} for action {ActionName}", handler?.Name, actionName);
+                    LogFactoryProducedHandler(_logger, handler?.Name, actionName);
 
                     // Fallback: if factory returns null, try resolving singleton handlers from the provider
                     if (handler == null)
@@ -270,7 +304,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
 
                     if (handler == null)
                     {
-                        _logger.LogWarning("Handler factory returned null for action {ActionName}", actionName);
+                        LogHandlerFactoryReturnedNull(_logger, actionName);
                         return;
                     }
 
@@ -278,22 +312,22 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                     var ctx = new ActionHandlerContext(workflowId, node, definition, rootMgr);
 
                     var sw = Stopwatch.StartNew();
-                    IDictionary<string,string>? updates = null;
+                    IDictionary<string, string>? updates = null;
                     try
                     {
-                        _logger.LogDebug("Invoking handler {HandlerName} for workflow {WorkflowId} node {NodeId}", handler.Name, workflowId, node.Id);
+                        LogInvokingHandler(_logger, handler.Name, workflowId, node.Id);
                         updates = await handler.HandleAsync(ctx, resolved, cancellationToken).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
                     {
-                        _logger.LogDebug("Action {ActionName} execution cancelled", actionName);
+                        LogActionCancelled(_logger, actionName);
                         throw; // Re-throw to be caught by outer try-catch
                     }
 
                     sw.Stop();
                     if (_options.LogExecutionTime)
                     {
-                        _logger.LogDebug("Action {ActionName} handled by {HandlerName} in {ElapsedMs}ms", actionName, handler.Name ?? "<null>", sw.ElapsedMilliseconds);
+                        LogActionHandledDebug(_logger, actionName, handler.Name ?? "<null>", sw.ElapsedMilliseconds);
                     }
 
                     if (updates != null)
@@ -306,7 +340,7 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogWarning(ex, "Failed to set variable {Key} from handler {ActionName}", kv.Key, actionName);
+                                LogFailedToSetVariable(_logger, ex, kv.Key, actionName);
                             }
                         }
                     }
@@ -318,14 +352,14 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Action handler for {ActionName} threw an exception", actionName);
+                LogActionHandlerThrew(_logger, ex, actionName);
             }
         };
 
         if (_options.ExecuteHandlersInBackground)
         {
             // Launch background task
-            _ = Task.Run(() => ExecuteHandlerAsync(factory));
+            _ = Task.Run(() => ExecuteHandlerAsync(factory), cancellationToken);
             return true;
         }
         else
@@ -344,9 +378,9 @@ public class WorkflowActionExecutor : IWorkflowActionExecutor
         }
     }
 
-    private static IDictionary<string,string> ResolveTemplates(IDictionary<string,string> parameters, IDictionary<string,string>? variables)
+    private static IDictionary<string, string> ResolveTemplates(IDictionary<string, string> parameters, IDictionary<string, string>? variables)
     {
-        var result = new ConcurrentDictionary<string,string>(StringComparer.OrdinalIgnoreCase);
+        var result = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var pattern = new Regex(@"\{\{\s*(?<key>[a-zA-Z0-9_.]+)\s*\}\}", RegexOptions.Compiled);
 
         foreach (var kv in parameters)

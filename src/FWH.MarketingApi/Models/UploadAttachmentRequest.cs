@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Request model for uploading feedback attachments.
 /// </summary>
-public class UploadAttachmentRequest
+internal class UploadAttachmentRequest
 {
     public long FeedbackId { get; set; }
     public required string AttachmentType { get; set; }

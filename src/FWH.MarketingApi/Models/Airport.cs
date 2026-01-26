@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Represents an airport that can be associated with tourism markets.
 /// </summary>
-public class Airport
+internal class Airport
 {
     public long Id { get; set; }
     public required string Name { get; set; }

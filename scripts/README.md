@@ -230,6 +230,37 @@ Synchronizes Functional Requirements, Technical Requirements, TODO list, and Sta
 
 ---
 
+### 📊 Update-CoverageReport.ps1
+
+Runs tests with code coverage and updates `docs/Coverage-Report.md` (MVP-SUPPORT-004). Uses coverlet and ReportGenerator.
+
+**Usage:**
+```powershell
+# Run all tests with coverage and update the report
+.\scripts\Update-CoverageReport.ps1
+
+# Only regenerate the report from existing TestResults (e.g. after CI tests)
+.\scripts\Update-CoverageReport.ps1 -SkipTests
+
+# Use Debug configuration
+.\scripts\Update-CoverageReport.ps1 -Configuration Debug
+```
+
+**What it does:**
+1. Builds the solution and runs `dotnet test` with `--collect "XPlat code coverage"` and `coverlet.runsettings` (unless `-SkipTests`)
+2. Finds `*.cobertura.xml` under `./TestResults` (or under the repo when `-SkipTests`)
+3. Runs `dotnet tool run reportgenerator` to merge and produce Markdown
+4. Writes `docs/Coverage-Report.md` with a "Last updated" line
+
+**Prerequisites:** `dotnet tool restore` (uses `.config/dotnet-tools.json` with `dotnet-reportgenerator-globaltool`).
+
+**Parameters:**
+- `-SkipTests` - Do not run build/tests; only regenerate from existing coverage files
+- `-Configuration` - Build configuration (default: `Release`)
+- `-ProjectRoot` - Repository root (default: parent of `scripts`)
+
+---
+
 ### 🧹 Cleanup-Actions.ps1
 
 Cleans up GitHub Actions workflow runs and optionally Docker images from GitHub Container Registry.

@@ -1,13 +1,13 @@
-using Microsoft.Extensions.DependencyInjection;
 using FWH.Common.Location;
 using FWH.Mobile.Desktop.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FWH.Mobile.Desktop;
 
 /// <summary>
 /// Extension methods for registering Desktop-specific services (Windows).
 /// </summary>
-public static class DesktopServiceCollectionExtensions
+internal static class DesktopServiceCollectionExtensions
 {
     /// <summary>
     /// Registers Windows-specific GPS service using Windows.Devices.Geolocation.

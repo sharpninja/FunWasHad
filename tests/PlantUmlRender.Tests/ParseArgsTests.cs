@@ -1,4 +1,3 @@
-using PlantUmlRender;
 using Xunit;
 
 namespace PlantUmlRender.Tests;
@@ -6,7 +5,7 @@ namespace PlantUmlRender.Tests;
 public class ParseArgsTests
 {
     [Fact]
-    public void ParseArgs_Empty_ReturnsDefaultsAndEmptyFiles()
+    public void ParseArgsEmptyReturnsDefaultsAndEmptyFiles()
     {
         var (outputDir, wantSvg, wantPng, files, unknown) = Program.ParseArgs(Array.Empty<string>());
         Assert.Equal(".", outputDir);
@@ -17,7 +16,7 @@ public class ParseArgsTests
     }
 
     [Fact]
-    public void ParseArgs_SingleFile_AddsToFiles()
+    public void ParseArgsSingleFileAddsToFiles()
     {
         var (_, _, _, files, _) = Program.ParseArgs(new[] { "a.puml" });
         Assert.Single(files);
@@ -25,7 +24,7 @@ public class ParseArgsTests
     }
 
     [Fact]
-    public void ParseArgs_MultipleFiles_AddsAll()
+    public void ParseArgsMultipleFilesAddsAll()
     {
         var (_, _, _, files, _) = Program.ParseArgs(new[] { "a.puml", "b.puml" });
         Assert.Equal(2, files.Count);
@@ -34,21 +33,21 @@ public class ParseArgsTests
     }
 
     [Fact]
-    public void ParseArgs_OutputShort_SetsOutputDir()
+    public void ParseArgsOutputShortSetsOutputDir()
     {
         var (outputDir, _, _, _, _) = Program.ParseArgs(new[] { "-o", "out", "x.puml" });
         Assert.Equal("out", outputDir);
     }
 
     [Fact]
-    public void ParseArgs_OutputLong_SetsOutputDir()
+    public void ParseArgsOutputLongSetsOutputDir()
     {
         var (outputDir, _, _, _, _) = Program.ParseArgs(new[] { "--output", "out", "x.puml" });
         Assert.Equal("out", outputDir);
     }
 
     [Fact]
-    public void ParseArgs_FormatSvg_OnlySvg()
+    public void ParseArgsFormatSvgOnlySvg()
     {
         var (_, wantSvg, wantPng, _, _) = Program.ParseArgs(new[] { "-f", "svg", "x.puml" });
         Assert.True(wantSvg);
@@ -56,7 +55,7 @@ public class ParseArgsTests
     }
 
     [Fact]
-    public void ParseArgs_FormatPng_OnlyPng()
+    public void ParseArgsFormatPngOnlyPng()
     {
         var (_, wantSvg, wantPng, _, _) = Program.ParseArgs(new[] { "-f", "png", "x.puml" });
         Assert.False(wantSvg);
@@ -64,7 +63,7 @@ public class ParseArgsTests
     }
 
     [Fact]
-    public void ParseArgs_FormatBoth_Both()
+    public void ParseArgsFormatBothBoth()
     {
         var (_, wantSvg, wantPng, _, _) = Program.ParseArgs(new[] { "-f", "both", "x.puml" });
         Assert.True(wantSvg);
@@ -72,7 +71,7 @@ public class ParseArgsTests
     }
 
     [Fact]
-    public void ParseArgs_FormatUnknown_SetsBothAndUnknownValue()
+    public void ParseArgsFormatUnknownSetsBothAndUnknownValue()
     {
         var (_, wantSvg, wantPng, _, unknown) = Program.ParseArgs(new[] { "-f", "foo", "x.puml" });
         Assert.True(wantSvg);
@@ -81,7 +80,7 @@ public class ParseArgsTests
     }
 
     [Fact]
-    public void ParseArgs_Mixed_CombinesCorrectly()
+    public void ParseArgsMixedCombinesCorrectly()
     {
         var (outputDir, wantSvg, wantPng, files, _) = Program.ParseArgs(new[] { "-o", "dir", "-f", "png", "a.puml", "b.puml" });
         Assert.Equal("dir", outputDir);
@@ -93,7 +92,7 @@ public class ParseArgsTests
     }
 
     [Fact]
-    public void ParseArgs_OptionsAfterFiles_StillAddsFiles()
+    public void ParseArgsOptionsAfterFilesStillAddsFiles()
     {
         var (_, _, _, files, _) = Program.ParseArgs(new[] { "a.puml", "-o", "x" });
         Assert.Single(files);
@@ -102,7 +101,7 @@ public class ParseArgsTests
     }
 
     [Fact]
-    public void ParseArgs_IgnoresOptions_KeepsNonOptions()
+    public void ParseArgsIgnoresOptionsKeepsNonOptions()
     {
         var (_, _, _, files, _) = Program.ParseArgs(new[] { "a.puml", "--other", "b.puml" });
         Assert.Equal(2, files.Count);

@@ -7,7 +7,7 @@ public partial class ImagePayload : ObservableObject, IPayload
     public PayloadTypes PayloadType => PayloadTypes.Image;
 
     [ObservableProperty]
-    public byte[]? image; 
+    public byte[]? image;
 
     [ObservableProperty]
     public bool showBorder = false;

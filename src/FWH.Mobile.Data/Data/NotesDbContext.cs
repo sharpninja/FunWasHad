@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
-using FWH.Mobile.Data.Models;
 using FWH.Mobile.Data.Entities;
+using FWH.Mobile.Data.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace FWH.Mobile.Data.Data;
 
@@ -40,6 +40,7 @@ public class NotesDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
         modelBuilder.Entity<Note>(b =>
         {
             b.HasKey(n => n.Id);

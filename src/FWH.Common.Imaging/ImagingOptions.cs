@@ -26,7 +26,7 @@ public class ImagingOptions
     /// <summary>
     /// Padding in pixels applied around the SVG when fitting.
     /// </summary>
-    public int Padding { get; set; } = 0;
+    public int Padding { get; set; }
 
     /// <summary>
     /// Background color to paint in the output before composing base and SVG.

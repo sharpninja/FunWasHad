@@ -20,7 +20,7 @@ public class MovementStateTests
     /// <para><strong>Reason for expectation:</strong> Enum values are typically assigned sequentially starting from 0 unless explicitly specified. These specific values may be used in database schemas, API contracts, or serialization formats. Verifying the values ensures compatibility with existing data and prevents breaking changes if the enum is modified.</para>
     /// </remarks>
     [Fact]
-    public void MovementState_HasExpectedValues()
+    public void MovementStateHasExpectedValues()
     {
         // Assert - Verify enum values
         Assert.Equal(0, (int)MovementState.Unknown);
@@ -184,7 +184,7 @@ public class MovementStateTests
     [InlineData(MovementState.Riding, MovementState.Stationary)]
     [InlineData(MovementState.Unknown, MovementState.Walking)]
     [InlineData(MovementState.Unknown, MovementState.Riding)]
-    public void MovementStateChangedEventArgs_SupportsAllTransitions(
+    public void MovementStateChangedEventArgsSupportsAllTransitions(
         MovementState from, MovementState to)
     {
         // Act
@@ -212,7 +212,7 @@ public class MovementStateTests
     /// <para><strong>Reason for expectation:</strong> Enums in C# support equality comparison by default, and can be compared using their underlying integer values. The sequential values (0-4) ensure predictable ordering. The equality assertions confirm enum comparison works, and the ordering assertions confirm integer-based ordering is correct. This validates that the enum can be used in comparison operations throughout the codebase.</para>
     /// </remarks>
     [Fact]
-    public void MovementState_EnumCanBeCompared()
+    public void MovementStateEnumCanBeCompared()
     {
         // Arrange
         var unknown = MovementState.Unknown;
@@ -251,7 +251,7 @@ public class MovementStateDetectionScenarioTests
     }
 
     [Fact]
-    public void StationaryToRiding_WhenSpeedAbove5Mph_ShouldTransition()
+    public void StationaryToRidingWhenSpeedAbove5MphShouldTransition()
     {
         // This test validates the scenario where:
         // - Device is stationary
@@ -263,7 +263,7 @@ public class MovementStateDetectionScenarioTests
     }
 
     [Fact]
-    public void WalkingToRiding_WhenSpeedIncreases_ShouldTransition()
+    public void WalkingToRidingWhenSpeedIncreasesShouldTransition()
     {
         // This test validates the scenario where:
         // - Device is in Walking state (< 5 mph)
@@ -278,7 +278,7 @@ public class MovementStateDetectionScenarioTests
     }
 
     [Fact]
-    public void RidingToWalking_WhenSpeedDecreases_ShouldTransition()
+    public void RidingToWalkingWhenSpeedDecreasesShouldTransition()
     {
         // This test validates the scenario where:
         // - Device is in Riding state (>= 5 mph)
@@ -354,7 +354,7 @@ public class MovementStateDetectionScenarioTests
     }
 
     [Fact]
-    public void RealWorldScenario_CommuteToCoffeeShop()
+    public void RealWorldScenarioCommuteToCoffeeShop()
     {
         // Walking to coffee shop (3 mph average)
         var walkingSpeed = GpsCalculator.MphToMetersPerSecond(3.0);
@@ -419,7 +419,7 @@ public class MovementStateDetectionScenarioTests
     [Theory]
     [InlineData(2.0, 3.0, 4.0, 4.5)]  // Accelerating from walk to jog
     [InlineData(10.0, 12.0, 15.0, 20.0)]  // Accelerating while cycling/driving
-    public void ContinuousAcceleration_ShouldTransitionOnceAcrossThreshold(
+    public void ContinuousAccelerationShouldTransitionOnceAcrossThreshold(
         double speed1Mph, double speed2Mph, double speed3Mph, double speed4Mph)
     {
         // Convert to m/s

@@ -1,10 +1,9 @@
-using System.Threading.Tasks;
-using Xunit;
-using Microsoft.Extensions.DependencyInjection;
+using FWH.Mobile.Data.Data;
+using FWH.Mobile.Data.Repositories;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using FWH.Mobile.Data.Repositories;
-using FWH.Mobile.Data.Data;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Mobile.Data.Tests;
 
@@ -21,12 +20,12 @@ public class WorkflowRepositoryPersistenceTests : DataTestBase
     /// <para><strong>Reason for expectation:</strong> The method should update the CurrentNodeId column in the database for the specified workflow. The true return value confirms the update succeeded. Querying the workflow after the update should reflect the new CurrentNodeId, confirming the change was persisted. This validates that workflow state updates are correctly saved to the database.</para>
     /// </remarks>
     [Fact]
-    public async Task UpdateCurrentNodeIdAsync_PersistsCurrentNode()
+    public async Task UpdateCurrentNodeIdAsyncPersistsCurrentNode()
     {
         using var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
 
-        var services = new ServiceCollection();
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
         services.AddDbContext<NotesDbContext>(options => options.UseSqlite(connection));
         services.AddScoped<IWorkflowRepository, EfWorkflowRepository>();
 
@@ -40,12 +39,12 @@ public class WorkflowRepositoryPersistenceTests : DataTestBase
         var repo = sp.GetRequiredService<IWorkflowRepository>();
 
         var def = new FWH.Mobile.Data.Models.WorkflowDefinitionEntity { Id = "wfp", Name = "p", CurrentNodeId = "A" };
-        await repo.CreateAsync(def);
+        await repo.CreateAsync(def).ConfigureAwait(true);
 
-        var updated = await repo.UpdateCurrentNodeIdAsync("wfp", "B");
+        var updated = await repo.UpdateCurrentNodeIdAsync("wfp", "B").ConfigureAwait(true);
         Assert.True(updated);
 
-        var persisted = await repo.GetByIdAsync("wfp");
+        var persisted = await repo.GetByIdAsync("wfp").ConfigureAwait(true);
         Assert.NotNull(persisted);
         Assert.Equal("B", persisted!.CurrentNodeId);
     }

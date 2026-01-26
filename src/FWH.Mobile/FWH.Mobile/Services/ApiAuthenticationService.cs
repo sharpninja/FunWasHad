@@ -42,6 +42,7 @@ public class ApiAuthenticationService : IApiAuthenticationService
 
     public void AddAuthenticationHeaders(HttpRequestMessage request, string? requestBody = null)
     {
+        ArgumentNullException.ThrowIfNull(request);
         // Add API key header
         request.Headers.Add("X-API-Key", _apiKey);
 
@@ -66,9 +67,8 @@ public class ApiAuthenticationService : IApiAuthenticationService
             var bodyHash = string.Empty;
             if (!string.IsNullOrEmpty(requestBody))
             {
-                using var sha256 = SHA256.Create();
                 var bodyBytes = Encoding.UTF8.GetBytes(requestBody);
-                var hashBytes = sha256.ComputeHash(bodyBytes);
+                var hashBytes = SHA256.HashData(bodyBytes);
                 bodyHash = Convert.ToBase64String(hashBytes);
             }
 

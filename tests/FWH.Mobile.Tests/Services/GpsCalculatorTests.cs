@@ -28,7 +28,7 @@ public class GpsCalculatorTests
     [InlineData(0, 0, 0, 1, 111319.49)] // 1 degree longitude at equator ≈ 111.32 km
     [InlineData(0, 0, 1, 0, 111319.49)] // 1 degree latitude ≈ 111.32 km
     [InlineData(40.7128, -74.0060, 40.7589, -73.9851, 5420.0)] // NYC: Times Square to Central Park (actual distance)
-    public void CalculateDistance_WithKnownCoordinates_ReturnsExpectedDistance(
+    public void CalculateDistanceWithKnownCoordinatesReturnsExpectedDistance(
         double lat1, double lon1, double lat2, double lon2, double expectedMeters)
     {
         // Act
@@ -49,7 +49,7 @@ public class GpsCalculatorTests
     /// <para><strong>Reason for expectation:</strong> Mathematically, the distance between identical points must be zero. This validates that the Haversine formula correctly handles the edge case and doesn't produce floating-point errors.</para>
     /// </remarks>
     [Fact]
-    public void CalculateDistance_WithSamePoint_ReturnsZero()
+    public void CalculateDistanceWithSamePointReturnsZero()
     {
         // Arrange
         var lat = 37.7749;
@@ -485,7 +485,7 @@ public class SpeedCalculationTests
     [InlineData(1.5, true)]      // 3.4 mph - walking
     [InlineData(2.0, true)]      // 4.5 mph - walking
     [InlineData(2.23, true)]     // 4.99 mph - walking (just under threshold)
-    public void IsWalkingSpeed_WithSpeedsBelowThreshold_ReturnsTrue(double metersPerSecond, bool expected)
+    public void IsWalkingSpeedWithSpeedsBelowThresholdReturnsTrue(double metersPerSecond, bool expected)
     {
         // Act
         var result = GpsCalculator.IsWalkingSpeed(metersPerSecond);
@@ -607,7 +607,7 @@ public class SpeedCalculationTests
     /// <para><strong>Reason for expectation:</strong> The threshold is defined as "riding is at or above 5 mph". At exactly 5 mph, the speed should be classified as riding. This ensures clear separation between walking and riding states and provides consistent behavior with IsWalkingSpeed (which returns false at exactly 5 mph).</para>
     /// </remarks>
     [Fact]
-    public void IsRidingSpeed_AtExactly5Mph_ReturnsTrue()
+    public void IsRidingSpeedAtExactly5MphReturnsTrue()
     {
         // Arrange - Exactly 5 mph = 2.23694 m/s
         var speed = GpsCalculator.MphToMetersPerSecond(5.0);

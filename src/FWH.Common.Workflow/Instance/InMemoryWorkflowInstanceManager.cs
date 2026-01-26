@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 
 namespace FWH.Common.Workflow.Instance;
 
@@ -11,7 +9,7 @@ namespace FWH.Common.Workflow.Instance;
 public class InMemoryWorkflowInstanceManager : IWorkflowInstanceManager
 {
     private readonly ConcurrentDictionary<string, string?> _currentNodeByWorkflow = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string,string>> _vars = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, string>> _vars = new(StringComparer.Ordinal);
 
     public string? GetCurrentNode(string workflowId)
     {
@@ -21,9 +19,9 @@ public class InMemoryWorkflowInstanceManager : IWorkflowInstanceManager
 
     public void SetCurrentNode(string workflowId, string? nodeId)
     {
-        if (string.IsNullOrWhiteSpace(workflowId)) 
+        if (string.IsNullOrWhiteSpace(workflowId))
             throw new ArgumentNullException(nameof(workflowId));
-        
+
         _currentNodeByWorkflow[workflowId] = nodeId;
     }
 
@@ -33,12 +31,12 @@ public class InMemoryWorkflowInstanceManager : IWorkflowInstanceManager
         _currentNodeByWorkflow.TryRemove(workflowId, out _);
     }
 
-    public IDictionary<string,string>? GetVariables(string workflowId)
+    public IDictionary<string, string>? GetVariables(string workflowId)
     {
         if (string.IsNullOrWhiteSpace(workflowId)) return null;
-        
+
         // Use GetOrAdd to atomically get or create the dictionary
-        var variables = _vars.GetOrAdd(workflowId, _ => 
+        var variables = _vars.GetOrAdd(workflowId, _ =>
             new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
 
         return variables;
@@ -50,9 +48,9 @@ public class InMemoryWorkflowInstanceManager : IWorkflowInstanceManager
         if (string.IsNullOrWhiteSpace(key)) return;
 
         // Use GetOrAdd to atomically get or create the dictionary
-        var variables = _vars.GetOrAdd(workflowId, _ => 
+        var variables = _vars.GetOrAdd(workflowId, _ =>
             new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase));
-        
+
         variables[key] = value;
     }
 }

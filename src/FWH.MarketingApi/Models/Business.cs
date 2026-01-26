@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Represents a business that can advertise through the mobile app.
 /// </summary>
-public class Business
+internal class Business
 {
     public long Id { get; set; }
     public required string Name { get; set; }
@@ -17,7 +17,7 @@ public class Business
     public bool IsSubscribed { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? SubscriptionExpiresAt { get; set; }
-    
+
     // Navigation properties
     public BusinessTheme? Theme { get; set; }
     public ICollection<Coupon> Coupons { get; set; } = new List<Coupon>();

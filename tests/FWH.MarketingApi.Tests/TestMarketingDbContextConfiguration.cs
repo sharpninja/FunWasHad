@@ -7,7 +7,7 @@ namespace FWH.MarketingApi.Tests;
 /// Test-specific model configuration that maps all properties to lowercase column names
 /// to match PostgreSQL's default behavior of converting unquoted identifiers to lowercase.
 /// </summary>
-public static class TestMarketingDbContextConfiguration
+internal static class TestMarketingDbContextConfiguration
 {
     public static void ConfigureForTests(ModelBuilder modelBuilder)
     {

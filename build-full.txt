@@ -1,0 +1,40 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  FWH.Common.Imaging -> E:\github\FunWasHad\src\FWH.Common.Imaging\bin\Debug\net9.0\FWH.Common.Imaging.dll
+  FWH.ServiceDefaults -> E:\github\FunWasHad\src\FWH.ServiceDefaults\bin\Debug\net9.0\FWH.ServiceDefaults.dll
+  FWH.Mobile.Data -> E:\github\FunWasHad\src\FWH.Mobile.Data\bin\Debug\net9.0\FWH.Mobile.Data.dll
+  FWH.Orchestrix.Contracts -> E:\github\FunWasHad\src\FWH.Orchestrix.Contracts\bin\Debug\net9.0\FWH.Orchestrix.Contracts.dll
+  FWH.Documentation.Sync -> E:\github\FunWasHad\src\FWH.Documentation.Sync\bin\Debug\net9.0\FWH.Documentation.Sync.dll
+  PlantUmlRender -> E:\github\FunWasHad\tools\PlantUmlRender\bin\Debug\net9.0\PlantUmlRender.dll
+  FWH.Orchestrix.Mediator.Remote -> E:\github\FunWasHad\src\FWH.Orchestrix.Mediator.Remote\bin\Debug\net9.0\FWH.Orchestrix.Mediator.Remote.dll
+  PlantUmlRender.Tests -> E:\github\FunWasHad\tests\PlantUmlRender.Tests\bin\Debug\net9.0\PlantUmlRender.Tests.dll
+  FWH.Common.Workflow -> E:\github\FunWasHad\src\FWH.Common.Workflow\bin\Debug\net9.0\FWH.Common.Workflow.dll
+  FWH.Common.Imaging.Tests -> E:\github\FunWasHad\tests\FWH.Common.Imaging.Tests\bin\Debug\net9.0\FWH.Common.Imaging.Tests.dll
+  FWH.MarketingApi -> E:\github\FunWasHad\src\FWH.MarketingApi\bin\Debug\net9.0\FWH.MarketingApi.dll
+  FWH.Common.Chat -> E:\github\FunWasHad\src\FWH.Common.Chat\bin\Debug\net9.0\FWH.Common.Chat.dll
+  FWH.Mobile.Data.Tests -> E:\github\FunWasHad\tests\FWH.Mobile.Data.Tests\bin\Debug\net9.0\FWH.Mobile.Data.Tests.dll
+  FWH.Common.Workflow.Tests -> E:\github\FunWasHad\tests\FWH.Common.Workflow.Tests\bin\Debug\net9.0\FWH.Common.Workflow.Tests.dll
+  FWH.Common.Location -> E:\github\FunWasHad\src\FWH.Common.Location\bin\Debug\net9.0\FWH.Common.Location.dll
+  FWH.MarketingApi.Tests -> E:\github\FunWasHad\tests\FWH.MarketingApi.Tests\bin\Debug\net9.0\FWH.MarketingApi.Tests.dll
+  FWH.Common.Chat.Tests -> E:\github\FunWasHad\tests\FWH.Common.Chat.Tests\bin\Debug\net9.0\FWH.Common.Chat.Tests.dll
+  FWH.Common.Location.Tests -> E:\github\FunWasHad\tests\FWH.Common.Location.Tests\bin\Debug\net9.0\FWH.Common.Location.Tests.dll
+  FWH.Location.Api -> E:\github\FunWasHad\src\FWH.Location.Api\bin\Debug\net9.0\FWH.Location.Api.dll
+  FWH.Mobile -> E:\github\FunWasHad\src\FWH.Mobile\FWH.Mobile\bin\Debug\net9.0\FWH.Mobile.dll
+  FWH.Mobile.Desktop -> E:\github\FunWasHad\src\FWH.Mobile\FWH.Mobile.Desktop\bin\Debug\net9.0-windows10.0.19041.0\FWH.Mobile.Desktop.dll
+  FWH.Mobile.Services.Tests -> E:\github\FunWasHad\tests\FWH.Mobile.Services.Tests\bin\Debug\net9.0\FWH.Mobile.Services.Tests.dll
+  FWH.AppHost -> E:\github\FunWasHad\src\FWH.AppHost\bin\Debug\net9.0\FWH.AppHost.dll
+  FWH.Mobile.Android -> E:\github\FunWasHad\src\FWH.Mobile\FWH.Mobile.Android\bin\Debug\net9.0-android\FWH.Mobile.Android.dll
+  FWH.Common.Imaging -> E:\github\FunWasHad\src\FWH.Common.Imaging\bin\Debug\net9.0\FWH.Common.Imaging.dll
+  FWH.Orchestrix.Contracts -> E:\github\FunWasHad\src\FWH.Orchestrix.Contracts\bin\Debug\net9.0\FWH.Orchestrix.Contracts.dll
+  FWH.Mobile.Data -> E:\github\FunWasHad\src\FWH.Mobile.Data\bin\Debug\net9.0\FWH.Mobile.Data.dll
+  FWH.Orchestrix.Mediator.Remote -> E:\github\FunWasHad\src\FWH.Orchestrix.Mediator.Remote\bin\Debug\net9.0\FWH.Orchestrix.Mediator.Remote.dll
+  FWH.Common.Workflow -> E:\github\FunWasHad\src\FWH.Common.Workflow\bin\Debug\net9.0\FWH.Common.Workflow.dll
+  FWH.Common.Chat -> E:\github\FunWasHad\src\FWH.Common.Chat\bin\Debug\net9.0\FWH.Common.Chat.dll
+  FWH.Common.Location -> E:\github\FunWasHad\src\FWH.Common.Location\bin\Debug\net9.0\FWH.Common.Location.dll
+  FWH.Mobile -> E:\github\FunWasHad\src\FWH.Mobile\FWH.Mobile\bin\Debug\net9.0\FWH.Mobile.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:10.19

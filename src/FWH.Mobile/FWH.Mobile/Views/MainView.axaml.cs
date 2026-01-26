@@ -1,9 +1,6 @@
 using Avalonia.Controls;
-using Avalonia.Layout;
 using FWH.Mobile.ViewModels;
-using FWH.Common.Chat.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 
 namespace FWH.Mobile.Views;
 

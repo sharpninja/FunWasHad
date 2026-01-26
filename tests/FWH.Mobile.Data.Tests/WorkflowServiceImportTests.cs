@@ -1,10 +1,7 @@
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 using FWH.Common.Workflow;
 using FWH.Mobile.Data.Repositories;
-using System;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Mobile.Data.Tests;
 
@@ -21,7 +18,7 @@ public class WorkflowServiceImportTests : DataTestBase
     /// <para><strong>Reason for expectation:</strong> ImportWorkflowAsync should parse the PlantUML, create a WorkflowDefinition with all components, persist it via the repository, and return the definition. The repository should store all nodes, transitions, and start points with correct relationships. The exact counts and content matches confirm that parsing and persistence work correctly together, ensuring workflows can be imported and later retrieved with full fidelity.</para>
     /// </remarks>
     [Fact]
-    public async Task ImportWorkflow_Basic_PersistsNodesAndStartPoints()
+    public async Task ImportWorkflowBasicPersistsNodesAndStartPoints()
     {
         var service = ServiceProvider.GetRequiredService<IWorkflowService>();
 
@@ -32,7 +29,7 @@ public class WorkflowServiceImportTests : DataTestBase
             @enduml
         ";
 
-        var def = await service.ImportWorkflowAsync(plant, id: "wf_basic", name: "Basic");
+        var def = await service.ImportWorkflowAsync(plant, id: "wf_basic", name: "Basic").ConfigureAwait(true);
 
         Assert.Equal("wf_basic", def.Id);
         Assert.Equal("Basic", def.Name);
@@ -40,7 +37,7 @@ public class WorkflowServiceImportTests : DataTestBase
         Assert.Single(def.StartPoints);
 
         var repo = ServiceProvider.GetRequiredService<IWorkflowRepository>();
-        var persisted = await repo.GetByIdAsync("wf_basic");
+        var persisted = await repo.GetByIdAsync("wf_basic").ConfigureAwait(true);
         Assert.NotNull(persisted);
         Assert.Equal("wf_basic", persisted!.Id);
         Assert.Equal("Basic", persisted.Name);
@@ -59,7 +56,7 @@ public class WorkflowServiceImportTests : DataTestBase
     }
 
     [Fact]
-    public async Task ImportWorkflow_IfBranch_PersistsTransitionWithConditionAndIds()
+    public async Task ImportWorkflowIfBranchPersistsTransitionWithConditionAndIds()
     {
         var service = ServiceProvider.GetRequiredService<IWorkflowService>();
 
@@ -79,12 +76,12 @@ public class WorkflowServiceImportTests : DataTestBase
             @enduml
         ";
 
-        var def = await service.ImportWorkflowAsync(plant, id: "wf_if", name: "IfTest");
+        var def = await service.ImportWorkflowAsync(plant, id: "wf_if", name: "IfTest").ConfigureAwait(true);
 
         Assert.Equal("wf_if", def.Id);
 
         var repo = ServiceProvider.GetRequiredService<IWorkflowRepository>();
-        var persisted = await repo.GetByIdAsync("wf_if");
+        var persisted = await repo.GetByIdAsync("wf_if").ConfigureAwait(true);
         Assert.NotNull(persisted);
 
         // Ensure transitions include expected conditions
@@ -123,13 +120,13 @@ public class WorkflowServiceImportTests : DataTestBase
             @enduml
         ";
 
-        var def = await service.ImportWorkflowAsync(plant, id: "wf_loop", name: "LoopTest");
+        var def = await service.ImportWorkflowAsync(plant, id: "wf_loop", name: "LoopTest").ConfigureAwait(true);
 
         Assert.Equal("wf_loop", def.Id);
         Assert.True(def.Transitions.Count >= 2);
 
         var repo = ServiceProvider.GetRequiredService<IWorkflowRepository>();
-        var persisted = await repo.GetByIdAsync("wf_loop");
+        var persisted = await repo.GetByIdAsync("wf_loop").ConfigureAwait(true);
         Assert.NotNull(persisted);
 
         // Ensure there's a transition with condition 'notDone'
@@ -144,14 +141,22 @@ public class WorkflowServiceImportTests : DataTestBase
     }
 
     [Fact]
-    public async Task ImportWorkflow_NullInput_ThrowsArgumentNullException()
+    public async Task ImportWorkflowNullInputThrowsArgumentNullException()
     {
         var service = ServiceProvider.GetRequiredService<IWorkflowService>();
-        await Assert.ThrowsAsync<ArgumentNullException>(async () => await service.ImportWorkflowAsync(null!));
+        try
+        {
+            await service.ImportWorkflowAsync(null!).ConfigureAwait(true);
+            Assert.True(false, "Expected ArgumentNullException");
+        }
+        catch (ArgumentNullException)
+        {
+            // Expected exception
+        }
     }
 
     [Fact]
-    public async Task ImportWorkflow_UnclosedIf_ProducesJoinNode()
+    public async Task ImportWorkflowUnclosedIfProducesJoinNode()
     {
         var service = ServiceProvider.GetRequiredService<IWorkflowService>();
 
@@ -163,12 +168,12 @@ public class WorkflowServiceImportTests : DataTestBase
             @enduml
         ";
 
-        var def = await service.ImportWorkflowAsync(plant, id: "wf_unclosed_if", name: "UnclosedIf");
+        var def = await service.ImportWorkflowAsync(plant, id: "wf_unclosed_if", name: "UnclosedIf").ConfigureAwait(true);
         Assert.Contains(def.Nodes, n => string.Equals(n.Label, "join", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    public async Task ImportWorkflow_RepeatWithoutWhile_ProducesAfterLoop()
+    public async Task ImportWorkflowRepeatWithoutWhileProducesAfterLoop()
     {
         var service = ServiceProvider.GetRequiredService<IWorkflowService>();
 
@@ -180,12 +185,12 @@ public class WorkflowServiceImportTests : DataTestBase
             @enduml
         ";
 
-        var def = await service.ImportWorkflowAsync(plant, id: "wf_repeat", name: "RepeatTest");
+        var def = await service.ImportWorkflowAsync(plant, id: "wf_repeat", name: "RepeatTest").ConfigureAwait(true);
         Assert.Contains(def.Nodes, n => string.Equals(n.Label, "after_loop", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    public async Task ImportWorkflow_GarbageInput_DoesNotThrowAndParsesValidLines()
+    public async Task ImportWorkflowGarbageInputDoesNotThrowAndParsesValidLines()
     {
         var service = ServiceProvider.GetRequiredService<IWorkflowService>();
 
@@ -198,7 +203,7 @@ public class WorkflowServiceImportTests : DataTestBase
             @enduml
         ";
 
-        var def = await service.ImportWorkflowAsync(plant, id: "wf_garbage", name: "Garbage");
+        var def = await service.ImportWorkflowAsync(plant, id: "wf_garbage", name: "Garbage").ConfigureAwait(true);
         Assert.Contains(def.Nodes, n => string.Equals(n.Label, "Start", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(def.Transitions, t => t.ToNodeId != null);
     }

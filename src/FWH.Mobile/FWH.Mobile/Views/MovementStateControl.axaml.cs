@@ -3,8 +3,6 @@ using FWH.Mobile.ViewModels;
 using Mapsui;
 using Mapsui.Projections;
 using Mapsui.Tiling;
-using Mapsui.UI.Avalonia;
-using System;
 
 namespace FWH.Mobile.Views;
 

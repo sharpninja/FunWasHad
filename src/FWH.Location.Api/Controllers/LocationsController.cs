@@ -6,18 +6,18 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FWH.Location.Api.Controllers;
 
-    /// <summary>
-    /// REST API surface for the shared location service.
-    /// Implements TR-API-005: Location API Endpoints.
-    /// </summary>
-    /// <remarks>
-    /// This controller provides endpoints for:
-    /// - Nearby business discovery (TR-API-002)
-    /// - Location confirmations
-    /// </remarks>
+/// <summary>
+/// REST API surface for the shared location service.
+/// Implements TR-API-005: Location API Endpoints.
+/// </summary>
+/// <remarks>
+/// This controller provides endpoints for:
+/// - Nearby business discovery (TR-API-002)
+/// - Location confirmations
+/// </remarks>
 [ApiController]
 [Route("api/[controller]")]
-public sealed class LocationsController : ControllerBase
+internal sealed class LocationsController : ControllerBase
 {
     private readonly ILocationService _locationService;
     private readonly LocationDbContext _dbContext;
@@ -74,7 +74,7 @@ public sealed class LocationsController : ControllerBase
             longitude,
             radiusMeters,
             categories,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         return Ok(results);
     }
@@ -118,7 +118,7 @@ public sealed class LocationsController : ControllerBase
             latitude,
             longitude,
             maxDistanceMeters,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (result == null)
         {
@@ -181,7 +181,7 @@ public sealed class LocationsController : ControllerBase
         };
 
         _dbContext.LocationConfirmations.Add(entity);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Location confirmed: {Business} at ({BusinessLat},{BusinessLon}) reported from ({UserLat},{UserLon})",
@@ -191,7 +191,7 @@ public sealed class LocationsController : ControllerBase
             entity.UserLatitude,
             entity.UserLongitude);
 
-        return Created($"/api/locations/confirmed/{entity.Id}", new { entity.Id });
+        return Created(new Uri($"/api/locations/confirmed/{entity.Id}", UriKind.Relative), new { entity.Id });
     }
 
     private static bool IsValidCoordinate(double value, double min, double max) => value >= min && value <= max;

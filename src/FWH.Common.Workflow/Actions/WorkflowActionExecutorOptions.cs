@@ -16,5 +16,5 @@ public class WorkflowActionExecutorOptions
     /// When true handlers will be executed in background (fire-and-forget) and executor returns immediately.
     /// Default false preserves previous synchronous behavior expected by tests.
     /// </summary>
-    public bool ExecuteHandlersInBackground { get; set; } = false;
+    public bool ExecuteHandlersInBackground { get; set; }
 }

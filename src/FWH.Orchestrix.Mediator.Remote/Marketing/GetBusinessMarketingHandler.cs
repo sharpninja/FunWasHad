@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using FWH.Orchestrix.Contracts.Marketing;
-using Microsoft.Extensions.Logging;
 using FWH.Orchestrix.Contracts.Mediator;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Orchestrix.Mediator.Remote.Marketing;
 
@@ -17,6 +17,7 @@ public class GetBusinessMarketingHandler : IMediatorHandler<GetBusinessMarketing
         IHttpClientFactory httpClientFactory,
         ILogger<GetBusinessMarketingHandler> logger)
     {
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
         _httpClient = httpClientFactory.CreateClient("MarketingApi");
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -25,16 +26,17 @@ public class GetBusinessMarketingHandler : IMediatorHandler<GetBusinessMarketing
         GetBusinessMarketingRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation("Getting business marketing data remotely for business {BusinessId}",
                 request.BusinessId);
 
-            var response = await _httpClient.GetAsync($"/api/marketing/{request.BusinessId}", cancellationToken);
+            var response = await _httpClient.GetAsync(new Uri($"/api/marketing/{request.BusinessId}", UriKind.Relative), cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                var data = await response.Content.ReadFromJsonAsync<BusinessMarketingDto>(cancellationToken);
+                var data = await response.Content.ReadFromJsonAsync<BusinessMarketingDto>(cancellationToken).ConfigureAwait(false);
                 return new GetBusinessMarketingResponse
                 {
                     Success = true,
@@ -42,7 +44,7 @@ public class GetBusinessMarketingHandler : IMediatorHandler<GetBusinessMarketing
                 };
             }
 
-            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogWarning("Failed to get business marketing data: {StatusCode} - {Error}",
                 response.StatusCode, error);
 

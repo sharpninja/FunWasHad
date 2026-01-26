@@ -1,4 +1,3 @@
-using PlantUmlRender;
 using Xunit;
 
 namespace PlantUmlRender.Tests;
@@ -6,39 +5,39 @@ namespace PlantUmlRender.Tests;
 public class ExtractStartumlBlockTests
 {
     [Fact]
-    public void ExtractStartumlBlock_ValidBlock_ReturnsBlock()
+    public void ExtractStartumlBlockValidBlockReturnsBlock()
     {
         var text = "pre @startuml\nx->y\n@enduml post";
         var r = Program.ExtractStartumlBlock(text);
         Assert.NotNull(r);
-        Assert.StartsWith("@startuml", r, StringComparison.OrdinalIgnoreCase);
-        Assert.EndsWith("@enduml", r, StringComparison.OrdinalIgnoreCase);
+        Assert.True(r.StartsWith("@startuml", StringComparison.OrdinalIgnoreCase));
+        Assert.True(r.EndsWith("@enduml", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("x->y", r);
     }
 
     [Fact]
-    public void ExtractStartumlBlock_NoStartuml_ReturnsNull()
+    public void ExtractStartumlBlockNoStartumlReturnsNull()
     {
         var text = "foo @enduml bar";
         Assert.Null(Program.ExtractStartumlBlock(text));
     }
 
     [Fact]
-    public void ExtractStartumlBlock_NoEnduml_ReturnsNull()
+    public void ExtractStartumlBlockNoEndumlReturnsNull()
     {
         var text = "@startuml\nfoo";
         Assert.Null(Program.ExtractStartumlBlock(text));
     }
 
     [Fact]
-    public void ExtractStartumlBlock_EndumlBeforeStartuml_ReturnsNull()
+    public void ExtractStartumlBlockEndumlBeforeStartumlReturnsNull()
     {
         var text = "@enduml\n@startuml\nx\n@enduml";
         Assert.Null(Program.ExtractStartumlBlock(text));
     }
 
     [Fact]
-    public void ExtractStartumlBlock_EmptyBlock_ReturnsBlock()
+    public void ExtractStartumlBlockEmptyBlockReturnsBlock()
     {
         var text = "@startuml\n@enduml";
         var r = Program.ExtractStartumlBlock(text);
@@ -48,7 +47,7 @@ public class ExtractStartumlBlockTests
     }
 
     [Fact]
-    public void ExtractStartumlBlock_FirstBlock_WhenMultiple()
+    public void ExtractStartumlBlockFirstBlockWhenMultiple()
     {
         var text = "@startuml\nA\n@enduml\n@startuml\nB\n@enduml";
         var r = Program.ExtractStartumlBlock(text);
@@ -58,7 +57,7 @@ public class ExtractStartumlBlockTests
     }
 
     [Fact]
-    public void ExtractStartumlBlock_CaseInsensitive()
+    public void ExtractStartumlBlockCaseInsensitive()
     {
         var text = "@STARTUML\na\n@ENDUML";
         var r = Program.ExtractStartumlBlock(text);

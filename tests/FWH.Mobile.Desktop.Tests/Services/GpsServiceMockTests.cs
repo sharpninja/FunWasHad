@@ -25,7 +25,7 @@ public class GpsServiceFactoryTests
     /// <para><strong>Reason for expectation:</strong> NoGpsService represents the absence of location capabilities, so it should always return false for IsLocationAvailable. This allows calling code to check availability before attempting to get location, preventing errors and enabling graceful degradation of location-dependent features.</para>
     /// </remarks>
     [Fact]
-    public void NoGpsService_IsLocationAvailable_ReturnsFalse()
+    public void NoGpsServiceIsLocationAvailableReturnsFalse()
     {
         // Arrange
         var service = new NoGpsService();
@@ -38,7 +38,7 @@ public class GpsServiceFactoryTests
     }
 
     [Fact]
-    public async Task NoGpsService_GetCurrentLocationAsync_ReturnsNull()
+    public async Task NoGpsServiceGetCurrentLocationAsyncReturnsNull()
     {
         // Arrange
         var service = new NoGpsService();
@@ -64,7 +64,7 @@ public class GpsServiceFactoryTests
     }
 
     [Fact]
-    public async Task NoGpsService_WithCancellationToken_CompletesImmediately()
+    public async Task NoGpsServiceWithCancellationTokenCompletesImmediately()
     {
         // Arrange
         var service = new NoGpsService();
@@ -225,7 +225,7 @@ public class GpsCoordinatesModelTests
 public class GpsServiceEdgeCaseTests
 {
     [Fact]
-    public void GpsCoordinates_ExtremeLatitudes_ValidatesCorrectly()
+    public void GpsCoordinatesExtremeLatitudesValidatesCorrectly()
     {
         // Arrange & Act
         var northPole = new GpsCoordinates(90, 0);
@@ -249,7 +249,7 @@ public class GpsServiceEdgeCaseTests
     }
 
     [Fact]
-    public void GpsCoordinates_NegativeAccuracy_IsAllowed()
+    public void GpsCoordinatesNegativeAccuracyIsAllowed()
     {
         // Arrange & Act
         var coords = new GpsCoordinates(0, 0, -1);
@@ -338,7 +338,7 @@ public class CommonLocationScenariosTests
     [InlineData(100.0)]     // Low accuracy
     [InlineData(500.0)]     // Very low accuracy
     [InlineData(1000.0)]    // Poor accuracy
-    public void GpsCoordinates_VariousAccuracyLevels_ArePreserved(double accuracy)
+    public void GpsCoordinatesVariousAccuracyLevelsArePreserved(double accuracy)
     {
         // Arrange & Act
         var coords = new GpsCoordinates(0, 0, accuracy);

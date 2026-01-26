@@ -1,24 +1,18 @@
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using Xunit;
 using FWH.Common.Workflow.Actions;
+using FWH.Common.Workflow.Controllers;
 using FWH.Common.Workflow.Instance;
-using FWH.Common.Workflow.Storage;
 using FWH.Common.Workflow.Mapping;
 using FWH.Common.Workflow.State;
+using FWH.Common.Workflow.Storage;
 using FWH.Common.Workflow.Views;
-using FWH.Common.Workflow.Controllers;
-using FWH.Common.Workflow;
 using FWH.Mobile.Data.Data;
-using FWH.Mobile.Data.Repositories;
-using System.Collections.Generic;
-using System.Threading;
-using Microsoft.Extensions.Logging;
 using FWH.Orchestrix.Contracts.Mediator;
 using FWH.Orchestrix.Mediator.Remote.Mediator;
-using System;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Xunit;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -37,10 +31,10 @@ public class WorkflowExecutorOptionsTests : IDisposable
         public HandlerUsingDep(ScopedDep dep) => _dep = dep;
         public string Name => "HandlerUsingDep";
 
-        public Task<IDictionary<string,string>?> HandleAsync(ActionHandlerContext context, IDictionary<string,string> parameters, CancellationToken cancellationToken = default)
+        public Task<IDictionary<string, string>?> HandleAsync(ActionHandlerContext context, IDictionary<string, string> parameters, CancellationToken cancellationToken = default)
         {
-            var updates = new Dictionary<string,string> { ["depId"] = _dep.Id };
-            return Task.FromResult<IDictionary<string,string>?>(updates);
+            var updates = new Dictionary<string, string> { ["depId"] = _dep.Id };
+            return Task.FromResult<IDictionary<string, string>?>(updates);
         }
     }
 
@@ -122,21 +116,21 @@ public class WorkflowExecutorOptionsTests : IDisposable
     /// <para><strong>Reason for expectation:</strong> With CreateScopeForHandlers=true, the executor should create a new service scope for each ExecuteAsync call. Each scope resolves a new ScopedDep instance (since it's registered as scoped), resulting in different IDs. The different IDs confirm that scoping works correctly and handlers receive fresh dependencies per execution, which is critical for proper resource management and isolation.</para>
     /// </remarks>
     [Fact]
-    public async Task When_CreateScopeForHandlers_True_Then_HandlerGetsNewScopedInstancesPerExecution()
+    public async Task WhenCreateScopeForHandlersTrueThenHandlerGetsNewScopedInstancesPerExecution()
     {
         var services = new ServiceCollection();
         var options = new WorkflowActionExecutorOptions { CreateScopeForHandlers = true, LogExecutionTime = false };
         var executor = BuildExecutor(services, options, out var sp, out var logger);
 
-        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A","A","{\"action\":\"HandlerUsingDep\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
+        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A", "A", "{\"action\":\"HandlerUsingDep\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
 
-        var ok1 = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None);
+        var ok1 = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None).ConfigureAwait(true);
         Assert.True(ok1);
         var vars1 = sp.GetRequiredService<IWorkflowInstanceManager>().GetVariables("w");
         Assert.NotNull(vars1);
         var id1 = vars1["depId"];
 
-        var ok2 = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None);
+        var ok2 = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None).ConfigureAwait(true);
         Assert.True(ok2);
         var vars2 = sp.GetRequiredService<IWorkflowInstanceManager>().GetVariables("w");
         Assert.NotNull(vars2);
@@ -152,15 +146,15 @@ public class WorkflowExecutorOptionsTests : IDisposable
         var options = new WorkflowActionExecutorOptions { CreateScopeForHandlers = false, LogExecutionTime = false };
         var executor = BuildExecutor(services, options, out var sp, out var logger);
 
-        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A","A","{\"action\":\"HandlerUsingDep\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
+        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A", "A", "{\"action\":\"HandlerUsingDep\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
 
-        var ok1 = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None);
+        var ok1 = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None).ConfigureAwait(true);
         Assert.True(ok1);
         var vars1 = sp.GetRequiredService<IWorkflowInstanceManager>().GetVariables("w");
         Assert.NotNull(vars1);
         var id1 = vars1["depId"];
 
-        var ok2 = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None);
+        var ok2 = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None).ConfigureAwait(true);
         Assert.True(ok2);
         var vars2 = sp.GetRequiredService<IWorkflowInstanceManager>().GetVariables("w");
         Assert.NotNull(vars2);
@@ -176,9 +170,9 @@ public class WorkflowExecutorOptionsTests : IDisposable
         var options = new WorkflowActionExecutorOptions { CreateScopeForHandlers = true, LogExecutionTime = false };
         var executor = BuildExecutor(services, options, out var sp, out var logger);
 
-        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A","A","{\"action\":\"HandlerUsingDep\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
+        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A", "A", "{\"action\":\"HandlerUsingDep\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
 
-        var ok = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None);
+        var ok = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None).ConfigureAwait(true);
         Assert.True(ok);
 
         // Ensure no messages mention "handled by" (the timing log)
@@ -186,15 +180,15 @@ public class WorkflowExecutorOptionsTests : IDisposable
     }
 
     [Fact]
-    public async Task When_LogExecutionTime_True_TimingLogIsEmitted()
+    public async Task WhenLogExecutionTimeTrueTimingLogIsEmitted()
     {
         var services = new ServiceCollection();
         var options = new WorkflowActionExecutorOptions { CreateScopeForHandlers = true, LogExecutionTime = true };
         var executor = BuildExecutor(services, options, out var sp, out var logger);
 
-        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A","A","{\"action\":\"HandlerUsingDep\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
+        var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A", "A", "{\"action\":\"HandlerUsingDep\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
 
-        var ok = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None);
+        var ok = await executor.ExecuteAsync("w", def.Nodes[0], def, CancellationToken.None).ConfigureAwait(true);
         Assert.True(ok);
 
         Assert.Contains(logger.Messages, m => m.Contains("handled by") || m.Contains("Handled by"));

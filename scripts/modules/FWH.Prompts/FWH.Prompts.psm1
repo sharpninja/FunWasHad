@@ -1002,32 +1002,8 @@ This file contains archived content from CLI.md.
         [System.IO.File]::WriteAllText($cliHistoryPath, $historyHeader + $historyEntry, $utf8NoBom)
     }
 
-    $initialContent = @'
-# CLI Agent
-
-This file is monitored by the CLI Agent. Add commands below and the agent will execute them.
-
-## Usage
-
-Add commands in the format:
-```cli
-help
-```
-
-The agent will execute the command and append results below.
-
-## Commands
-
-## Prompts
-
-## Results
-
-_Results will appear here after commands are executed._
-
----
-*Last updated: PLACEHOLDER*
-'@
-    $initialContent = $initialContent -replace 'PLACEHOLDER', $timestamp
+    # CR-PSM-2.4.4: use shared default template (Get-CcliDefaultCliContent) instead of duplicating
+    $initialContent = Get-CcliDefaultCliContent -Timestamp $timestamp
     $utf8 = New-Object System.Text.UTF8Encoding $false
     [System.IO.File]::WriteAllText($cliFilePath, $initialContent, $utf8)
 
@@ -1073,13 +1049,14 @@ function Watch-CcliResults {
         [int]$Timeout = 300
     )
 
-    if (-not (Test-Path $CliFilePath)) {
+    # CR-PSM-2.2.4: use -LiteralPath for paths that may contain [ or ?
+    if (-not (Test-Path -LiteralPath $CliFilePath)) {
         Write-Error ('CLI.md file not found: ' + $CliFilePath)
         return
     }
 
-    # Resolve project root (directory containing FunWasHad.sln) from CLI.md's directory; same rule as CLI Agent
-    $cliDir = [System.IO.Path]::GetDirectoryName((Resolve-Path -Path $CliFilePath -ErrorAction Stop).Path)
+    # Resolve project root (directory containing FunWasHad.sln) from CLI.md's directory; same rule as CLI Agent. Use Get-Item -LiteralPath to resolve path.
+    $cliDir = [System.IO.Path]::GetDirectoryName((Get-Item -LiteralPath $CliFilePath).FullName)
     $ProjectRoot = Find-CcliProjectRoot -StartPath $cliDir
 
     Write-Host 'Press Ctrl+C to stop watching' -ForegroundColor Yellow
@@ -1088,11 +1065,11 @@ function Watch-CcliResults {
     # CR-PSM-2.2.3: use string compare instead of GetHashCode() for deterministic change detection
     $lastResultsContent = $null
     $startTime = Get-Date
-    $lastWriteTime = (Get-Item $CliFilePath).LastWriteTime
+    $lastWriteTime = (Get-Item -LiteralPath $CliFilePath).LastWriteTime
 
     try {
         # Initial check
-        $initialContent = Get-Content $CliFilePath -Raw
+        $initialContent = Get-Content -LiteralPath $CliFilePath -Raw
         $resultsPattern = '(?s)## Results\s*\n(.*?)(?=\n---|\Z)'
         $resultsMatch = [regex]::Match($initialContent, $resultsPattern)
         if ($resultsMatch.Success) {
@@ -1105,14 +1082,14 @@ function Watch-CcliResults {
             Start-Sleep -Seconds 1
             $elapsed = ((Get-Date) - $startTime).TotalSeconds
 
-            # Check if file was modified
-            $currentWriteTime = (Get-Item $CliFilePath -ErrorAction SilentlyContinue).LastWriteTime
+            # Check if file was modified. CR-PSM-2.2.4: -LiteralPath for path with possible [ or ?
+            $currentWriteTime = (Get-Item -LiteralPath $CliFilePath -ErrorAction SilentlyContinue).LastWriteTime
             if ($currentWriteTime -gt $lastWriteTime) {
                 $lastWriteTime = $currentWriteTime
                 Start-Sleep -Milliseconds 500  # Debounce
 
                 try {
-                    $newContent = Get-Content $CliFilePath -Raw -ErrorAction SilentlyContinue
+                    $newContent = Get-Content -LiteralPath $CliFilePath -Raw -ErrorAction SilentlyContinue
                     if ($null -eq $newContent) {
                         continue
                     }

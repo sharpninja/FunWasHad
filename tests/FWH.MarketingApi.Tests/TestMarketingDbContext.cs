@@ -7,9 +7,9 @@ namespace FWH.MarketingApi.Tests;
 /// Test-specific DbContext that uses explicit lowercase column name mapping
 /// to match PostgreSQL's default behavior of converting unquoted identifiers to lowercase.
 /// </summary>
-public class TestMarketingDbContext : MarketingDbContext
+internal class TestMarketingDbContext : MarketingDbContext
 {
-    public TestMarketingDbContext(DbContextOptions<MarketingDbContext> options) 
+    public TestMarketingDbContext(DbContextOptions<MarketingDbContext> options)
         : base(options)
     {
     }

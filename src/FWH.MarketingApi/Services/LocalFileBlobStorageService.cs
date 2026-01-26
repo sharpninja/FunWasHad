@@ -1,12 +1,10 @@
-using System.IO;
-
 namespace FWH.MarketingApi.Services;
 
 /// <summary>
 /// Local file system implementation of blob storage.
 /// Used for development and can be used for Railway with persistent volumes.
 /// </summary>
-public class LocalFileBlobStorageService : IBlobStorageService
+internal class LocalFileBlobStorageService : IBlobStorageService
 {
     private readonly string _basePath;
     private readonly string _baseUrl;
@@ -44,8 +42,7 @@ public class LocalFileBlobStorageService : IBlobStorageService
         string container,
         CancellationToken cancellationToken = default)
     {
-        if (fileStream == null)
-            throw new ArgumentNullException(nameof(fileStream));
+        ArgumentNullException.ThrowIfNull(fileStream);
         if (string.IsNullOrWhiteSpace(fileName))
             throw new ArgumentException("File name cannot be null or empty", nameof(fileName));
         if (string.IsNullOrWhiteSpace(container))
@@ -68,7 +65,7 @@ public class LocalFileBlobStorageService : IBlobStorageService
         // Write file
         using (var fileStreamWriter = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
         {
-            await fileStream.CopyToAsync(fileStreamWriter, cancellationToken);
+            await fileStream.CopyToAsync(fileStreamWriter, cancellationToken).ConfigureAwait(false);
         }
 
         // Return public URL
@@ -86,7 +83,7 @@ public class LocalFileBlobStorageService : IBlobStorageService
         bool generateThumbnail = false,
         CancellationToken cancellationToken = default)
     {
-        var storageUrl = await UploadAsync(fileStream, fileName, contentType, container, cancellationToken);
+        var storageUrl = await UploadAsync(fileStream, fileName, contentType, container, cancellationToken).ConfigureAwait(false);
 
         // Thumbnail generation would be implemented here for images/videos
         // For now, return null for thumbnail

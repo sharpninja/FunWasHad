@@ -1,7 +1,6 @@
 using FWH.MarketingApi.Data;
 using FWH.MarketingApi.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace FWH.MarketingApi.Tests;
@@ -10,43 +9,23 @@ namespace FWH.MarketingApi.Tests;
 /// Tests for entity relationships in the Marketing API.
 /// Tests many-to-many relationships between City-TourismMarket and Airport-TourismMarket.
 /// </summary>
-public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory>
+public class EntityRelationshipTests : ControllerTestBase
 {
-    private readonly CustomWebApplicationFactory _factory;
-
-    public EntityRelationshipTests(CustomWebApplicationFactory factory)
+    public EntityRelationshipTests()
     {
-        _factory = factory;
         SeedTestData();
     }
 
     private void SeedTestData()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
         // Clear existing data - delete in proper order to respect foreign keys
-        db.CityTourismMarkets.RemoveRange(db.CityTourismMarkets);
-        db.AirportTourismMarkets.RemoveRange(db.AirportTourismMarkets);
-        db.CityThemes.RemoveRange(db.CityThemes);
-        db.Cities.RemoveRange(db.Cities);
-        db.Airports.RemoveRange(db.Airports);
-        db.TourismMarkets.RemoveRange(db.TourismMarkets);
-        db.SaveChanges();
-
-        // Reset sequences to 1 to start fresh (since we're using explicit IDs in SeedTestData)
-        try
-        {
-            db.Database.ExecuteSqlRaw("SELECT setval('tourism_markets_id_seq', 1, false)");
-            db.Database.ExecuteSqlRaw("SELECT setval('cities_id_seq', 1, false)");
-            db.Database.ExecuteSqlRaw("SELECT setval('city_tourism_markets_id_seq', 1, false)");
-            db.Database.ExecuteSqlRaw("SELECT setval('airports_id_seq', 1, false)");
-            db.Database.ExecuteSqlRaw("SELECT setval('airport_tourism_markets_id_seq', 1, false)");
-        }
-        catch
-        {
-            // Sequences might not exist yet, ignore
-        }
+        DbContext.CityTourismMarkets.RemoveRange(DbContext.CityTourismMarkets);
+        DbContext.AirportTourismMarkets.RemoveRange(DbContext.AirportTourismMarkets);
+        DbContext.CityThemes.RemoveRange(DbContext.CityThemes);
+        DbContext.Cities.RemoveRange(DbContext.Cities);
+        DbContext.Airports.RemoveRange(DbContext.Airports);
+        DbContext.TourismMarkets.RemoveRange(DbContext.TourismMarkets);
+        DbContext.SaveChanges();
 
         var now = DateTimeOffset.UtcNow;
 
@@ -69,7 +48,7 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
             CreatedAt = now
         };
 
-        db.TourismMarkets.AddRange(coastalMarket, mountainMarket);
+        DbContext.TourismMarkets.AddRange(coastalMarket, mountainMarket);
 
         // Create cities
         var sanFrancisco = new City
@@ -96,7 +75,7 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
             CreatedAt = now
         };
 
-        db.Cities.AddRange(sanFrancisco, seattle);
+        DbContext.Cities.AddRange(sanFrancisco, seattle);
 
         // Create city-tourism market relationships
         var sfCoastal = new CityTourismMarket
@@ -130,7 +109,7 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
             CreatedAt = now
         };
 
-        db.CityTourismMarkets.AddRange(sfCoastal, seattleMountain, sfMountain);
+        DbContext.CityTourismMarkets.AddRange(sfCoastal, seattleMountain, sfMountain);
 
         // Create airports
         var sfo = new Airport
@@ -163,7 +142,7 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
             CreatedAt = now
         };
 
-        db.Airports.AddRange(sfo, sea);
+        DbContext.Airports.AddRange(sfo, sea);
 
         // Create airport-tourism market relationships
         var sfoCoastal = new AirportTourismMarket
@@ -197,24 +176,21 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
             CreatedAt = now
         };
 
-        db.AirportTourismMarkets.AddRange(sfoCoastal, seaMountain, sfoMountain);
+        DbContext.AirportTourismMarkets.AddRange(sfoCoastal, seaMountain, sfoMountain);
 
-        db.SaveChanges();
+        DbContext.SaveChanges();
     }
 
     /// <summary>
     /// Tests that a city can be associated with multiple tourism markets.
     /// </summary>
     [Fact]
-    public async Task City_CanBeInMultipleTourismMarkets()
+    public async Task CityCanBeInMultipleTourismMarkets()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
-        var city = await db.Cities
+        var city = await DbContext.Cities
             .Include(c => c.CityTourismMarkets)
                 .ThenInclude(ctm => ctm.TourismMarket)
-            .FirstOrDefaultAsync(c => c.Id == 1);
+            .FirstOrDefaultAsync(c => c.Id == 1).ConfigureAwait(false);
 
         Assert.NotNull(city);
         Assert.Equal("San Francisco", city.Name);
@@ -227,15 +203,12 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
     /// Tests that a tourism market can contain multiple cities.
     /// </summary>
     [Fact]
-    public async Task TourismMarket_CanContainMultipleCities()
+    public async Task TourismMarketCanContainMultipleCities()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
-        var market = await db.TourismMarkets
+        var market = await DbContext.TourismMarkets
             .Include(tm => tm.CityTourismMarkets)
                 .ThenInclude(ctm => ctm.City)
-            .FirstOrDefaultAsync(tm => tm.Id == 2); // Mountain Tourism
+            .FirstOrDefaultAsync(tm => tm.Id == 2).ConfigureAwait(false); // Mountain Tourism
 
         Assert.NotNull(market);
         Assert.Equal("Mountain Tourism", market.Name);
@@ -248,15 +221,12 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
     /// Tests that an airport can be associated with multiple tourism markets.
     /// </summary>
     [Fact]
-    public async Task Airport_CanBeInMultipleTourismMarkets()
+    public async Task AirportCanBeInMultipleTourismMarkets()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
-        var airport = await db.Airports
+        var airport = await DbContext.Airports
             .Include(a => a.AirportTourismMarkets)
                 .ThenInclude(atm => atm.TourismMarket)
-            .FirstOrDefaultAsync(a => a.Id == 1);
+            .FirstOrDefaultAsync(a => a.Id == 1).ConfigureAwait(false);
 
         Assert.NotNull(airport);
         Assert.Equal("SFO", airport.IataCode);
@@ -269,15 +239,12 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
     /// Tests that a tourism market can contain multiple airports.
     /// </summary>
     [Fact]
-    public async Task TourismMarket_CanContainMultipleAirports()
+    public async Task TourismMarketCanContainMultipleAirports()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
-        var market = await db.TourismMarkets
+        var market = await DbContext.TourismMarkets
             .Include(tm => tm.AirportTourismMarkets)
                 .ThenInclude(atm => atm.Airport)
-            .FirstOrDefaultAsync(tm => tm.Id == 2); // Mountain Tourism
+            .FirstOrDefaultAsync(tm => tm.Id == 2).ConfigureAwait(false); // Mountain Tourism
 
         Assert.NotNull(market);
         Assert.Equal("Mountain Tourism", market.Name);
@@ -290,22 +257,8 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
     /// Tests that a city can have zero tourism markets (optional relationship).
     /// </summary>
     [Fact]
-    public async Task City_CanHaveZeroTourismMarkets()
+    public async Task CityCanHaveZeroTourismMarkets()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
-        // Get the current max ID and reset sequence to avoid conflicts
-        var maxCityId = await db.Cities.AnyAsync() ? await db.Cities.MaxAsync(c => (long?)c.Id) ?? 0 : 0;
-        try
-        {
-            await db.Database.ExecuteSqlRawAsync("SELECT setval('cities_id_seq', {0}, true)", maxCityId);
-        }
-        catch
-        {
-            // Sequence might not exist, ignore
-        }
-
         // Create a city without any tourism markets
         // Use a unique name to avoid conflicts with other tests
         var uniqueCityName = $"TestCity_{Guid.NewGuid():N}";
@@ -320,12 +273,12 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        db.Cities.Add(city);
-        await db.SaveChangesAsync();
+        DbContext.Cities.Add(city);
+        await DbContext.SaveChangesAsync().ConfigureAwait(false);
 
-        var retrievedCity = await db.Cities
+        var retrievedCity = await DbContext.Cities
             .Include(c => c.CityTourismMarkets)
-            .FirstOrDefaultAsync(c => c.Name == uniqueCityName);
+            .FirstOrDefaultAsync(c => c.Name == uniqueCityName).ConfigureAwait(false);
 
         Assert.NotNull(retrievedCity);
         Assert.Empty(retrievedCity.CityTourismMarkets);
@@ -335,22 +288,8 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
     /// Tests that an airport can have zero tourism markets (optional relationship).
     /// </summary>
     [Fact]
-    public async Task Airport_CanHaveZeroTourismMarkets()
+    public async Task AirportCanHaveZeroTourismMarkets()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
-        // Get the current max ID and reset sequence to avoid conflicts
-        var maxAirportId = await db.Airports.AnyAsync() ? await db.Airports.MaxAsync(a => (long?)a.Id) ?? 0 : 0;
-        try
-        {
-            await db.Database.ExecuteSqlRawAsync("SELECT setval('airports_id_seq', {0}, true)", maxAirportId);
-        }
-        catch
-        {
-            // Sequence might not exist, ignore
-        }
-
         // Create an airport without any tourism markets
         // Use a unique IATA code to avoid conflicts with other tests
         var uniqueIataCode = $"T{Guid.NewGuid():N}".Substring(0, 3).ToUpperInvariant();
@@ -368,12 +307,12 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        db.Airports.Add(airport);
-        await db.SaveChangesAsync();
+        DbContext.Airports.Add(airport);
+        await DbContext.SaveChangesAsync().ConfigureAwait(false);
 
-        var retrievedAirport = await db.Airports
+        var retrievedAirport = await DbContext.Airports
             .Include(a => a.AirportTourismMarkets)
-            .FirstOrDefaultAsync(a => a.IataCode == uniqueIataCode);
+            .FirstOrDefaultAsync(a => a.IataCode == uniqueIataCode).ConfigureAwait(false);
 
         Assert.NotNull(retrievedAirport);
         Assert.Empty(retrievedAirport.AirportTourismMarkets);
@@ -383,25 +322,22 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
     /// Tests that cascade delete works for CityTourismMarket when a city is deleted.
     /// </summary>
     [Fact]
-    public async Task CityTourismMarket_CascadeDeleteWhenCityDeleted()
+    public async Task CityTourismMarketCascadeDeleteWhenCityDeleted()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
-        var city = await db.Cities
+        var city = await DbContext.Cities
             .Include(c => c.CityTourismMarkets)
-            .FirstOrDefaultAsync(c => c.Id == 2); // Seattle
+            .FirstOrDefaultAsync(c => c.Id == 2).ConfigureAwait(false); // Seattle
 
         Assert.NotNull(city);
         var relationshipCount = city.CityTourismMarkets.Count;
         Assert.True(relationshipCount > 0);
 
-        db.Cities.Remove(city);
-        await db.SaveChangesAsync();
+        DbContext.Cities.Remove(city);
+        await DbContext.SaveChangesAsync().ConfigureAwait(false);
 
-        var relationships = await db.CityTourismMarkets
+        var relationships = await DbContext.CityTourismMarkets
             .Where(ctm => ctm.CityId == 2)
-            .ToListAsync();
+            .ToListAsync().ConfigureAwait(false);
 
         Assert.Empty(relationships);
     }
@@ -410,25 +346,22 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
     /// Tests that cascade delete works for AirportTourismMarket when an airport is deleted.
     /// </summary>
     [Fact]
-    public async Task AirportTourismMarket_CascadeDeleteWhenAirportDeleted()
+    public async Task AirportTourismMarketCascadeDeleteWhenAirportDeleted()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
-        var airport = await db.Airports
+        var airport = await DbContext.Airports
             .Include(a => a.AirportTourismMarkets)
-            .FirstOrDefaultAsync(a => a.Id == 2); // SEA
+            .FirstOrDefaultAsync(a => a.Id == 2).ConfigureAwait(false); // SEA
 
         Assert.NotNull(airport);
         var relationshipCount = airport.AirportTourismMarkets.Count;
         Assert.True(relationshipCount > 0);
 
-        db.Airports.Remove(airport);
-        await db.SaveChangesAsync();
+        DbContext.Airports.Remove(airport);
+        await DbContext.SaveChangesAsync().ConfigureAwait(false);
 
-        var relationships = await db.AirportTourismMarkets
+        var relationships = await DbContext.AirportTourismMarkets
             .Where(atm => atm.AirportId == 2)
-            .ToListAsync();
+            .ToListAsync().ConfigureAwait(false);
 
         Assert.Empty(relationships);
     }
@@ -437,11 +370,8 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
     /// Tests that the unique constraint prevents duplicate city-tourism market relationships.
     /// </summary>
     [Fact]
-    public async Task CityTourismMarket_UniqueConstraintPreventsDuplicates()
+    public async Task CityTourismMarketUniqueConstraintPreventsDuplicates()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
         // Try to create a duplicate relationship
         var duplicate = new CityTourismMarket
         {
@@ -450,20 +380,25 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        db.CityTourismMarkets.Add(duplicate);
+        DbContext.CityTourismMarkets.Add(duplicate);
 
-        await Assert.ThrowsAsync<DbUpdateException>(async () => await db.SaveChangesAsync());
+        try
+        {
+            await DbContext.SaveChangesAsync().ConfigureAwait(false);
+            Assert.True(false, "Expected DbUpdateException");
+        }
+        catch (DbUpdateException)
+        {
+            // Expected exception
+        }
     }
 
     /// <summary>
     /// Tests that the unique constraint prevents duplicate airport-tourism market relationships.
     /// </summary>
     [Fact]
-    public async Task AirportTourismMarket_UniqueConstraintPreventsDuplicates()
+    public async Task AirportTourismMarketUniqueConstraintPreventsDuplicates()
     {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
         // Try to create a duplicate relationship
         var duplicate = new AirportTourismMarket
         {
@@ -472,8 +407,16 @@ public class EntityRelationshipTests : IClassFixture<CustomWebApplicationFactory
             CreatedAt = DateTimeOffset.UtcNow
         };
 
-        db.AirportTourismMarkets.Add(duplicate);
+        DbContext.AirportTourismMarkets.Add(duplicate);
 
-        await Assert.ThrowsAsync<DbUpdateException>(async () => await db.SaveChangesAsync());
+        try
+        {
+            await DbContext.SaveChangesAsync().ConfigureAwait(false);
+            Assert.True(false, "Expected DbUpdateException");
+        }
+        catch (DbUpdateException)
+        {
+            // Expected exception
+        }
     }
 }

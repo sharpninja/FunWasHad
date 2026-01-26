@@ -1,9 +1,4 @@
-using Microsoft.Extensions.Logging;
 using Npgsql;
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace FWH.MarketingApi.Data;
 
@@ -11,7 +6,7 @@ namespace FWH.MarketingApi.Data;
 /// Service for applying SQL-based database migrations.
 /// Reads .sql files from the Migrations folder and executes them in order.
 /// </summary>
-public class DatabaseMigrationService
+internal class DatabaseMigrationService
 {
     private readonly string _connectionString;
     private readonly ILogger<DatabaseMigrationService> _logger;
@@ -42,7 +37,7 @@ public class DatabaseMigrationService
                     Port = uri.Port > 0 ? uri.Port : 5432,
                     Database = uri.AbsolutePath.TrimStart('/'),
                     Username = uri.UserInfo.Split(':')[0],
-                    Password = uri.UserInfo.Contains(':')
+                    Password = uri.UserInfo.Contains(":", StringComparison.Ordinal)
                         ? Uri.UnescapeDataString(uri.UserInfo.Split(':', 2)[1])
                         : string.Empty
                 };
@@ -87,10 +82,10 @@ public class DatabaseMigrationService
         try
         {
             // Ensure database exists before attempting to connect to it
-            await EnsureDatabaseExistsAsync();
+            await EnsureDatabaseExistsAsync().ConfigureAwait(false);
 
             // Ensure migrations table exists
-            await EnsureMigrationsTableAsync();
+            await EnsureMigrationsTableAsync().ConfigureAwait(false);
 
             // Get migration files from Migrations directory
             var migrationsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Migrations");
@@ -118,7 +113,7 @@ public class DatabaseMigrationService
             {
                 var migrationName = Path.GetFileNameWithoutExtension(migrationFile);
 
-                if (await IsMigrationAppliedAsync(migrationName))
+                if (await IsMigrationAppliedAsync(migrationName).ConfigureAwait(false))
                 {
                     _logger.LogDebug("Migration {Name} already applied, skipping", migrationName);
                     continue;
@@ -126,8 +121,8 @@ public class DatabaseMigrationService
 
                 _logger.LogInformation("Applying migration: {Name}", migrationName);
 
-                var sql = await File.ReadAllTextAsync(migrationFile);
-                await ExecuteMigrationAsync(sql, migrationName);
+                var sql = await File.ReadAllTextAsync(migrationFile).ConfigureAwait(false);
+                await ExecuteMigrationAsync(sql, migrationName).ConfigureAwait(false);
 
                 _logger.LogInformation("Successfully applied migration: {Name}", migrationName);
             }
@@ -160,13 +155,13 @@ public class DatabaseMigrationService
         builder.Database = "postgres";
 
         await using var adminConnection = new NpgsqlConnection(builder.ConnectionString);
-        await adminConnection.OpenAsync();
+        await adminConnection.OpenAsync().ConfigureAwait(false);
 
         const string existsSql = "SELECT 1 FROM pg_database WHERE datname = @db";
         await using (var existsCommand = new NpgsqlCommand(existsSql, adminConnection))
         {
             existsCommand.Parameters.AddWithValue("db", targetDatabase);
-            var exists = await existsCommand.ExecuteScalarAsync() is not null;
+            var exists = await existsCommand.ExecuteScalarAsync().ConfigureAwait(false) is not null;
 
             if (exists)
             {
@@ -176,12 +171,12 @@ public class DatabaseMigrationService
         }
 
         // CREATE DATABASE cannot be parameterized; quote identifier safely.
-        var quotedDbName = '"' + targetDatabase.Replace("\"", "\"\"") + '"';
+        var quotedDbName = '"' + targetDatabase.Replace("\"", "\"\"", StringComparison.Ordinal) + '"';
         var createSql = $"CREATE DATABASE {quotedDbName}";
 
         await using (var createCommand = new NpgsqlCommand(createSql, adminConnection))
         {
-            await createCommand.ExecuteNonQueryAsync();
+            await createCommand.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
 
         _logger.LogInformation("Database '{Database}' created", targetDatabase);
@@ -199,10 +194,10 @@ public class DatabaseMigrationService
 
         var connectionString = GetConnectionString();
         await using var connection = new NpgsqlConnection(connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         await using var command = new NpgsqlCommand(sql, connection);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 
     private async Task<bool> IsMigrationAppliedAsync(string migrationName)
@@ -211,12 +206,12 @@ public class DatabaseMigrationService
 
         var connectionString = GetConnectionString();
         await using var connection = new NpgsqlConnection(connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
         await using var command = new NpgsqlCommand(sql, connection);
         command.Parameters.AddWithValue("name", migrationName);
 
-        var result = await command.ExecuteScalarAsync();
+        var result = await command.ExecuteScalarAsync().ConfigureAwait(false);
         return Convert.ToInt32(result) > 0;
     }
 
@@ -224,16 +219,16 @@ public class DatabaseMigrationService
     {
         var connectionString = GetConnectionString();
         await using var connection = new NpgsqlConnection(connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync().ConfigureAwait(false);
 
-        await using var transaction = await connection.BeginTransactionAsync();
+        await using var transaction = await connection.BeginTransactionAsync().ConfigureAwait(false);
 
         try
         {
             // Execute migration SQL
             await using (var command = new NpgsqlCommand(sql, connection, transaction))
             {
-                await command.ExecuteNonQueryAsync();
+                await command.ExecuteNonQueryAsync().ConfigureAwait(false);
             }
 
             // Record migration as applied
@@ -241,14 +236,14 @@ public class DatabaseMigrationService
             await using (var command = new NpgsqlCommand(recordSql, connection, transaction))
             {
                 command.Parameters.AddWithValue("name", migrationName);
-                await command.ExecuteNonQueryAsync();
+                await command.ExecuteNonQueryAsync().ConfigureAwait(false);
             }
 
-            await transaction.CommitAsync();
+            await transaction.CommitAsync().ConfigureAwait(false);
         }
         catch
         {
-            await transaction.RollbackAsync();
+            await transaction.RollbackAsync().ConfigureAwait(false);
             throw;
         }
     }

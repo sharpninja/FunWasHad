@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using FWH.Common.Workflow.Models;
 using DataModels = FWH.Mobile.Data.Models;
 
@@ -11,18 +9,18 @@ namespace FWH.Common.Workflow.Mapping;
 /// </summary>
 public class WorkflowModelMapper : IWorkflowModelMapper
 {
-    public DataModels.WorkflowDefinitionEntity ToDataModel(WorkflowDefinition def)
+    public DataModels.WorkflowDefinitionEntity ToDataModel(WorkflowDefinition definition)
     {
-        if (def == null) throw new ArgumentNullException(nameof(def));
+        ArgumentNullException.ThrowIfNull(definition);
 
         var data = new DataModels.WorkflowDefinitionEntity
         {
-            Id = string.IsNullOrWhiteSpace(def.Id) ? Guid.NewGuid().ToString() : def.Id,
-            Name = def.Name ?? string.Empty,
+            Id = string.IsNullOrWhiteSpace(definition.Id) ? Guid.NewGuid().ToString() : definition.Id,
+            Name = definition.Name ?? string.Empty,
             CreatedAt = DateTime.UtcNow
         };
 
-        foreach (var n in def.Nodes)
+        foreach (var n in definition.Nodes)
         {
             data.Nodes.Add(new DataModels.NodeEntity
             {
@@ -31,7 +29,7 @@ public class WorkflowModelMapper : IWorkflowModelMapper
             });
         }
 
-        foreach (var t in def.Transitions)
+        foreach (var t in definition.Transitions)
         {
             data.Transitions.Add(new DataModels.TransitionEntity
             {
@@ -41,7 +39,7 @@ public class WorkflowModelMapper : IWorkflowModelMapper
             });
         }
 
-        foreach (var s in def.StartPoints)
+        foreach (var s in definition.StartPoints)
         {
             data.StartPoints.Add(new DataModels.StartPointEntity
             {
@@ -50,7 +48,7 @@ public class WorkflowModelMapper : IWorkflowModelMapper
         }
 
         // Set initial current node as the start point if available
-        data.CurrentNodeId = def.StartPoints.FirstOrDefault()?.NodeId ?? def.Nodes.FirstOrDefault()?.Id;
+        data.CurrentNodeId = definition.StartPoints.FirstOrDefault()?.NodeId ?? definition.Nodes.FirstOrDefault()?.Id;
 
         return data;
     }

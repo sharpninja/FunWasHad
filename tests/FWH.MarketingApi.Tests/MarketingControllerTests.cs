@@ -1,9 +1,6 @@
-using System.Net;
-using System.Net.Http.Json;
-using FWH.MarketingApi.Data;
+using FWH.MarketingApi.Controllers;
 using FWH.MarketingApi.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
 namespace FWH.MarketingApi.Tests;
@@ -13,111 +10,11 @@ namespace FWH.MarketingApi.Tests;
 /// Implements TR-TEST-001: Unit Tests for API controllers.
 /// Implements TR-API-002: Marketing endpoints validation.
 /// </summary>
-public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactory>
+public class MarketingControllerTests : ControllerTestBase
 {
-    private readonly CustomWebApplicationFactory _factory;
-
-    public MarketingControllerTests(CustomWebApplicationFactory factory)
+    private MarketingController CreateController()
     {
-        _factory = factory;
-        SeedTestData();
-    }
-
-    private void SeedTestData()
-    {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MarketingDbContext>();
-
-        // Clear existing data to avoid conflicts with other test classes
-        db.Businesses.RemoveRange(db.Businesses);
-        db.BusinessThemes.RemoveRange(db.BusinessThemes);
-        db.Coupons.RemoveRange(db.Coupons);
-        db.MenuItems.RemoveRange(db.MenuItems);
-        db.NewsItems.RemoveRange(db.NewsItems);
-        db.SaveChanges();
-
-        var now = DateTimeOffset.UtcNow;
-
-        // Add test business - MUST be subscribed for queries to work
-        var business = new Business
-        {
-            Id = 1,
-            Name = "Test Cafe",
-            Address = "123 Main St",
-            Latitude = 37.7749,
-            Longitude = -122.4194,
-            IsSubscribed = true, // Required for all queries
-            CreatedAt = now
-        };
-
-        // Add theme - MUST be active for GetTheme to work
-        var theme = new BusinessTheme
-        {
-            Id = 1,
-            BusinessId = 1,
-            Business = business, // Set navigation property
-            ThemeName = "Test Theme",
-            PrimaryColor = "#FF0000",
-            IsActive = true, // Required for GetTheme query
-            CreatedAt = now
-        };
-        business.Theme = theme; // Set navigation property
-        db.BusinessThemes.Add(theme);
-
-        // Add coupon - MUST be active and within valid date range
-        var coupon = new Coupon
-        {
-            Id = 1,
-            BusinessId = 1,
-            Business = business, // Set navigation property
-            Title = "Test Coupon",
-            Description = "10% off",
-            IsActive = true, // Required
-            ValidFrom = now.AddDays(-1), // Must be in the past
-            ValidUntil = now.AddDays(30), // Must be in the future
-            CurrentRedemptions = 0,
-            MaxRedemptions = null, // No limit
-            CreatedAt = now
-        };
-        business.Coupons.Add(coupon); // Add to collection
-        db.Coupons.Add(coupon);
-
-        // Add menu item - MUST be available
-        var menuItem = new MenuItem
-        {
-            Id = 1,
-            BusinessId = 1,
-            Business = business, // Set navigation property
-            Name = "Test Item",
-            Category = "Drinks",
-            Price = 5.99m,
-            IsAvailable = true, // Required
-            SortOrder = 0,
-            CreatedAt = now
-        };
-        business.MenuItems.Add(menuItem); // Add to collection
-        db.MenuItems.Add(menuItem);
-
-        // Add news item - MUST be published and PublishedAt in the past, no ExpiresAt
-        var newsItem = new NewsItem
-        {
-            Id = 1,
-            BusinessId = 1,
-            Business = business, // Set navigation property
-            Title = "Test News",
-            Content = "Test content",
-            IsPublished = true, // Required
-            PublishedAt = now.AddDays(-1), // Must be in the past
-            ExpiresAt = null, // No expiration
-            IsFeatured = false,
-            CreatedAt = now
-        };
-        business.NewsItems.Add(newsItem); // Add to collection
-        db.NewsItems.Add(newsItem);
-
-        db.Businesses.Add(business);
-
-        db.SaveChanges();
+        return new MarketingController(DbContext, CreateLogger<MarketingController>());
     }
 
     /// <summary>
@@ -131,21 +28,26 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> The seeded test data includes exactly one of each entity type, and all entities are in the correct state (active, available, published) to be returned by the query. The endpoint should aggregate all related data and return it in a single response, which is the expected behavior for a marketing API that provides complete business information.</para>
     /// </remarks>
     [Fact]
-    public async Task GetBusinessMarketing_ReturnsCompleteData()
+    public async Task GetBusinessMarketingReturnsCompleteData()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedCompleteTestBusiness();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/1");
+        // Act
+        var result = await controller.GetBusinessMarketing(1).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<BusinessMarketingResponse>();
-        Assert.NotNull(result);
-        Assert.Equal(1, result!.BusinessId);
-        Assert.Equal("Test Cafe", result.BusinessName);
-        Assert.NotNull(result.Theme);
-        Assert.Single(result.Coupons);
-        Assert.Single(result.MenuItems);
-        Assert.Single(result.NewsItems);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<BusinessMarketingResponse>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var response = Assert.IsType<BusinessMarketingResponse>(actionResult.Value);
+        Assert.Equal(1, response.BusinessId);
+        Assert.Equal("Test Cafe", response.BusinessName);
+        Assert.NotNull(response.Theme);
+        Assert.Single(response.Coupons);
+        Assert.Single(response.MenuItems);
+        Assert.Single(response.NewsItems);
     }
 
     /// <summary>
@@ -159,13 +61,17 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> REST API best practices dictate that requests for non-existent resources should return 404 Not Found. This allows clients to distinguish between "resource doesn't exist" (404) and "server error" (500), enabling proper error handling in client applications.</para>
     /// </remarks>
     [Fact]
-    public async Task GetBusinessMarketing_NonExistentBusiness_ReturnsNotFound()
+    public async Task GetBusinessMarketingNonExistentBusinessReturnsNotFound()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/999");
+        // Act
+        var result = await controller.GetBusinessMarketing(999).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<BusinessMarketingResponse>>(result);
+        Assert.IsType<NotFoundResult>(actionResult.Result);
     }
 
     /// <summary>
@@ -179,16 +85,21 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> The seeded test data includes an active theme for business 1. The endpoint should query the BusinessThemes table, filter by BusinessId and IsActive=true, and return the matching theme. This is the expected behavior for theme retrieval in a multi-tenant system where businesses can customize their appearance.</para>
     /// </remarks>
     [Fact]
-    public async Task GetTheme_ReturnsTheme()
+    public async Task GetThemeReturnsTheme()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestBusinessWithTheme();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/1/theme");
+        // Act
+        var result = await controller.GetTheme(1).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<BusinessTheme>();
-        Assert.NotNull(result);
-        Assert.Equal("Test Theme", result!.ThemeName);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<BusinessTheme>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var theme = Assert.IsType<BusinessTheme>(actionResult.Value);
+        Assert.Equal("Test Theme", theme.ThemeName);
     }
 
     /// <summary>
@@ -202,19 +113,24 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> The seeded test data includes exactly one active coupon within its validity period. The endpoint should filter out inactive coupons and expired/future coupons, returning only the valid active coupon. This ensures users don't see coupons they can't use.</para>
     /// </remarks>
     [Fact]
-    public async Task GetCoupons_ReturnsActiveCoupons()
+    public async Task GetCouponsReturnsActiveCoupons()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestBusinessWithCoupons();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/1/coupons");
+        // Act
+        var result = await controller.GetCoupons(1, 1, 10).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<PagedResult<Coupon>>();
-        Assert.NotNull(result);
-        Assert.Single(result!.Items);
-        Assert.Equal("Test Coupon", result.Items[0].Title);
-        Assert.Equal(1, result.TotalCount);
-        Assert.Equal(1, result.Page);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<PagedResult<Coupon>>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var pagedResult = Assert.IsType<PagedResult<Coupon>>(actionResult.Value);
+        Assert.Single(pagedResult.Items);
+        Assert.Equal("Test Coupon", pagedResult.Items[0].Title);
+        Assert.Equal(1, pagedResult.TotalCount);
+        Assert.Equal(1, pagedResult.Page);
     }
 
     /// <summary>
@@ -228,17 +144,22 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> The seeded test data includes exactly one available menu item for business 1. The endpoint should query the MenuItems table, filter by BusinessId and IsAvailable=true, and return the matching items. This ensures customers only see items they can actually order.</para>
     /// </remarks>
     [Fact]
-    public async Task GetMenu_ReturnsMenuItems()
+    public async Task GetMenuReturnsMenuItems()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestBusinessWithMenuItems();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/1/menu");
+        // Act
+        var result = await controller.GetMenu(1).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<List<MenuItem>>();
-        Assert.NotNull(result);
-        Assert.Single(result!);
-        Assert.Equal("Test Item", result[0].Name);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<List<MenuItem>>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var menuItems = Assert.IsType<List<MenuItem>>(actionResult.Value);
+        Assert.Single(menuItems);
+        Assert.Equal("Test Item", menuItems[0].Name);
     }
 
     /// <summary>
@@ -252,36 +173,46 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> The seeded test data includes exactly one menu item with category "Drinks". The endpoint should query all available menu items for the business, extract distinct category values, and return them as a list. This allows the UI to display category filters or organize items by category.</para>
     /// </remarks>
     [Fact]
-    public async Task GetMenuCategories_ReturnsCategories()
+    public async Task GetMenuCategoriesReturnsCategories()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestBusinessWithMenuItems();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/1/menu/categories");
+        // Act
+        var result = await controller.GetMenuCategories(1).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<List<string>>();
-        Assert.NotNull(result);
-        Assert.Single(result!);
-        Assert.Equal("Drinks", result[0]);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<List<string>>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var categories = Assert.IsType<List<string>>(actionResult.Value);
+        Assert.Single(categories);
+        Assert.Equal("Drinks", categories[0]);
     }
 
     /// <summary>
     /// Tests TR-API-002: GET /api/marketing/{businessId}/news - returns news items.
     /// </summary>
     [Fact]
-    public async Task GetNews_ReturnsNewsItems()
+    public async Task GetNewsReturnsNewsItems()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedTestBusinessWithNewsItems();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/1/news");
+        // Act
+        var result = await controller.GetNews(1, 1, 10).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<PagedResult<NewsItem>>();
-        Assert.NotNull(result);
-        Assert.Single(result!.Items);
-        Assert.Equal("Test News", result.Items[0].Title);
-        Assert.Equal(1, result.TotalCount);
-        Assert.Equal(1, result.Page);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<PagedResult<NewsItem>>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var pagedResult = Assert.IsType<PagedResult<NewsItem>>(actionResult.Value);
+        Assert.Single(pagedResult.Items);
+        Assert.Equal("Test News", pagedResult.Items[0].Title);
+        Assert.Equal(1, pagedResult.TotalCount);
+        Assert.Equal(1, pagedResult.Page);
     }
 
     /// <summary>
@@ -296,17 +227,22 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> The test business is located at exactly the same coordinates as the query point, so the distance is 0 meters, which is well within the 1000-meter radius. The endpoint should use spatial distance calculation to find all businesses within the radius and return them as a list.</para>
     /// </remarks>
     [Fact]
-    public async Task GetNearbyBusinesses_ReturnsNearbyBusinesses()
+    public async Task GetNearbyBusinessesReturnsNearbyBusinesses()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        SeedCompleteTestBusiness();
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/nearby?latitude=37.7749&longitude=-122.4194&radiusMeters=1000");
+        // Act
+        var result = await controller.GetNearbyBusinesses(37.7749, -122.4194, 1000).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<List<Business>>();
-        Assert.NotNull(result);
-        Assert.Single(result!);
-        Assert.Equal("Test Cafe", result[0].Name);
+        // Assert
+        var okResult = Assert.IsType<ActionResult<List<Business>>>(result);
+        var actionResult = okResult.Result as OkObjectResult;
+        Assert.NotNull(actionResult);
+        var businesses = Assert.IsType<List<Business>>(actionResult.Value);
+        Assert.Single(businesses);
+        Assert.Equal("Test Cafe", businesses[0].Name);
     }
 
     /// <summary>
@@ -321,13 +257,17 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> REST API best practices require validation of input parameters. Latitude must be between -90 and 90 degrees (valid range for Earth coordinates). Returning 400 Bad Request allows clients to correct invalid input, distinguishing it from server errors (500) or not found (404).</para>
     /// </remarks>
     [Fact]
-    public async Task GetNearbyBusinesses_InvalidLatitude_ReturnsBadRequest()
+    public async Task GetNearbyBusinessesInvalidLatitudeReturnsBadRequest()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/nearby?latitude=999&longitude=-122.4194");
+        // Act
+        var result = await controller.GetNearbyBusinesses(999, -122.4194, 1000).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<List<Business>>>(result);
+        Assert.IsType<BadRequestObjectResult>(actionResult.Result);
     }
 
     /// <summary>
@@ -342,12 +282,16 @@ public class MarketingControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> REST API best practices require validation of input parameters. Longitude must be between -180 and 180 degrees (valid range for Earth coordinates). Returning 400 Bad Request allows clients to correct invalid input, distinguishing it from server errors (500) or not found (404).</para>
     /// </remarks>
     [Fact]
-    public async Task GetNearbyBusinesses_InvalidLongitude_ReturnsBadRequest()
+    public async Task GetNearbyBusinessesInvalidLongitudeReturnsBadRequest()
     {
-        var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
+        // Arrange
+        var controller = CreateController();
 
-        var response = await client.GetAsync("/api/marketing/nearby?latitude=37.7749&longitude=999");
+        // Act
+        var result = await controller.GetNearbyBusinesses(37.7749, 999, 1000).ConfigureAwait(false);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        // Assert
+        var actionResult = Assert.IsType<ActionResult<List<Business>>>(result);
+        Assert.IsType<BadRequestObjectResult>(actionResult.Result);
     }
 }

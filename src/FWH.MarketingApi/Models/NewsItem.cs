@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// News item or announcement from a business.
 /// </summary>
-public class NewsItem
+internal class NewsItem
 {
     public long Id { get; set; }
     public long BusinessId { get; set; }

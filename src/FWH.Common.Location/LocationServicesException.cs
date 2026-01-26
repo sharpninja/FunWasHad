@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace FWH.Common.Location;
@@ -25,6 +22,22 @@ public class LocationServicesException : Exception
     /// Gets additional diagnostic information about the failure.
     /// </summary>
     public Dictionary<string, object?> Diagnostics { get; }
+
+    public LocationServicesException(string message)
+        : base(message)
+    {
+        Platform = string.Empty;
+        Operation = string.Empty;
+        Diagnostics = new Dictionary<string, object?>();
+    }
+
+    public LocationServicesException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+        Platform = string.Empty;
+        Operation = string.Empty;
+        Diagnostics = new Dictionary<string, object?>();
+    }
 
     public LocationServicesException(
         string platform,
@@ -61,5 +74,9 @@ public class LocationServicesException : Exception
         }
 
         return sb.ToString();
+    }
+
+    public LocationServicesException()
+    {
     }
 }

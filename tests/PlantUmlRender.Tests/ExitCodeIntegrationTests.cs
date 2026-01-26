@@ -10,25 +10,26 @@ namespace PlantUmlRender.Tests;
 public class ExitCodeIntegrationTests
 {
     [Fact]
-    public void NoFiles_ReturnsExit1()
+    public void NoFilesReturnsExit1()
     {
         var exit = RunRender(Array.Empty<string>());
         Assert.Equal(1, exit);
     }
 
     [Fact]
-    public void NoStartumlPuml_ReturnsExit1()
+    public void NoStartumlPumlReturnsExit1()
     {
         using var temp = new TempDir();
         var puml = Path.Combine(temp.Dir, "nodiag.puml");
         File.WriteAllText(puml, "nothing here");
 
-        var exit = RunRender(new[] { puml }, temp.Dir);
+        // Use relative path since working directory is set to temp.Dir
+        var exit = RunRender(new[] { "nodiag.puml" }, temp.Dir);
         Assert.Equal(1, exit);
     }
 
     [Fact]
-    public void ValidPuml_ReturnsExit0AndCreatesOutput()
+    public void ValidPumlReturnsExit0AndCreatesOutput()
     {
         using var temp = new TempDir();
         var puml = Path.Combine(temp.Dir, "ok.puml");
@@ -36,7 +37,8 @@ public class ExitCodeIntegrationTests
 actor a
 @enduml");
 
-        var exit = RunRender(new[] { "-o", temp.Dir, "-f", "svg", puml }, temp.Dir);
+        // Use relative paths since working directory is set to temp.Dir
+        var exit = RunRender(new[] { "-o", ".", "-f", "svg", "ok.puml" }, temp.Dir);
         Assert.Equal(0, exit);
 
         var svg = Path.Combine(temp.Dir, "ok.svg");
@@ -67,7 +69,20 @@ actor a
 
         using var p = Process.Start(psi);
         if (p == null) throw new InvalidOperationException("Could not start dotnet run.");
-        p.WaitForExit(90_000);
+        
+        // Read output streams to prevent deadlock
+        var outputTask = p.StandardOutput.ReadToEndAsync();
+        var errorTask = p.StandardError.ReadToEndAsync();
+        
+        if (!p.WaitForExit(90_000))
+        {
+            p.Kill();
+            throw new InvalidOperationException("Process did not exit within timeout period.");
+        }
+        
+        // Ensure streams are fully read
+        Task.WaitAll(outputTask, errorTask);
+        
         return p.ExitCode;
     }
 

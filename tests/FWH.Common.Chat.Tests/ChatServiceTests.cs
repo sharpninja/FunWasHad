@@ -1,19 +1,15 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit;
-using FWH.Common.Chat;
-using FWH.Common.Chat.ViewModels;
+using CommunityToolkit.Mvvm.Input;
 using FWH.Common.Chat.Conversion;
 using FWH.Common.Chat.Duplicate;
-using CommunityToolkit.Mvvm.Input;
+using FWH.Common.Chat.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Common.Chat.Tests;
 
 public class ChatServiceTests
 {
-    private ServiceProvider BuildServices()
+    private IServiceProvider BuildServices()
     {
         var services = new ServiceCollection();
 
@@ -42,13 +38,13 @@ public class ChatServiceTests
     /// <para><strong>Reason for expectation:</strong> The ChatService should initialize the chat interface with at least one bot message to start the conversation. The first entry being from the Bot is expected because workflows typically begin with bot-initiated messages that prompt user interaction.</para>
     /// </remarks>
     [Fact]
-    public async Task StartAsync_PopulatesInitialEntries()
+    public async Task StartAsyncPopulatesInitialEntries()
     {
         var sp = BuildServices();
         var service = sp.GetRequiredService<ChatService>();
         var vm = sp.GetRequiredService<ChatViewModel>();
 
-        await service.StartAsync();
+        await service.StartAsync().ConfigureAwait(true);
 
         var list = vm.ChatList;
         Assert.NotEmpty(list.Entries);
@@ -134,7 +130,7 @@ public class ChatServiceTests
         var cmd1 = (IAsyncRelayCommand)item1.SelectChoiceCommand;
         var cmd2 = (IAsyncRelayCommand)item2.SelectChoiceCommand;
 
-        await Task.WhenAll(cmd1.ExecuteAsync(item1), cmd2.ExecuteAsync(item2));
+        await Task.WhenAll(cmd1.ExecuteAsync(item1), cmd2.ExecuteAsync(item2)).ConfigureAwait(true);
 
         Assert.Equal(2, invoked);
     }
@@ -150,7 +146,7 @@ public class ChatServiceTests
     /// <para><strong>Reason for expectation:</strong> The AddChoice method should append the new choice to the collection regardless of index conflicts. This allows the collection to grow and preserves all choices, even if they have duplicate indices. The presence of "Second" confirms the new choice was added successfully alongside the existing "First" choice.</para>
     /// </remarks>
     [Fact]
-    public void ChoicePayload_AddChoice_HandlesDuplicateIndex()
+    public void ChoicePayloadAddChoiceHandlesDuplicateIndex()
     {
         var payload = new ChoicePayload(new[] { new ChoicesItem(0, "First", 1) });
         var added = payload.AddChoice("Second", 2, 0);
@@ -158,6 +154,6 @@ public class ChatServiceTests
         // Should still have two items
         Assert.Equal(2, payload.Choices.Count);
         // The newly added item should be present
-        Assert.Contains(payload.Choices, c => c.ChoiceText == "Second");
+        Assert.True(payload.Choices.Any(c => c.ChoiceText == "Second"), "Expected choice 'Second' not found");
     }
 }

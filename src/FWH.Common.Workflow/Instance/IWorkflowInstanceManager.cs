@@ -24,7 +24,7 @@ public interface IWorkflowInstanceManager
     /// <summary>
     /// Get variables associated with the workflow instance (key/value strings).
     /// </summary>
-    System.Collections.Generic.IDictionary<string,string>? GetVariables(string workflowId);
+    System.Collections.Generic.IDictionary<string, string>? GetVariables(string workflowId);
 
     /// <summary>
     /// Set a variable for the workflow instance.

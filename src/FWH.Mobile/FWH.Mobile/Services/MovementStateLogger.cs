@@ -1,6 +1,4 @@
-using FWH.Mobile.Services;
 using Microsoft.Extensions.Logging;
-using System;
 
 namespace FWH.Mobile.Services;
 
@@ -28,7 +26,7 @@ public class MovementStateLogger
     {
         _locationTrackingService.MovementStateChanged += OnMovementStateChanged;
         _locationTrackingService.LocationUpdated += OnLocationUpdated;
-        
+
         _logger.LogDebug("Movement state logging started");
         LogCurrentState();
     }
@@ -40,7 +38,7 @@ public class MovementStateLogger
     {
         _locationTrackingService.MovementStateChanged -= OnMovementStateChanged;
         _locationTrackingService.LocationUpdated -= OnLocationUpdated;
-        
+
         _logger.LogDebug("Movement state logging stopped");
     }
 
@@ -84,33 +82,33 @@ public class MovementStateLogger
         {
             { PreviousState: MovementState.Stationary, CurrentState: MovementState.Walking }
                 => "🚶 Started walking",
-            
+
             { PreviousState: MovementState.Stationary, CurrentState: MovementState.Riding }
                 => $"🚴 Started riding at {e.CurrentSpeedMph:F1} mph",
-            
+
             { PreviousState: MovementState.Walking, CurrentState: MovementState.Riding }
                 => $"⬆️  Accelerated from walking to riding ({e.CurrentSpeedMph:F1} mph)",
-            
+
             { PreviousState: MovementState.Riding, CurrentState: MovementState.Walking }
                 => "⬇️  Slowed down from riding to walking",
-            
+
             { PreviousState: MovementState.Walking, CurrentState: MovementState.Stationary }
                 => $"⏸️  Stopped walking (walked for {e.DurationInPreviousState.TotalMinutes:F1} minutes)",
-            
+
             { PreviousState: MovementState.Riding, CurrentState: MovementState.Stationary }
                 => $"⏸️  Stopped riding (rode for {e.DurationInPreviousState.TotalMinutes:F1} minutes)",
-            
+
             _ => $"State transition: {e.PreviousState} → {e.CurrentState}"
         };
 
-        _logger.LogInformation(message);
+        _logger.LogInformation("{Message}", message);
     }
 
     private void OnLocationUpdated(object? sender, FWH.Common.Location.Models.GpsCoordinates e)
     {
         var state = _locationTrackingService.CurrentMovementState;
         var speed = _locationTrackingService.CurrentSpeedMph;
-        
+
         _logger.LogDebug(
             "Location updated: ({Lat:F6}, {Lon:F6}) - State: {State}, Speed: {Speed:F1} mph",
             e.Latitude,
@@ -123,7 +121,7 @@ public class MovementStateLogger
     {
         var state = _locationTrackingService.CurrentMovementState;
         var speed = _locationTrackingService.CurrentSpeedMph;
-        
+
         _logger.LogInformation(
             "Current Movement State: {State}, Speed: {Speed:F1} mph",
             state,

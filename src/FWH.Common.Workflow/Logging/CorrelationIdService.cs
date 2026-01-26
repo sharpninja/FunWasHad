@@ -1,5 +1,3 @@
-using System;
-
 namespace FWH.Common.Workflow.Logging;
 
 /// <summary>

@@ -2,8 +2,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FWH.Mobile.Configuration;
 using FWH.Mobile.Services;
-using System;
-using System.Threading.Tasks;
 
 namespace FWH.Mobile.ViewModels;
 
@@ -70,7 +68,7 @@ public partial class ActivityTrackingViewModel : ObservableObject
             CurrentSpeed = speed.HasValue ? $"{speed:F1} mph" : "0.0 mph";
         }
 
-        ActivitySummary = _activityTrackingService.GetActivitySummary();
+        ActivitySummary = _activityTrackingService.ActivitySummary;
         IsTracking = _activityTrackingService.IsTrackingActivity;
     }
 

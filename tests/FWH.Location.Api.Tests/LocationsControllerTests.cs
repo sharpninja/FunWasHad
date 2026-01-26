@@ -1,5 +1,10 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using FWH.Common.Location.Models;
 using FWH.Location.Api.Data;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +33,7 @@ public class LocationsControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> When the location service returns results, the endpoint should return them as a JSON array with a 200 OK status. The response should match the service results exactly, allowing clients to display nearby businesses to users.</para>
     /// </remarks>
     [Fact]
-    public async Task Nearby_ReturnsOk_WithResults()
+    public async Task NearbyReturnsOkWithResults()
     {
         var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
         var substitute = _factory.LocationServiceSubstitute;
@@ -39,7 +44,7 @@ public class LocationsControllerTests : IClassFixture<CustomWebApplicationFactor
                 new BusinessLocation { Name = "Test Place", Latitude = 1, Longitude = 2, Category = "cafe" }
             }));
 
-        var response = await client.GetAsync("/api/locations/nearby?latitude=1&longitude=2&radiusMeters=50");
+        var response = await client.GetAsync(new Uri("/api/locations/nearby?latitude=1&longitude=2&radiusMeters=50", UriKind.Relative));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var payload = await response.Content.ReadFromJsonAsync<List<BusinessLocation>>();
@@ -63,7 +68,7 @@ public class LocationsControllerTests : IClassFixture<CustomWebApplicationFactor
     {
         var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
 
-        var response = await client.GetAsync("/api/locations/nearby?latitude=999&longitude=2&radiusMeters=50");
+        var response = await client.GetAsync(new Uri("/api/locations/nearby?latitude=999&longitude=2&radiusMeters=50", UriKind.Relative));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -79,7 +84,7 @@ public class LocationsControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> When the location service finds a closest business within the maximum distance, the endpoint should return it as a single object (not an array) with a 200 OK status. This allows clients to directly use the result without array indexing.</para>
     /// </remarks>
     [Fact]
-    public async Task Closest_ReturnsOk_WhenFound()
+    public async Task ClosestReturnsOkWhenFound()
     {
         var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
         var substitute = _factory.LocationServiceSubstitute;
@@ -130,7 +135,7 @@ public class LocationsControllerTests : IClassFixture<CustomWebApplicationFactor
     /// <para><strong>Reason for expectation:</strong> When a valid confirmation request is received, the endpoint should create a LocationConfirmation entity in the database with both the business information and the user's coordinates. The 201 Created status indicates successful resource creation. Querying the database after the request confirms the data was persisted correctly, validating the full request-to-database flow.</para>
     /// </remarks>
     [Fact]
-    public async Task Confirmed_Persists_AndReturnsCreated()
+    public async Task ConfirmedPersistsAndReturnsCreated()
     {
         var client = _factory.CreateClient(new() { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
 

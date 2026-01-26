@@ -1,25 +1,9 @@
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+using FWH.Common.Chat.Tests.TestFixtures;
+using FWH.Common.Chat.ViewModels;
+using FWH.Common.Workflow;
+using FWH.Common.Workflow.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
-using FWH.Common.Workflow;
-using FWH.Common.Workflow.Controllers;
-using FWH.Common.Workflow.Storage;
-using FWH.Common.Workflow.Instance;
-using FWH.Common.Workflow.Mapping;
-using FWH.Common.Workflow.State;
-using FWH.Common.Workflow.Views;
-using FWH.Common.Workflow.Extensions;
-using FWH.Common.Chat;
-using FWH.Common.Chat.ViewModels;
-using FWH.Common.Chat.Conversion;
-using FWH.Common.Chat.Duplicate;
-using FWH.Common.Chat.Extensions;
-using FWH.Common.Location.Extensions;
-using FWH.Common.Chat.Tests.TestFixtures;
-using Microsoft.Extensions.Logging;
 
 namespace FWH.Common.Chat.Tests;
 
@@ -62,7 +46,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
     /// <para><strong>Reason for expectation:</strong> The parser should successfully parse the actual PlantUML syntax used in production. The presence of specific node labels ("get_nearby_businesses", "camera") confirms the parser correctly extracted the workflow structure from the real file. This validates that the production workflow definition is syntactically correct and can be imported without errors.</para>
     /// </remarks>
     [Fact]
-    public async Task WorkflowPuml_CanBeImported_Successfully()
+    public async Task WorkflowPumlCanBeImportedSuccessfully()
     {
         // Arrange
         var sp = _fixture.CreateServiceProvider();
@@ -70,7 +54,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         var puml = LoadWorkflowPuml();
 
         // Act
-        var workflow = await workflowService.ImportWorkflowAsync(puml, WorkflowId, "Fun Was Had");
+        var workflow = await workflowService.ImportWorkflowAsync(puml, WorkflowId, "Fun Was Had").ConfigureAwait(true);
 
         // Assert
         Assert.NotNull(workflow);
@@ -104,10 +88,10 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         var workflowService = sp.GetRequiredService<IWorkflowService>();
         var puml = LoadWorkflowPuml();
 
-        var workflow = await workflowService.ImportWorkflowAsync(puml, WorkflowId + "_start", "Fun Was Had Start");
+        var workflow = await workflowService.ImportWorkflowAsync(puml, WorkflowId + "_start", "Fun Was Had Start").ConfigureAwait(true);
 
         // Act
-        var state = await workflowService.GetCurrentStatePayloadAsync(workflow.Id);
+        var state = await workflowService.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
 
         // Assert
         Assert.NotNull(state);
@@ -126,14 +110,14 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
     /// <para><strong>Reason for expectation:</strong> The workflow.puml file should define the action in a note attached to the node. The parser should extract this note content and store it in NoteMarkdown. The presence of "action" confirms it's an action definition, and "get_nearby_businesses" confirms the specific action name. This validates that action definitions are correctly preserved during parsing.</para>
     /// </remarks>
     [Fact]
-    public async Task GetNearbyBusinessesNode_HasActionDefinition()
+    public async Task GetNearbyBusinessesNodeHasActionDefinition()
     {
         // Arrange
         var sp = _fixture.CreateServiceProvider();
         var workflowService = sp.GetRequiredService<IWorkflowService>();
         var puml = LoadWorkflowPuml();
 
-        var workflow = await workflowService.ImportWorkflowAsync(puml, WorkflowId + "_action", "Fun Was Had Action");
+        var workflow = await workflowService.ImportWorkflowAsync(puml, WorkflowId + "_action", "Fun Was Had Action").ConfigureAwait(true);
 
         // Act
         var getNearbyNode = workflow.Nodes.FirstOrDefault(n =>
@@ -174,11 +158,11 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         var chatList = sp.GetRequiredService<ChatListViewModel>();
         var puml = LoadWorkflowPuml();
 
-        var workflow = await workflowService.ImportWorkflowAsync(puml, WorkflowId + "_camera", "Fun Was Had Camera");
+        var workflow = await workflowService.ImportWorkflowAsync(puml, WorkflowId + "_camera", "Fun Was Had Camera").ConfigureAwait(true);
 
         // Act - Advance past get_nearby_businesses to reach camera
-        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
-        await chatService.RenderWorkflowStateAsync(workflow.Id);
+        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true);
+        await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
 
         // Assert
         Assert.NotEmpty(chatList.Entries);
@@ -192,34 +176,34 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
     }
 
     [Fact]
-    public async Task WorkflowNavigation_FromGetNearby_ToCamera_ToDecision_Works()
+    public async Task WorkflowNavigationFromGetNearbyToCameraToDecisionWorks()
     {
         // Arrange
         var sp = _fixture.CreateServiceProvider();
         var workflowController = sp.GetRequiredService<IWorkflowController>();
         var puml = LoadWorkflowPuml();
 
-        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_nav1", "Fun Was Had Nav");
-        await workflowController.StartInstanceAsync(workflow.Id);
+        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_nav1", "Fun Was Had Nav").ConfigureAwait(true);
+        await workflowController.StartInstanceAsync(workflow.Id).ConfigureAwait(true);
 
         // Act - Get initial state (get_nearby_businesses node)
-        var initialState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
+        var initialState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
         Assert.Equal("get_nearby_businesses", initialState.NodeLabel, ignoreCase: true);
 
         // Advance through get_nearby_businesses node (auto-advance since it's an action)
-        var advanced1 = await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
+        var advanced1 = await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true);
         Assert.True(advanced1);
 
         // Should now be at camera
-        var cameraState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
+        var cameraState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
         Assert.Equal("camera", cameraState.NodeLabel, ignoreCase: true);
 
         // Advance through camera node (auto-advance since it's not a choice)
-        var advanced2 = await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
+        var advanced2 = await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true);
         Assert.True(advanced2);
 
         // Should now be at the decision point
-        var decisionState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
+        var decisionState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
 
         // Assert - Should be at "Was fun had?" choice
         Assert.NotNull(decisionState);
@@ -244,19 +228,19 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         var chatList = sp.GetRequiredService<ChatListViewModel>();
         var puml = LoadWorkflowPuml();
 
-        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_fun", "Fun Was Had - Yes Branch");
+        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_fun", "Fun Was Had - Yes Branch").ConfigureAwait(true);
 
         // Act - Navigate from get_nearby_businesses -> camera -> decision
-        await chatService.RenderWorkflowStateAsync(workflow.Id);
+        await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
 
         // Advance past get_nearby_businesses
-        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
+        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true);
 
         // Advance past camera
-        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
+        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true);
 
         // Get decision state
-        var decisionState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
+        var decisionState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
         Assert.True(decisionState.IsChoice);
 
         // Look for the "fun was had" choice
@@ -268,11 +252,11 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         Assert.NotNull(funChoice);
 
         // Take the "fun was had" branch
-        var advanced = await workflowController.AdvanceByChoiceValueAsync(workflow.Id, funChoice.TargetNodeId);
+        var advanced = await workflowController.AdvanceByChoiceValueAsync(workflow.Id, funChoice.TargetNodeId).ConfigureAwait(true);
         Assert.True(advanced);
 
         // Verify we reached the "Record Fun Experience" state
-        var finalState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
+        var finalState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
         var currentNode = workflowController.GetCurrentNodeId(workflow.Id);
 
         Assert.NotNull(currentNode);
@@ -280,7 +264,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
     }
 
     [Fact]
-    public async Task WorkflowBranch_NotFun_ReachesRecordNotFunExperience()
+    public async Task WorkflowBranchNotFunReachesRecordNotFunExperience()
     {
         // Arrange
         var sp = _fixture.CreateServiceProvider(services =>
@@ -295,19 +279,19 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         var chatService = sp.GetRequiredService<ChatService>();
         var puml = LoadWorkflowPuml();
 
-        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_notfun", "Fun Was Had - No Branch");
+        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_notfun", "Fun Was Had - No Branch").ConfigureAwait(true);
 
         // Act - Navigate from get_nearby_businesses -> camera -> decision
-        await chatService.RenderWorkflowStateAsync(workflow.Id);
+        await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
 
         // Advance past get_nearby_businesses
-        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
+        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true);
 
         // Advance past camera
-        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
+        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true);
 
         // Get decision state
-        var decisionState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
+        var decisionState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
         Assert.True(decisionState.IsChoice);
 
         // Look for the "not fun" choice
@@ -319,11 +303,11 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         Assert.NotNull(noFunChoice);
 
         // Take the "not fun" branch
-        var advanced = await workflowController.AdvanceByChoiceValueAsync(workflow.Id, noFunChoice.TargetNodeId);
+        var advanced = await workflowController.AdvanceByChoiceValueAsync(workflow.Id, noFunChoice.TargetNodeId).ConfigureAwait(true);
         Assert.True(advanced);
 
         // Verify we reached the "Record Not Fun Experience" state
-        var finalState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
+        var finalState = await workflowController.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
         var currentNode = workflowController.GetCurrentNodeId(workflow.Id);
 
         Assert.NotNull(currentNode);
@@ -344,7 +328,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
             var workflow = await workflowController.ImportWorkflowAsync(
                 puml,
                 WorkflowId + $"_stop_{branch}",
-                $"Fun Was Had - Stop {branch}");
+                $"Fun Was Had - Stop {branch}").ConfigureAwait(true);
 
             // Navigate: get_nearby_businesses -> camera -> decision -> experience recording -> end
             var maxSteps = 15; // Increased from 10 to account for new initial action
@@ -353,7 +337,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
 
             while (steps < maxSteps)
             {
-                var state = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
+                var state = await workflowController.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
 
                 if (state.IsChoice)
                 {
@@ -361,7 +345,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
                     {
                         // Take appropriate branch based on test case
                         var choiceIndex = branch == "fun" ? 0 : (state.Choices.Count - 1);
-                        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, state.Choices[choiceIndex].TargetNodeId);
+                        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, state.Choices[choiceIndex].TargetNodeId).ConfigureAwait(true);
                     }
                     else
                     {
@@ -372,7 +356,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
                 else
                 {
                     // Try to advance; if no transitions available, we're at end
-                    var advanced = await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
+                    var advanced = await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true);
                     if (!advanced)
                     {
                         reachedEnd = true;
@@ -397,10 +381,10 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         var view = sp.GetRequiredService<IWorkflowView>();
         var puml = LoadWorkflowPuml();
 
-        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_view", "Fun Was Had View");
+        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_view", "Fun Was Had View").ConfigureAwait(true);
 
         // Act & Assert - Load workflow
-        await view.LoadWorkflowAsync(workflow.Id);
+        await view.LoadWorkflowAsync(workflow.Id).ConfigureAwait(true);
         Assert.Equal(workflow.Id, view.CurrentWorkflowId);
         Assert.NotNull(view.CurrentState);
         Assert.False(view.HasError);
@@ -409,12 +393,12 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         Assert.Equal("get_nearby_businesses", view.CurrentState!.NodeLabel, ignoreCase: true);
 
         // Advance past get_nearby_businesses to camera
-        var advanced = await view.AdvanceAsync(null);
+        var advanced = await view.AdvanceAsync(null).ConfigureAwait(true);
         Assert.True(advanced);
         Assert.Equal("camera", view.CurrentState!.NodeLabel, ignoreCase: true);
 
         // Advance past camera to decision
-        advanced = await view.AdvanceAsync(null);
+        advanced = await view.AdvanceAsync(null).ConfigureAwait(true);
         Assert.True(advanced);
 
         // Now should be at choice
@@ -423,19 +407,19 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         // Try to advance with choice
         if (view.CurrentState.Choices.Any())
         {
-            advanced = await view.AdvanceAsync(view.CurrentState.Choices[0].TargetNodeId);
+            advanced = await view.AdvanceAsync(view.CurrentState.Choices[0].TargetNodeId).ConfigureAwait(true);
             Assert.True(advanced);
         }
 
         // Test restart
-        await view.RestartAsync();
+        await view.RestartAsync().ConfigureAwait(true);
         Assert.NotNull(view.CurrentState);
         Assert.False(view.HasError);
         Assert.Equal("get_nearby_businesses", view.CurrentState!.NodeLabel, ignoreCase: true);
     }
 
     [Fact]
-    public async Task ChatService_WithActualWorkflow_RendersAllStates()
+    public async Task ChatServiceWithActualWorkflowRendersAllStates()
     {
         // Arrange
         var sp = _fixture.CreateServiceProvider(services =>
@@ -451,10 +435,10 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         var chatList = sp.GetRequiredService<ChatListViewModel>();
         var puml = LoadWorkflowPuml();
 
-        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_chat", "Fun Was Had Chat");
+        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_chat", "Fun Was Had Chat").ConfigureAwait(true);
 
         // Act - Render initial state (get_nearby_businesses)
-        await chatService.RenderWorkflowStateAsync(workflow.Id);
+        await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
 
         // Assert - Chat should have entry for get_nearby_businesses action
         Assert.NotEmpty(chatList.Entries);
@@ -462,8 +446,8 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         var initialCount = chatList.Entries.Count;
 
         // Advance past get_nearby_businesses to camera
-        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
-        await chatService.RenderWorkflowStateAsync(workflow.Id);
+        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true);
+        await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
 
         // Should have ImageChatEntry for camera
         Assert.True(chatList.Entries.Count >= initialCount);
@@ -471,17 +455,17 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         Assert.True(hasImageEntry);
 
         // Advance past camera to decision
-        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null);
-        await chatService.RenderWorkflowStateAsync(workflow.Id);
+        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true);
+        await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
 
         // Should now have choice entry
-        var state = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
+        var state = await workflowController.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
         if (state.IsChoice && state.Choices.Any())
         {
             // Simulate user selecting a choice
             var choice = state.Choices[0];
-            await workflowController.AdvanceByChoiceValueAsync(workflow.Id, choice.TargetNodeId);
-            await chatService.RenderWorkflowStateAsync(workflow.Id);
+            await workflowController.AdvanceByChoiceValueAsync(workflow.Id, choice.TargetNodeId).ConfigureAwait(true);
+            await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(true);
 
             // Chat should have been updated with the result
             Assert.True(chatList.Entries.Count >= initialCount);
@@ -507,27 +491,27 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         var repo = sp.GetRequiredService<FWH.Mobile.Data.Repositories.IWorkflowRepository>();
         var puml = LoadWorkflowPuml();
 
-        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_persist", "Fun Was Had Persist");
+        var workflow = await workflowController.ImportWorkflowAsync(puml, WorkflowId + "_persist", "Fun Was Had Persist").ConfigureAwait(true);
 
         // Act - Advance past get_nearby_businesses -> camera -> decision
-        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null); // past get_nearby_businesses
-        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null); // past camera
+        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true); // past get_nearby_businesses
+        await workflowController.AdvanceByChoiceValueAsync(workflow.Id, null).ConfigureAwait(true); // past camera
 
-        var state = await workflowController.GetCurrentStatePayloadAsync(workflow.Id);
+        var state = await workflowController.GetCurrentStatePayloadAsync(workflow.Id).ConfigureAwait(true);
         if (state.IsChoice && state.Choices.Any())
         {
-            await workflowController.AdvanceByChoiceValueAsync(workflow.Id, state.Choices[0].TargetNodeId);
+            await workflowController.AdvanceByChoiceValueAsync(workflow.Id, state.Choices[0].TargetNodeId).ConfigureAwait(true);
         }
 
         var savedNodeId = workflowController.GetCurrentNodeId(workflow.Id);
 
         // Verify persistence
-        var persisted = await repo.GetByIdAsync(workflow.Id);
+        var persisted = await repo.GetByIdAsync(workflow.Id).ConfigureAwait(true);
         Assert.NotNull(persisted);
         Assert.Equal(savedNodeId, persisted!.CurrentNodeId);
 
         // Act - Restart instance (which should restore from persistence)
-        await workflowController.StartInstanceAsync(workflow.Id);
+        await workflowController.StartInstanceAsync(workflow.Id).ConfigureAwait(true);
         var restoredNodeId = workflowController.GetCurrentNodeId(workflow.Id);
 
         // Assert - State should be restored
@@ -545,7 +529,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
     /// <para><strong>Reason for expectation:</strong> The workflow definition should include all nodes required for the "Fun Was Had" user journey. The presence of these specific node labels confirms the workflow structure is correct. The transition from get_nearby_businesses to camera confirms the workflow flow is properly defined. This validates that the production workflow definition is structurally correct and complete.</para>
     /// </remarks>
     [Fact]
-    public async Task WorkflowStructure_HasExpectedNodes()
+    public async Task WorkflowStructureHasExpectedNodes()
     {
         // Arrange
         var sp = _fixture.CreateServiceProvider();
@@ -553,7 +537,7 @@ public class FunWasHadWorkflowIntegrationTests : IClassFixture<SqliteTestFixture
         var puml = LoadWorkflowPuml();
 
         // Act
-        var workflow = await workflowService.ImportWorkflowAsync(puml, WorkflowId + "_structure", "Fun Was Had Structure");
+        var workflow = await workflowService.ImportWorkflowAsync(puml, WorkflowId + "_structure", "Fun Was Had Structure").ConfigureAwait(true);
 
         // Assert - Verify expected nodes exist
         Assert.Contains(workflow.Nodes, n => n.Label.Equals("get_nearby_businesses", StringComparison.OrdinalIgnoreCase));

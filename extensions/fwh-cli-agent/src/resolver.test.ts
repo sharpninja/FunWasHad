@@ -4,7 +4,7 @@
 
 import { strict as assert } from 'assert';
 import * as path from 'path';
-import { resolveCliMdPath, resolveExecuteOptions } from './resolver';
+import { resolveCliMdPath, resolvePromptsMdPath, resolveExecuteOptions, DEFAULT_PROMPTS_MD } from './resolver';
 
 describe('resolver', () => {
   const ws = path.resolve('/workspace');
@@ -62,6 +62,20 @@ describe('resolver', () => {
         resolveExecuteOptions('agent-cli', 'cmd.a', 'composer', 'cmd.b'),
         { mode: 'agent-cli', composerCommand: 'cmd.a' }
       );
+    });
+  });
+
+  describe('resolvePromptsMdPath (MVP-SUPPORT-005)', () => {
+    it('default when no config or vsc', () => {
+      assert.strictEqual(resolvePromptsMdPath(ws, undefined, undefined), path.join(ws, DEFAULT_PROMPTS_MD));
+    });
+
+    it('uses config PromptsMdPath when under root', () => {
+      assert.strictEqual(resolvePromptsMdPath(ws, 'scripts/prompts.md', undefined), path.join(ws, 'scripts', 'prompts.md'));
+    });
+
+    it('uses vsc when config not set', () => {
+      assert.strictEqual(resolvePromptsMdPath(ws, undefined, 'p/prompts.md'), path.join(ws, 'p', 'prompts.md'));
     });
   });
 });

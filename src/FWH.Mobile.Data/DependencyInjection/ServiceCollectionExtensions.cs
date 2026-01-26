@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Repositories;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FWH.Mobile.Data.DependencyInjection;
 

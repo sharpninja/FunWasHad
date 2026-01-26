@@ -43,6 +43,7 @@ Generated\ Files/
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
+analyzer-build.txt
 
 # NUnit
 *.VisualState.xml
@@ -146,6 +147,7 @@ _TeamCity*
 coverage*.json
 coverage*.xml
 coverage*.info
+coverage-report/
 
 # Visual Studio code coverage results
 *.coverage

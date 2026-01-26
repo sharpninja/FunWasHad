@@ -1,12 +1,7 @@
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Diagnostics;
+using FWH.Common.Workflow.Logging;
 using FWH.Common.Workflow.Models;
 using Microsoft.Extensions.Logging;
-using FWH.Common.Workflow.Controllers;
-using FWH.Common.Workflow.Logging;
-using System.Diagnostics;
 
 namespace FWH.Common.Workflow;
 
@@ -18,14 +13,26 @@ public record WorkflowStatePayload(bool IsChoice, string? Text, IReadOnlyList<Wo
 /// Delegates to IWorkflowController for business logic.
 /// Single Responsibility: Provide service interface for workflow operations.
 /// </summary>
-public class WorkflowService : IWorkflowService
+public partial class WorkflowService : IWorkflowService
 {
+    [LoggerMessage(LogLevel.Information, "Started instance for workflow {WorkflowId}")]
+    private static partial void LogStartedInstance(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Error, "Failed to start instance for workflow {WorkflowId}")]
+    private static partial void LogStartInstanceFailed(ILogger logger, Exception ex, string workflowId);
+
+    [LoggerMessage(LogLevel.Information, "Restarted instance for workflow {WorkflowId}")]
+    private static partial void LogRestartedInstance(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Error, "Failed to restart instance for workflow {WorkflowId}")]
+    private static partial void LogRestartInstanceFailed(ILogger logger, Exception ex, string workflowId);
+
     private readonly IWorkflowController _controller;
     private readonly ILogger<WorkflowService> _logger;
     private readonly ICorrelationIdService _correlationIdService;
 
     public WorkflowService(
-        IWorkflowController controller, 
+        IWorkflowController controller,
         ILogger<WorkflowService> logger,
         ICorrelationIdService? correlationIdService = null)
     {
@@ -38,9 +45,9 @@ public class WorkflowService : IWorkflowService
     {
         var sw = Stopwatch.StartNew();
         var correlationId = _correlationIdService.GenerateCorrelationId();
-        
+
         using var scope = _logger.BeginCorrelatedScope(
-            _correlationIdService, 
+            _correlationIdService,
             "ImportWorkflow",
             new Dictionary<string, object>
             {
@@ -55,8 +62,8 @@ public class WorkflowService : IWorkflowService
                 ["WorkflowId"] = id ?? "auto-generated"
             });
 
-            var result = await _controller.ImportWorkflowAsync(plantUmlText, id, name);
-            
+            var result = await _controller.ImportWorkflowAsync(plantUmlText, id, name).ConfigureAwait(false);
+
             sw.Stop();
             _logger.LogOperationComplete(_correlationIdService, "ImportWorkflow", sw.Elapsed, new Dictionary<string, object>
             {
@@ -87,12 +94,12 @@ public class WorkflowService : IWorkflowService
 
         try
         {
-            await _controller.StartInstanceAsync(workflowId);
-            _logger.LogInformation("Started instance for workflow {WorkflowId}", workflowId);
+            await _controller.StartInstanceAsync(workflowId).ConfigureAwait(false);
+            LogStartedInstance(_logger, workflowId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start instance for workflow {WorkflowId}", workflowId);
+            LogStartInstanceFailed(_logger, ex, workflowId);
             throw;
         }
     }
@@ -106,12 +113,12 @@ public class WorkflowService : IWorkflowService
 
         try
         {
-            await _controller.RestartInstanceAsync(workflowId);
-            _logger.LogInformation("Restarted instance for workflow {WorkflowId}", workflowId);
+            await _controller.RestartInstanceAsync(workflowId).ConfigureAwait(false);
+            LogRestartedInstance(_logger, workflowId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to restart instance for workflow {WorkflowId}", workflowId);
+            LogRestartInstanceFailed(_logger, ex, workflowId);
             throw;
         }
     }
@@ -119,7 +126,7 @@ public class WorkflowService : IWorkflowService
     public async Task<WorkflowStatePayload> GetCurrentStatePayloadAsync(string workflowId)
     {
         var sw = Stopwatch.StartNew();
-        
+
         using var scope = _logger.BeginCorrelatedScope(
             _correlationIdService,
             "GetCurrentState",
@@ -127,8 +134,8 @@ public class WorkflowService : IWorkflowService
 
         try
         {
-            var result = await _controller.GetCurrentStatePayloadAsync(workflowId);
-            
+            var result = await _controller.GetCurrentStatePayloadAsync(workflowId).ConfigureAwait(false);
+
             sw.Stop();
             _logger.LogOperationComplete(_correlationIdService, "GetCurrentState", sw.Elapsed, new Dictionary<string, object>
             {
@@ -153,7 +160,7 @@ public class WorkflowService : IWorkflowService
     public async Task<bool> AdvanceByChoiceValueAsync(string workflowId, object? choiceValue)
     {
         var sw = Stopwatch.StartNew();
-        
+
         using var scope = _logger.BeginCorrelatedScope(
             _correlationIdService,
             "AdvanceByChoice",
@@ -171,8 +178,8 @@ public class WorkflowService : IWorkflowService
                 ["ChoiceValue"] = choiceValue?.ToString() ?? "null"
             });
 
-            var result = await _controller.AdvanceByChoiceValueAsync(workflowId, choiceValue);
-            
+            var result = await _controller.AdvanceByChoiceValueAsync(workflowId, choiceValue).ConfigureAwait(false);
+
             sw.Stop();
             _logger.LogOperationComplete(_correlationIdService, "AdvanceByChoice", sw.Elapsed, new Dictionary<string, object>
             {

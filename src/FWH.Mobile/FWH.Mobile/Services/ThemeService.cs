@@ -1,11 +1,6 @@
-using System;
-using System.Net.Http;
 using System.Net.Http.Json;
-using System.Threading.Tasks;
 using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Media;
-using Avalonia.Styling;
 using FWH.Mobile.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -51,7 +46,7 @@ public class ThemeService : IThemeService
             var httpClient = _httpClientFactory.CreateClient("MarketingApi");
             var themeUrl = $"api/marketing/{businessId}/theme";
 
-            var theme = await httpClient.GetFromJsonAsync<BusinessThemeDto>(themeUrl);
+            var theme = await httpClient.GetFromJsonAsync<BusinessThemeDto>(themeUrl).ConfigureAwait(false);
 
             if (theme == null || !theme.IsActive)
             {
@@ -112,7 +107,7 @@ public class ThemeService : IThemeService
             }
 
             var cityUrl = queryBuilder.ToString();
-            var cityResponse = await httpClient.GetFromJsonAsync<CityMarketingResponseDto>(cityUrl);
+            var cityResponse = await httpClient.GetFromJsonAsync<CityMarketingResponseDto>(cityUrl).ConfigureAwait(false);
 
             if (cityResponse?.Theme == null || !cityResponse.Theme.IsActive)
             {

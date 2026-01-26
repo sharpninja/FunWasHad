@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace FWH.Common.Workflow.Logging;
 
 /// <summary>
@@ -17,7 +13,7 @@ public static class ScopeValidator
     /// </summary>
     public static bool ContainsKeys(IDictionary<string, object?> scope, params string[] keys)
     {
-        if (scope is null) throw new ArgumentNullException(nameof(scope));
+        ArgumentNullException.ThrowIfNull(scope);
         if (keys is null || keys.Length == 0) return true;
         return keys.All(k => scope.ContainsKey(k) && scope[k] != null);
     }
@@ -27,7 +23,7 @@ public static class ScopeValidator
     /// </summary>
     public static bool AnyScopeContainsKeys(IEnumerable<IDictionary<string, object?>> scopes, params string[] keys)
     {
-        if (scopes is null) throw new ArgumentNullException(nameof(scopes));
+        ArgumentNullException.ThrowIfNull(scopes);
         if (keys is null || keys.Length == 0) return true;
         return scopes.Any(s => s != null && ContainsKeys(s, keys));
     }

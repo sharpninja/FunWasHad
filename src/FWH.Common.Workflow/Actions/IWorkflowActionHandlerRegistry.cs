@@ -1,5 +1,3 @@
-using System;
-
 namespace FWH.Common.Workflow.Actions;
 
 public interface IWorkflowActionHandlerRegistry

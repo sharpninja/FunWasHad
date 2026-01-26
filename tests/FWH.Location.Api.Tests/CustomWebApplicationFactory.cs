@@ -1,4 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using FWH.Common.Location;
 using FWH.Location.Api.Data;
 using Microsoft.AspNetCore.Hosting;
@@ -17,6 +21,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
     public ILocationService LocationServiceSubstitute { get; } = Substitute.For<ILocationService>();
 
+    /// <summary>Root service provider from the built test server. Use CreateScope() for scoped services.</summary>
+    public IServiceProvider Services => Server.Host.Services;
+
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
@@ -34,10 +42,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 { "Aspire:Npgsql:EntityFrameworkCore:PostgreSQL:LocationDbContext:ConnectionString", "Host=localhost;Database=test;Username=test;Password=test" }
             });
         });
-    }
 
-    protected override IHost CreateHost(IHostBuilder builder)
-    {
         // Override services AFTER Program.cs has run
         // This allows us to remove Aspire's pooled DbContext and replace with in-memory
         builder.ConfigureServices(services =>
@@ -83,17 +88,29 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<ILocationService>();
             services.AddSingleton(LocationServiceSubstitute);
+
+            // Ensure database schema is created when host starts
+            services.AddSingleton<IHostedService, EnsureDbCreatedHostedService>();
         });
+    }
 
-        var host = base.CreateHost(builder);
+    private sealed class EnsureDbCreatedHostedService : IHostedService
+    {
+        private readonly IServiceProvider _services;
 
-        // Ensure database schema is created
-        using (var scope = host.Services.CreateScope())
+        public EnsureDbCreatedHostedService(IServiceProvider services)
         {
-            var db = scope.ServiceProvider.GetRequiredService<LocationDbContext>();
-            db.Database.EnsureCreated();
+            _services = services;
         }
 
-        return host;
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            using var scope = _services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<LocationDbContext>();
+            db.Database.EnsureCreated();
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

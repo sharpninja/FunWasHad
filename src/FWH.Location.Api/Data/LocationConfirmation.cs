@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FWH.Location.Api.Data;
 
-public class LocationConfirmation
+internal class LocationConfirmation
 {
     [Key]
     public int Id { get; set; }

@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.Extensions.Primitives;
 
 namespace FWH.MarketingApi.Middleware;
 
@@ -8,7 +7,7 @@ namespace FWH.MarketingApi.Middleware;
 /// Middleware to authenticate requests using API key and request signing.
 /// Ensures only genuine builds of the app can call the API.
 /// </summary>
-public class ApiKeyAuthenticationMiddleware
+internal class ApiKeyAuthenticationMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<ApiKeyAuthenticationMiddleware> _logger;
@@ -36,11 +35,11 @@ public class ApiKeyAuthenticationMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         // Skip authentication for health checks and Swagger
-        if (context.Request.Path.StartsWithSegments("/health") ||
-            context.Request.Path.StartsWithSegments("/swagger") ||
-            context.Request.Path.StartsWithSegments("/metrics"))
+        if (context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase) ||
+            context.Request.Path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase) ||
+            context.Request.Path.StartsWithSegments("/metrics", StringComparison.OrdinalIgnoreCase))
         {
-            await _next(context);
+            await _next(context).ConfigureAwait(false);
             return;
         }
 
@@ -51,7 +50,7 @@ public class ApiKeyAuthenticationMiddleware
             _logger.LogWarning("Unauthorized API request: Missing or invalid API key from {RemoteIpAddress}",
                 context.Connection.RemoteIpAddress);
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsync("Unauthorized: Invalid API key");
+            await context.Response.WriteAsync("Unauthorized: Invalid API key").ConfigureAwait(false);
             return;
         }
 
@@ -63,12 +62,12 @@ public class ApiKeyAuthenticationMiddleware
                 _logger.LogWarning("Unauthorized API request: Invalid request signature from {RemoteIpAddress}",
                     context.Connection.RemoteIpAddress);
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                await context.Response.WriteAsync("Unauthorized: Invalid request signature");
+                await context.Response.WriteAsync("Unauthorized: Invalid request signature").ConfigureAwait(false);
                 return;
             }
         }
 
-        await _next(context);
+        await _next(context).ConfigureAwait(false);
     }
 
     private static bool VerifyRequestSignature(HttpContext context, string providedSignature, string secret)

@@ -1,10 +1,9 @@
-using System;
+using FWH.Common.Workflow.Extensions;
+using FWH.Mobile.Data.Data;
+using FWH.Mobile.Data.Repositories;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using FWH.Mobile.Data.Data;
-using FWH.Mobile.Data.Repositories;
-using FWH.Common.Workflow.Extensions;
 
 namespace FWH.Mobile.Data.Tests;
 
@@ -18,7 +17,7 @@ public abstract class DataTestBase : IDisposable
         Connection = new SqliteConnection("DataSource=:memory:");
         Connection.Open();
 
-        var services = new ServiceCollection();
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
 
         services.AddDbContext<NotesDbContext>(options => options.UseSqlite(Connection));
         services.AddScoped<INoteRepository, EfNoteRepository>();

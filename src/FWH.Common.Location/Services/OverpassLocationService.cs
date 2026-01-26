@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using FWH.Common.Location.Configuration;
+using FWH.Common.Location.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using FWH.Common.Location.Models;
-using FWH.Common.Location.Configuration;
 
 namespace FWH.Common.Location.Services;
 
@@ -59,7 +59,7 @@ public class OverpassLocationService : ILocationService
 
             // The HttpClient is configured with resilience policies (retry, circuit breaker, timeout)
             // in LocationServiceCollectionExtensions, so transient failures will be automatically retried
-            var response = await _httpClient.PostAsync(_overpassApiUrl, content, cancellationToken)
+            var response = await _httpClient.PostAsync(new Uri(_overpassApiUrl), content, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
@@ -133,7 +133,7 @@ public class OverpassLocationService : ILocationService
             longitude,
             maxDistanceMeters,
             null,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         return businesses.FirstOrDefault();
     }
@@ -154,7 +154,7 @@ public class OverpassLocationService : ILocationService
                 latitude,
                 longitude,
                 maxDistanceMeters,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (closestBusiness != null && !string.IsNullOrEmpty(closestBusiness.Address))
             {
@@ -168,7 +168,7 @@ public class OverpassLocationService : ILocationService
                 latitude, longitude, validatedRadius);
 
             var content = new StringContent(query);
-            var response = await _httpClient.PostAsync(_overpassApiUrl, content, cancellationToken)
+            var response = await _httpClient.PostAsync(new Uri(_overpassApiUrl), content, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)

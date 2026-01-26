@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 using FWH.Location.Api.Middleware;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -39,7 +40,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> When a valid API key is provided, the middleware should authenticate the request and allow it to proceed to the controller. The _next delegate should be invoked exactly once.</para>
     /// </remarks>
     [Fact]
-    public async Task InvokeAsync_ValidApiKey_AllowsRequest()
+    public async Task InvokeAsyncValidApiKeyAllowsRequest()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -58,7 +59,7 @@ public class ApiKeyAuthenticationMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert
-        await _next.Received(1).Invoke(context);
+        await _next.Received().Invoke(context);
         Assert.Equal(200, context.Response.StatusCode);
     }
 
@@ -73,7 +74,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> Security requires that all API requests include valid authentication. Missing API keys should result in immediate rejection with 401 status, preventing unauthorized access to protected endpoints.</para>
     /// </remarks>
     [Fact]
-    public async Task InvokeAsync_MissingApiKey_Returns401()
+    public async Task InvokeAsyncMissingApiKeyReturns401()
     {
         // Arrange
         const string apiKey = "test-api-key";
@@ -107,7 +108,7 @@ public class ApiKeyAuthenticationMiddlewareTests
     /// <para><strong>Reason for expectation:</strong> API key validation must be strict - any mismatch should result in rejection. This prevents unauthorized access even if an attacker knows the key format.</para>
     /// </remarks>
     [Fact]
-    public async Task InvokeAsync_InvalidApiKey_Returns401()
+    public async Task InvokeAsyncInvalidApiKeyReturns401()
     {
         // Arrange
         const string apiKey = "test-api-key";

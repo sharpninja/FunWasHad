@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Coupon or promotional offer from a business.
 /// </summary>
-public class Coupon
+internal class Coupon
 {
     public long Id { get; set; }
     public long BusinessId { get; set; }

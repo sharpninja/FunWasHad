@@ -1,16 +1,11 @@
-using Avalonia;
+using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
-using FWH.Mobile.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
-using FWH.Common.Chat.ViewModels;
 using FWH.Common.Chat;
-using FWH.Common.Chat.Services;
+using FWH.Common.Chat.ViewModels;
 using FWH.Mobile.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace FWH.Mobile;
 
@@ -61,7 +56,7 @@ public partial class ChatInputControl : UserControl
             logger?.LogInformation("Calling TakePhotoAsync...");
             Debug.WriteLine("ChatInputControl: Calling TakePhotoAsync...");
 
-            var imageBytes = await cameraService.TakePhotoAsync();
+            var imageBytes = await cameraService.TakePhotoAsync().ConfigureAwait(false);
 
             Debug.WriteLine($"ChatInputControl: TakePhotoAsync completed. ImageBytes length: {imageBytes?.Length ?? 0}");
             logger?.LogInformation("TakePhotoAsync completed. ImageBytes length: {Length}", imageBytes?.Length ?? 0);
@@ -81,7 +76,7 @@ public partial class ChatInputControl : UserControl
                             "User",
                             null,
                             "image/jpeg",
-                            $"chat_{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}.jpg");
+                            $"chat_{DateTimeOffset.UtcNow:yyyyMMdd_HHmmss}.jpg").ConfigureAwait(false);
                         logger?.LogDebug("Stored chat image via ImageService");
                     }
                     catch (Exception storeEx)
@@ -97,7 +92,7 @@ public partial class ChatInputControl : UserControl
                     chatInput.CurrentImage.Image = imageBytes;
 
                     // Raise event to notify that image was captured
-                    chatInput.RaiseImageCaptured(imageBytes);
+                    chatInput.OnImageCaptured(imageBytes);
                 }
             }
             else

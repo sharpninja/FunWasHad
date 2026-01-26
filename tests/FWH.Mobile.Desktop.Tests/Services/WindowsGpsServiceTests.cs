@@ -24,7 +24,7 @@ public class WindowsGpsServiceTests
     /// <para><strong>Reason for expectation:</strong> Object construction should be a lightweight operation that doesn't depend on external services being available. The constructor should initialize internal state only, and actual location service availability should be checked via IsLocationAvailable or GetCurrentLocationAsync. The null exception confirms construction succeeded, allowing the service to be safely instantiated in DI containers.</para>
     /// </remarks>
     [Fact]
-    public void Constructor_ShouldNotThrow()
+    public void ConstructorShouldNotThrow()
     {
         // Act & Assert
         var exception = Record.Exception(() => new WindowsGpsService());
@@ -65,7 +65,7 @@ public class WindowsGpsServiceTests
     /// <para><strong>Reason for expectation:</strong> The method should interact with Windows location permission APIs and return a boolean result. The exact value (true/false) depends on user consent and system settings, but it should always be a valid boolean. The type assertion confirms the method returns the correct type, enabling conditional logic based on permission status.</para>
     /// </remarks>
     [Fact]
-    public async Task RequestLocationPermissionAsync_ShouldReturnBool()
+    public async Task RequestLocationPermissionAsyncShouldReturnBool()
     {
         // Arrange
         var service = new WindowsGpsService();
@@ -311,7 +311,7 @@ public class GpsCoordinatesValidationTests
     /// <para><strong>Reason for expectation:</strong> The GpsCoordinates class should support object initializer syntax, allowing all properties to be set during initialization. The property values should be set exactly as specified in the initializer. The matching values confirm that object initializer syntax works correctly and all properties can be set, providing flexibility in coordinate creation.</para>
     /// </remarks>
     [Fact]
-    public void GpsCoordinates_OptionalProperties_CanBeSet()
+    public void GpsCoordinatesOptionalPropertiesCanBeSet()
     {
         // Arrange & Act
         var coordinates = new GpsCoordinates

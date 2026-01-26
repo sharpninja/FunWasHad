@@ -8,8 +8,38 @@ namespace FWH.Mobile.Data.Services;
 /// Service for managing SQLite database migrations in the mobile app.
 /// Ensures database schema is up-to-date with the latest migrations.
 /// </summary>
-public class MobileDatabaseMigrationService
+public partial class MobileDatabaseMigrationService
 {
+    [LoggerMessage(LogLevel.Information, "Checking mobile database status...")]
+    private static partial void LogCheckingStatus(ILogger logger);
+
+    [LoggerMessage(LogLevel.Information, "Creating mobile database...")]
+    private static partial void LogCreating(ILogger logger);
+
+    [LoggerMessage(LogLevel.Information, "Mobile database created successfully")]
+    private static partial void LogCreated(ILogger logger);
+
+    [LoggerMessage(LogLevel.Information, "Mobile database is up to date")]
+    private static partial void LogUpToDate(ILogger logger);
+
+    [LoggerMessage(LogLevel.Information, "Applying {Count} pending migrations to mobile database")]
+    private static partial void LogApplyingMigrations(ILogger logger, int count);
+
+    [LoggerMessage(LogLevel.Debug, "Pending migration: {Migration}")]
+    private static partial void LogPendingMigration(ILogger logger, string migration);
+
+    [LoggerMessage(LogLevel.Information, "Mobile database migrations applied successfully")]
+    private static partial void LogMigrationsApplied(ILogger logger);
+
+    [LoggerMessage(LogLevel.Error, "Error ensuring mobile database: {Message}")]
+    private static partial void LogEnsureError(ILogger logger, Exception ex, string message);
+
+    [LoggerMessage(LogLevel.Error, "Error getting applied migrations: {Message}")]
+    private static partial void LogGetAppliedError(ILogger logger, Exception ex, string message);
+
+    [LoggerMessage(LogLevel.Error, "Error getting pending migrations: {Message}")]
+    private static partial void LogGetPendingError(ILogger logger, Exception ex, string message);
+
     private readonly NotesDbContext _dbContext;
     private readonly ILogger<MobileDatabaseMigrationService> _logger;
 
@@ -29,42 +59,42 @@ public class MobileDatabaseMigrationService
     {
         try
         {
-            _logger.LogInformation("Checking mobile database status...");
+            LogCheckingStatus(_logger);
 
             // Check if database exists
-            var canConnect = await _dbContext.Database.CanConnectAsync(cancellationToken);
+            var canConnect = await _dbContext.Database.CanConnectAsync(cancellationToken).ConfigureAwait(false);
 
             if (!canConnect)
             {
-                _logger.LogInformation("Creating mobile database...");
-                await _dbContext.Database.EnsureCreatedAsync(cancellationToken);
-                _logger.LogInformation("Mobile database created successfully");
+                LogCreating(_logger);
+                await _dbContext.Database.EnsureCreatedAsync(cancellationToken).ConfigureAwait(false);
+                LogCreated(_logger);
                 return;
             }
 
             // Check for pending migrations
-            var pendingMigrations = await _dbContext.Database.GetPendingMigrationsAsync(cancellationToken);
+            var pendingMigrations = await _dbContext.Database.GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
             var pendingList = pendingMigrations.ToList();
 
             if (pendingList.Count == 0)
             {
-                _logger.LogInformation("Mobile database is up to date");
+                LogUpToDate(_logger);
                 return;
             }
 
-            _logger.LogInformation("Applying {Count} pending migrations to mobile database", pendingList.Count);
+            LogApplyingMigrations(_logger, pendingList.Count);
             foreach (var migration in pendingList)
             {
-                _logger.LogDebug("Pending migration: {Migration}", migration);
+                LogPendingMigration(_logger, migration);
             }
 
             // Apply migrations
-            await _dbContext.Database.MigrateAsync(cancellationToken);
-            _logger.LogInformation("Mobile database migrations applied successfully");
+            await _dbContext.Database.MigrateAsync(cancellationToken).ConfigureAwait(false);
+            LogMigrationsApplied(_logger);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error ensuring mobile database: {Message}", ex.Message);
+            LogEnsureError(_logger, ex, ex.Message);
             throw;
         }
     }
@@ -76,12 +106,12 @@ public class MobileDatabaseMigrationService
     {
         try
         {
-            var applied = await _dbContext.Database.GetAppliedMigrationsAsync(cancellationToken);
+            var applied = await _dbContext.Database.GetAppliedMigrationsAsync(cancellationToken).ConfigureAwait(false);
             return applied;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting applied migrations: {Message}", ex.Message);
+            LogGetAppliedError(_logger, ex, ex.Message);
             return Enumerable.Empty<string>();
         }
     }
@@ -93,12 +123,12 @@ public class MobileDatabaseMigrationService
     {
         try
         {
-            var pending = await _dbContext.Database.GetPendingMigrationsAsync(cancellationToken);
+            var pending = await _dbContext.Database.GetPendingMigrationsAsync(cancellationToken).ConfigureAwait(false);
             return pending;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting pending migrations: {Message}", ex.Message);
+            LogGetPendingError(_logger, ex, ex.Message);
             return Enumerable.Empty<string>();
         }
     }

@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Join entity for the many-to-many relationship between City and TourismMarket.
 /// </summary>
-public class CityTourismMarket
+internal class CityTourismMarket
 {
     public long Id { get; set; }
     public long CityId { get; set; }

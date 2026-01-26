@@ -16,9 +16,9 @@ Context that is prepended to the beginning of every prompt when it is executed. 
 
 Request a code review for a specific file or feature.
 
-Please review the following code for {FeatureName} in {FilePath}:
+Archive previous code review documents first.
 
-{Code}
+Please review the following code for {FeatureName} in {FilePath}:
 
 Focus on:
 - Code quality and best practices
@@ -36,13 +36,19 @@ Aggregate the results into a single review and note which models each line item 
 
 Provide specific, actionable feedback.
 
+Create an implementation plan.
+- Identify tasks that can run in parallel.
+- Prepare agents to run each parallel task.
+- Create context for each task to aid in implementing the changes.
+
+
 ### Parameters
 
 | Parameter | Description | Required | Default |
 |-----------|-------------|----------|---------|
 | FeatureName | Name of the feature | No | all features |
-| FilePath | Path to the file | No | the current directory |
-| Code | The code to review | No | |
+| FilePath | Path to the file | No | the entire solution |
+
 
 ---
 

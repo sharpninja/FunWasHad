@@ -17,7 +17,7 @@ namespace FWH.MarketingApi.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/[controller]")]
-public class FeedbackController : ControllerBase
+internal class FeedbackController : ControllerBase
 {
     private readonly MarketingDbContext _context;
     private readonly ILogger<FeedbackController> _logger;
@@ -60,7 +60,7 @@ public class FeedbackController : ControllerBase
         }
 
         // Validate business exists and is subscribed
-        var business = await _context.Businesses.FindAsync(request.BusinessId);
+        var business = await _context.Businesses.FindAsync(request.BusinessId).ConfigureAwait(false);
         if (business == null)
         {
             return NotFound($"Business {request.BusinessId} not found");
@@ -102,7 +102,7 @@ public class FeedbackController : ControllerBase
         };
 
         _context.Feedbacks.Add(feedback);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
         _logger.LogInformation("Feedback {FeedbackId} submitted for business {BusinessId} by user {UserId}",
             feedback.Id, request.BusinessId, request.UserId);
@@ -146,7 +146,7 @@ public class FeedbackController : ControllerBase
             return BadRequest($"Invalid image type. Allowed types: {string.Join(", ", AllowedImageTypes)}");
         }
 
-        var feedback = await _context.Feedbacks.FindAsync(feedbackId);
+        var feedback = await _context.Feedbacks.FindAsync(feedbackId).ConfigureAwait(false);
         if (feedback == null)
         {
             return NotFound($"Feedback {feedbackId} not found");
@@ -165,7 +165,7 @@ public class FeedbackController : ControllerBase
                 file.ContentType,
                 $"feedback/{feedbackId}/images",
                 generateThumbnail: true,
-                cancellationToken: default);
+                cancellationToken: default).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -186,7 +186,7 @@ public class FeedbackController : ControllerBase
         };
 
         _context.FeedbackAttachments.Add(attachment);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
         _logger.LogInformation("Image attachment {AttachmentId} uploaded for feedback {FeedbackId}",
             attachment.Id, feedbackId);
@@ -230,7 +230,7 @@ public class FeedbackController : ControllerBase
             return BadRequest($"Invalid video type. Allowed types: {string.Join(", ", AllowedVideoTypes)}");
         }
 
-        var feedback = await _context.Feedbacks.FindAsync(feedbackId);
+        var feedback = await _context.Feedbacks.FindAsync(feedbackId).ConfigureAwait(false);
         if (feedback == null)
         {
             return NotFound($"Feedback {feedbackId} not found");
@@ -249,7 +249,7 @@ public class FeedbackController : ControllerBase
                 file.ContentType,
                 $"feedback/{feedbackId}/videos",
                 generateThumbnail: false, // Video thumbnail generation not yet implemented
-                cancellationToken: default);
+                cancellationToken: default).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -271,7 +271,7 @@ public class FeedbackController : ControllerBase
         };
 
         _context.FeedbackAttachments.Add(attachment);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
         _logger.LogInformation("Video attachment {AttachmentId} uploaded for feedback {FeedbackId}",
             attachment.Id, feedbackId);
@@ -294,7 +294,7 @@ public class FeedbackController : ControllerBase
         var feedback = await _context.Feedbacks
             .Include(f => f.Business)
             .Include(f => f.Attachments)
-            .FirstOrDefaultAsync(f => f.Id == id);
+            .FirstOrDefaultAsync(f => f.Id == id).ConfigureAwait(false);
 
         if (feedback == null)
         {
@@ -313,7 +313,7 @@ public class FeedbackController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<FeedbackAttachment>> GetAttachment(long id)
     {
-        var attachment = await _context.FeedbackAttachments.FindAsync(id);
+        var attachment = await _context.FeedbackAttachments.FindAsync(id).ConfigureAwait(false);
 
         if (attachment == null)
         {
@@ -356,12 +356,12 @@ public class FeedbackController : ControllerBase
             query = query.Include(f => f.Attachments);
         }
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync().ConfigureAwait(false);
         var feedback = await query
             .OrderByDescending(f => f.SubmittedAt)
             .Skip(pagination.Skip)
             .Take(pagination.Take)
-            .ToListAsync();
+            .ToListAsync().ConfigureAwait(false);
 
         var result = new FWH.MarketingApi.Models.PagedResult<Feedback>
         {
@@ -386,7 +386,7 @@ public class FeedbackController : ControllerBase
     {
         var feedback = await _context.Feedbacks
             .Where(f => f.BusinessId == businessId && f.IsPublic && f.IsApproved)
-            .ToListAsync();
+            .ToListAsync().ConfigureAwait(false);
 
         var stats = new
         {

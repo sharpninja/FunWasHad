@@ -11,7 +11,7 @@ namespace FWH.MarketingApi.Models;
 /// Used by the feedback submission endpoint (TR-API-003).
 /// All fields are validated according to TR-API-004 and TR-SEC-001.
 /// </remarks>
-public class SubmitFeedbackRequest
+internal class SubmitFeedbackRequest
 {
     /// <summary>
     /// Business ID to submit feedback for.

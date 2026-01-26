@@ -1,16 +1,11 @@
-using Android.App;
 using Android.Content;
+using Android.Content.PM;
 using Android.Graphics;
 using Android.Provider;
 using Android.Util;
 using AndroidX.Core.Content;
 using FWH.Common.Chat.Services;
 using Microsoft.Extensions.Logging;
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using Android.Content.PM;
-using Java.IO;
 using JFile = Java.IO.File;
 
 namespace FWH.Mobile.Droid.Services;
@@ -26,7 +21,7 @@ public class AndroidCameraService : ICameraService
     {
         try
         {
-            return Platform.CurrentActivity;
+            return AndroidCameraPlatform.CurrentActivity;
         }
         catch
         {
@@ -41,7 +36,7 @@ public class AndroidCameraService : ICameraService
 
     public AndroidCameraService(ILogger<AndroidCameraService>? logger = null)
     {
-        // Don't access Platform.CurrentActivity in constructor
+        // Don't access AndroidCameraPlatform.CurrentActivity in constructor
         // It will be accessed lazily when methods/properties are called
         _logger = logger;
     }
@@ -300,9 +295,9 @@ public class AndroidCameraService : ICameraService
 }
 
 /// <summary>
-/// Static helper to access the camera service instance
+/// Holds the current Activity for Android camera; avoids name conflict with Avalonia.Android.Platform (CA1724).
 /// </summary>
-public static class Platform
+public static class AndroidCameraPlatform
 {
     public static Activity? CurrentActivity { get; set; }
 }

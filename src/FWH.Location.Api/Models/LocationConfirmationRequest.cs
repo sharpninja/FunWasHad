@@ -11,7 +11,7 @@ namespace FWH.Location.Api.Models;
 /// Used to record when a user confirms a business location with their current GPS coordinates.
 /// Implements TR-SEC-001 (data validation) with coordinate range validation.
 /// </remarks>
-public sealed record LocationConfirmationRequest
+internal sealed record LocationConfirmationRequest
 {
     /// <summary>
     /// Business location information being confirmed.

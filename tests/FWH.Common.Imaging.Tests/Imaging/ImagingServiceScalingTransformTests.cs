@@ -1,8 +1,7 @@
-using Xunit;
-using SkiaSharp;
-using Microsoft.Extensions.DependencyInjection;
-using FWH.Common.Imaging;
 using FWH.Common.Imaging.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using SkiaSharp;
+using Xunit;
 
 namespace FWH.Common.Imaging.Tests.Imaging;
 
@@ -21,7 +20,7 @@ public class ImagingServiceScalingTransformTests
     /// <para><strong>Reason for expectation:</strong> The viewBox defines a 100x100 coordinate system, but width/height specify 50x50 pixels, so content should be scaled down by 50%. The red rectangle (100x100 in viewBox coordinates) should render as 50x50 pixels. The center pixel being red confirms scaling works correctly, and the outside pixel remaining white confirms the overlay doesn't affect unrelated areas.</para>
     /// </remarks>
     [Fact]
-    public void RenderSvgOverlay_ViewBoxScaling_AppliesCorrectScale()
+    public void RenderSvgOverlayViewBoxScalingAppliesCorrectScale()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -68,7 +67,7 @@ public class ImagingServiceScalingTransformTests
     /// <para><strong>Reason for expectation:</strong> The renderer should parse the transform="rotate(45 20 20)" attribute and apply a 45-degree rotation about point (20,20) before rendering. After rotation, the rectangle's center should be at the overlay center, so pixel (50,50) should be red. The corner pixel (30,30) is outside the rotated rectangle's bounds, so it should retain the base bitmap color (white). This confirms that transforms are correctly interpreted and applied during rendering.</para>
     /// </remarks>
     [Fact]
-    public void RenderSvgOverlay_RotatedSvg_RendersRotatedContent()
+    public void RenderSvgOverlayRotatedSvgRendersRotatedContent()
     {
         // Arrange
         var services = new ServiceCollection();

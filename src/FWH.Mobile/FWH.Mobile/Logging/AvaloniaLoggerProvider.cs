@@ -1,16 +1,12 @@
-using System;
 using System.Collections;
 using System.Collections.Concurrent;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using Microsoft.Extensions.Logging;
 
 namespace FWH.Mobile.Logging;
 
 public sealed class AvaloniaLoggerProvider : ILoggerProvider, ISupportExternalScope
 {
-    private static long _logEntryIdCounter = 0;
+    private static long _logEntryIdCounter;
     private readonly AvaloniaLogStore _store;
     private readonly ConcurrentDictionary<string, AvaloniaLogger> _loggers = new(StringComparer.Ordinal);
 
@@ -58,8 +54,7 @@ public sealed class AvaloniaLoggerProvider : ILoggerProvider, ISupportExternalSc
             Exception? exception,
             Func<TState, Exception?, string> formatter)
         {
-            if (formatter is null)
-                throw new ArgumentNullException(nameof(formatter));
+            ArgumentNullException.ThrowIfNull(formatter);
 
             var message = formatter(state, exception);
 

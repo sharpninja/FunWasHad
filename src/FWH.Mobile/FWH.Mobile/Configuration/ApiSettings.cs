@@ -24,7 +24,7 @@ public sealed class ApiSettings
     /// <summary>
     /// Whether to use HTTPS for API connections
     /// </summary>
-    public bool UseHttps { get; set; } = false;
+    public bool UseHttps { get; set; }
 
     /// <summary>
     /// Full base URL for the Location API (overrides HostIpAddress/Port if set).
@@ -39,34 +39,36 @@ public sealed class ApiSettings
     public string? MarketingApiBaseUrl { get; set; }
 
     /// <summary>
-    /// Gets the base URL for the Location API
+    /// Gets the resolved base URI for the Location API (from override or from Host+Port).
     /// </summary>
-    public string GetLocationApiBaseUrl()
+    public Uri GetResolvedLocationApiBaseUrl()
     {
         // If full URL is provided (e.g., for staging), use it directly
         if (!string.IsNullOrWhiteSpace(LocationApiBaseUrl))
         {
-            return LocationApiBaseUrl.EndsWith('/') ? LocationApiBaseUrl : LocationApiBaseUrl + "/";
+            var s = LocationApiBaseUrl.EndsWith('/') ? LocationApiBaseUrl : LocationApiBaseUrl + "/";
+            return new Uri(s, UriKind.Absolute);
         }
 
         // Otherwise, construct from HostIpAddress and Port
         var protocol = UseHttps ? "https" : "http";
-        return $"{protocol}://{HostIpAddress}:{LocationApiPort}/";
+        return new Uri($"{protocol}://{HostIpAddress}:{LocationApiPort}/", UriKind.Absolute);
     }
 
     /// <summary>
-    /// Gets the base URL for the Marketing API
+    /// Gets the resolved base URI for the Marketing API (from override or from Host+Port).
     /// </summary>
-    public string GetMarketingApiBaseUrl()
+    public Uri GetResolvedMarketingApiBaseUrl()
     {
         // If full URL is provided (e.g., for staging), use it directly
         if (!string.IsNullOrWhiteSpace(MarketingApiBaseUrl))
         {
-            return MarketingApiBaseUrl.EndsWith('/') ? MarketingApiBaseUrl : MarketingApiBaseUrl + "/";
+            var s = MarketingApiBaseUrl.EndsWith('/') ? MarketingApiBaseUrl : MarketingApiBaseUrl + "/";
+            return new Uri(s, UriKind.Absolute);
         }
 
         // Otherwise, construct from HostIpAddress and Port
         var protocol = UseHttps ? "https" : "http";
-        return $"{protocol}://{HostIpAddress}:{MarketingApiPort}/";
+        return new Uri($"{protocol}://{HostIpAddress}:{MarketingApiPort}/", UriKind.Absolute);
     }
 }

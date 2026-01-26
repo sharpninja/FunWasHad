@@ -1,8 +1,7 @@
-using Xunit;
-using SkiaSharp;
-using Microsoft.Extensions.DependencyInjection;
-using FWH.Common.Imaging;
 using FWH.Common.Imaging.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using SkiaSharp;
+using Xunit;
 
 namespace FWH.Common.Imaging.Tests.Imaging;
 
@@ -39,7 +38,7 @@ public class ImagingServiceAdvancedTests
     /// </remarks>
     [Theory]
     [InlineData(10.2f, 10.7f, 15, 15, 9, 9, 20, 20, 0, 255, 0)] // Green SVG 20x20
-    public void RenderSvgOverlay_WithDifferentPositionsAndSizes_RendersCorrectly(
+    public void RenderSvgOverlayWithDifferentPositionsAndSizesRendersCorrectly(
         float x, float y,
         int insideX, int insideY,
         int outsideX, int outsideY,
@@ -91,7 +90,7 @@ public class ImagingServiceAdvancedTests
     /// </remarks>
     [Theory]
     [InlineData("rgba(0,0,255,0.5)", 128, 0, 128, 40.5f, 40.5f)] // 50% blue over red = purple
-    public void RenderSvgOverlay_WithTransparency_BlendsCorrectly(
+    public void RenderSvgOverlayWithTransparencyBlendsCorrectly(
         string fillColor,
         int expectedR, int expectedG, int expectedB,
         float x, float y)
@@ -125,7 +124,7 @@ public class ImagingServiceAdvancedTests
     // Note: This test is commented out due to Svg.Skia library limitation with fill-opacity attribute
     // The library doesn't properly support fill-opacity - use rgba() instead
     //[Fact]
-    private void RenderSvgOverlay_VaryingOpacity_BlendsAccordingly()
+    private void RenderSvgOverlayVaryingOpacityBlendsAccordingly()
     {
         var services = new ServiceCollection();
         services.AddImagingServices();

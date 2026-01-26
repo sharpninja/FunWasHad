@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Pagination parameters for list endpoints.
 /// </summary>
-public class PaginationParameters
+internal class PaginationParameters
 {
     /// <summary>
     /// Page number (1-based). Defaults to 1.
@@ -40,7 +40,7 @@ public class PaginationParameters
 /// Paginated result with metadata.
 /// </summary>
 /// <typeparam name="T">Type of items in the result</typeparam>
-public class PagedResult<T>
+internal class PagedResult<T>
 {
     /// <summary>
     /// Items for the current page.

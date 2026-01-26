@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using FWH.Orchestrix.Contracts.Location;
-using Microsoft.Extensions.Logging;
 using FWH.Orchestrix.Contracts.Mediator;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Orchestrix.Mediator.Remote.Location;
 
@@ -17,6 +17,7 @@ public class GetDeviceLocationHistoryHandler : IMediatorHandler<GetDeviceLocatio
         IHttpClientFactory httpClientFactory,
         ILogger<GetDeviceLocationHistoryHandler> logger)
     {
+        ArgumentNullException.ThrowIfNull(httpClientFactory);
         _httpClient = httpClientFactory.CreateClient("LocationApi");
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -25,6 +26,7 @@ public class GetDeviceLocationHistoryHandler : IMediatorHandler<GetDeviceLocatio
         GetDeviceLocationHistoryRequest request,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
         try
         {
             _logger.LogInformation("Getting device location history remotely for device {DeviceId}",
@@ -38,11 +40,11 @@ public class GetDeviceLocationHistoryHandler : IMediatorHandler<GetDeviceLocatio
             if (request.Limit.HasValue)
                 query += $"&limit={request.Limit}";
 
-            var response = await _httpClient.GetAsync($"/api/locations{query}", cancellationToken);
+            var response = await _httpClient.GetAsync(new Uri($"/api/locations{query}", UriKind.Relative), cancellationToken).ConfigureAwait(false);
 
             if (response.IsSuccessStatusCode)
             {
-                var locations = await response.Content.ReadFromJsonAsync<List<DeviceLocationDto>>(cancellationToken);
+                var locations = await response.Content.ReadFromJsonAsync<List<DeviceLocationDto>>(cancellationToken).ConfigureAwait(false);
                 return new GetDeviceLocationHistoryResponse
                 {
                     Success = true,
@@ -50,7 +52,7 @@ public class GetDeviceLocationHistoryHandler : IMediatorHandler<GetDeviceLocatio
                 };
             }
 
-            var error = await response.Content.ReadAsStringAsync(cancellationToken);
+            var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogWarning("Failed to get device location history: {StatusCode} - {Error}",
                 response.StatusCode, error);
 

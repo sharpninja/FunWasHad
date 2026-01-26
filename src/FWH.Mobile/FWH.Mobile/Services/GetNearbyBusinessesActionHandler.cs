@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
 using FWH.Common.Workflow.Actions;
@@ -40,6 +35,7 @@ public class GetNearbyBusinessesActionHandler : IWorkflowActionHandler
         IDictionary<string, string> parameters,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(parameters);
         _logger.LogInformation("Starting GPS location and nearby business search");
 
         // Parse radius from parameters (default 1000m)
@@ -67,7 +63,7 @@ public class GetNearbyBusinessesActionHandler : IWorkflowActionHandler
                     "Location Required");
 
                 // Try to request permission
-                var granted = await _gpsService.RequestLocationPermissionAsync();
+                var granted = await _gpsService.RequestLocationPermissionAsync().ConfigureAwait(false);
                 if (!granted)
                 {
                     _logger.LogWarning("GPS permission denied by user");
@@ -90,7 +86,7 @@ public class GetNearbyBusinessesActionHandler : IWorkflowActionHandler
             GpsCoordinates? coordinates = null;
             try
             {
-                coordinates = await _gpsService.GetCurrentLocationAsync(cancellationToken);
+                coordinates = await _gpsService.GetCurrentLocationAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (LocationServicesException ex)
             {
@@ -148,7 +144,7 @@ public class GetNearbyBusinessesActionHandler : IWorkflowActionHandler
                 coordinates.Longitude,
                 radiusMeters,
                 categories,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             var businessList = businesses.ToList();
             _logger.LogInformation("Found {Count} nearby businesses", businessList.Count);

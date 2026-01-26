@@ -1,11 +1,9 @@
-using FWH.MarketingApi.Models;
-
 namespace FWH.MarketingApi.Models;
 
 /// <summary>
 /// Response model for city marketing data.
 /// </summary>
-public class CityMarketingResponse
+internal class CityMarketingResponse
 {
     public long CityId { get; set; }
     public required string CityName { get; set; }

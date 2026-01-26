@@ -1,5 +1,3 @@
-﻿using System;
-
 using Avalonia;
 
 namespace FWH.Mobile.Desktop;

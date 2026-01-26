@@ -1,14 +1,11 @@
 using Avalonia.Controls;
-using FWH.Mobile.ViewModels;
 using FWH.Mobile.Services;
+using FWH.Mobile.ViewModels;
 using Mapsui;
-using Mapsui.Layers;
 using Mapsui.Projections;
-using Mapsui.Styles;
 using Mapsui.Tiling;
 using Mapsui.UI.Avalonia;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 
 namespace FWH.Mobile.Views;
 

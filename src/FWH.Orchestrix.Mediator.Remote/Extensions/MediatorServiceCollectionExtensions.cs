@@ -1,15 +1,11 @@
-using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Headers;
 using FWH.Orchestrix.Contracts.Mediator;
 using FWH.Orchestrix.Mediator.Remote.Location;
 using FWH.Orchestrix.Mediator.Remote.Marketing;
 using FWH.Orchestrix.Mediator.Remote.Mediator;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Reflection;
-using System.Text;
+using Microsoft.Extensions.DependencyInjection;
 using Polly;
 using Polly.CircuitBreaker;
-using Polly.Fallback;
 
 namespace FWH.Orchestrix.Mediator.Remote.Extensions;
 
@@ -48,6 +44,7 @@ public static class MediatorServiceCollectionExtensions
         this IServiceCollection services,
         Action<ApiClientOptions> configure)
     {
+        ArgumentNullException.ThrowIfNull(configure);
         var options = new ApiClientOptions();
         configure(options);
 
@@ -213,7 +210,7 @@ internal class ApiAuthenticationMessageHandler : DelegatingHandler
                 string? requestBody = null;
                 if (request.Content != null)
                 {
-                    requestBody = await request.Content.ReadAsStringAsync(cancellationToken);
+                    requestBody = await request.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
                     // Reset the content stream position
                     var contentType = request.Content.Headers.ContentType ?? new MediaTypeHeaderValue("application/json");
                     request.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, contentType);
@@ -228,6 +225,6 @@ internal class ApiAuthenticationMessageHandler : DelegatingHandler
             }
         }
 
-        return await base.SendAsync(request, cancellationToken);
+        return await base.SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
 }

@@ -1,14 +1,11 @@
-using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Android.Util;
-
 using Avalonia;
 using Avalonia.Android;
-
-using FWH.Mobile.Droid.Services;
 using FWH.Common.Chat.Services;
+using FWH.Mobile.Droid.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -35,7 +32,7 @@ public class MainActivity : AvaloniaMainActivity<App>
         base.OnCreate(savedInstanceState);
 
         // Set current activity for camera service
-        Platform.CurrentActivity = this;
+        AndroidCameraPlatform.CurrentActivity = this;
 
         // Get logger from service provider
         _logger = App.ServiceProvider?.GetService<ILogger<MainActivity>>();
@@ -137,6 +134,8 @@ public class MainActivity : AvaloniaMainActivity<App>
 #pragma warning disable CA1416 // Platform compatibility - protected by version check in RequestRequiredPermissions
     public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Permission[] grantResults)
     {
+        ArgumentNullException.ThrowIfNull(permissions);
+        ArgumentNullException.ThrowIfNull(grantResults);
         base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (requestCode == PermissionsRequestCode)

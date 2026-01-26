@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Menu item from a business (e.g., restaurant menu).
 /// </summary>
-public class MenuItem
+internal class MenuItem
 {
     public long Id { get; set; }
     public long BusinessId { get; set; }

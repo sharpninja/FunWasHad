@@ -16,7 +16,7 @@ public sealed class AvaloniaLoggerProviderTests
     /// <para><strong>Reason for expectation:</strong> The provider should create logger instances on demand for any category name. The non-null result confirms that logger creation succeeds and the returned logger can be used for logging. This is a basic functionality test to ensure the provider works correctly.</para>
     /// </remarks>
     [Fact]
-    public void CreateLogger_ReturnsLogger()
+    public void CreateLoggerReturnsLogger()
     {
         var store = new AvaloniaLogStore(maxEntries: 10);
         var provider = new AvaloniaLoggerProvider(store);
@@ -39,7 +39,7 @@ public sealed class AvaloniaLoggerProviderTests
     }
 
     [Fact]
-    public void Dispose_ClearsLoggers()
+    public void DisposeClearsLoggers()
     {
         var store = new AvaloniaLogStore(maxEntries: 10);
         var provider = new AvaloniaLoggerProvider(store);

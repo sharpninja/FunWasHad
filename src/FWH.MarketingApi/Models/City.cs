@@ -3,7 +3,7 @@ namespace FWH.MarketingApi.Models;
 /// <summary>
 /// Represents a city that can have marketing information (theme, logo, general info).
 /// </summary>
-public class City
+internal class City
 {
     public long Id { get; set; }
     public required string Name { get; set; }

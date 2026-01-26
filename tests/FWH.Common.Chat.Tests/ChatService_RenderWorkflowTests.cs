@@ -1,17 +1,9 @@
-using System.Threading.Tasks;
-using Xunit;
-using Microsoft.Extensions.DependencyInjection;
-using FWH.Common.Workflow;
-using FWH.Common.Workflow.Controllers;
-using FWH.Common.Workflow.Storage;
-using FWH.Common.Workflow.Instance;
-using FWH.Common.Workflow.Mapping;
-using FWH.Common.Workflow.State;
-using FWH.Common.Workflow.Models;
-using FWH.Common.Chat.ViewModels;
-using FWH.Common.Chat;
 using FWH.Common.Chat.Conversion;
 using FWH.Common.Chat.Duplicate;
+using FWH.Common.Chat.ViewModels;
+using FWH.Common.Workflow;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Common.Chat.Tests;
 
@@ -28,7 +20,7 @@ public class ChatServiceRenderTests
     /// <para><strong>Reason for expectation:</strong> The WorkflowToChatConverter should detect that IsChoice=false and create a TextChatEntry with the payload's Text content. The entry should have Author=Bot (since it's from the workflow, not the user). The single entry confirms that the text was correctly converted and added to the chat list, enabling users to see workflow messages.</para>
     /// </remarks>
     [Fact]
-    public async Task RenderWorkflowStateAsync_AppendsTextEntryWhenNotChoice()
+    public async Task RenderWorkflowStateAsyncAppendsTextEntryWhenNotChoice()
     {
         var services = new ServiceCollection();
 
@@ -54,7 +46,7 @@ public class ChatServiceRenderTests
         var chatSvc = new ChatService(sp, converter, detector, logger);
         var chatList = sp.GetRequiredService<ChatListViewModel>();
 
-        await chatSvc.RenderWorkflowStateAsync("wf-x");
+        await chatSvc.RenderWorkflowStateAsync("wf-x").ConfigureAwait(true);
 
         Assert.Single(chatList.Entries);
         var entry = chatList.Entries[0];
@@ -72,7 +64,7 @@ public class ChatServiceRenderTests
     /// <para><strong>Reason for expectation:</strong> The WorkflowToChatConverter should detect IsChoice=true and create a ChoiceChatEntry with the provided options. When SelectChoiceCommand is executed, it should call AdvanceByChoiceValueAsync on the controller, which advances the workflow. The ChatService should then automatically call RenderWorkflowStateAsync again to render the new state, which should be the text payload "Arrived at B". The presence of both entries confirms the complete choice selection and advancement flow works correctly.</para>
     /// </remarks>
     [Fact]
-    public async Task RenderWorkflowStateAsync_AppendsChoiceAndAdvancesOnSelection()
+    public async Task RenderWorkflowStateAsyncAppendsChoiceAndAdvancesOnSelection()
     {
         var services = new ServiceCollection();
 
@@ -108,7 +100,7 @@ public class ChatServiceRenderTests
         var chatSvc = new ChatService(sp, converter, detector, logger);
         var chatList = sp.GetRequiredService<ChatListViewModel>();
 
-        await chatSvc.RenderWorkflowStateAsync("wf-x");
+        await chatSvc.RenderWorkflowStateAsync("wf-x").ConfigureAwait(true);
 
         // Chat list should contain the choice entry
         Assert.Single(chatList.Entries);
@@ -118,7 +110,7 @@ public class ChatServiceRenderTests
 
         // Simulate selecting the first choice by invoking the SelectChoiceCommand
         var first = choiceEntry.Choices[0];
-        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)first.SelectChoiceCommand).ExecuteAsync(first);
+        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)first.SelectChoiceCommand).ExecuteAsync(first).ConfigureAwait(true);
 
         // After selection and automatic render, chat list should now have two entries (choice + resulting text)
         Assert.Equal(2, chatList.Entries.Count);

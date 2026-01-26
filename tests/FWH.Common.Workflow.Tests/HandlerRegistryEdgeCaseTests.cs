@@ -1,10 +1,6 @@
-using Xunit;
-using System;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System.Threading;
 using FWH.Common.Workflow.Actions;
 using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Common.Workflow.Tests;
 
@@ -121,7 +117,7 @@ public class HandlerRegistryEdgeCaseTests
     /// <para><strong>Reason for expectation:</strong> The TryGet pattern (similar to Dictionary.TryGetValue) is designed to safely query for values that may not exist. Returning false indicates the action was not found, and setting the out parameter to null provides a clear indication that no factory exists. This allows callers to handle missing handlers appropriately (e.g., log a warning, use a default handler, or skip the action).</para>
     /// </remarks>
     [Fact]
-    public void HandlerRegistry_TryGetFactoryForNonExistentAction_ReturnsFalse()
+    public void HandlerRegistryTryGetFactoryForNonExistentActionReturnsFalse()
     {
         // Arrange
         var registry = new WorkflowActionHandlerRegistry();
@@ -135,7 +131,7 @@ public class HandlerRegistryEdgeCaseTests
     }
 
     [Fact]
-    public void HandlerRegistry_TryGetFactoryWithNullActionName_ReturnsFalse()
+    public void HandlerRegistryTryGetFactoryWithNullActionNameReturnsFalse()
     {
         // Arrange
         var registry = new WorkflowActionHandlerRegistry();
@@ -166,7 +162,7 @@ public class HandlerRegistryEdgeCaseTests
             }));
         }
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(true);
 
         // Assert - All handlers should be registered
         for (int i = 0; i < 100; i++)
@@ -221,7 +217,7 @@ public class HandlerRegistryEdgeCaseTests
             }));
         }
 
-        await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks).ConfigureAwait(true);
 
         // Assert - No exceptions should have occurred
         Assert.Empty(exceptions);
@@ -328,7 +324,7 @@ public class HandlerRegistryEdgeCaseTests
     /// <para><strong>Reason for expectation:</strong> The registry should use efficient data structures (e.g., Dictionary with O(1) lookup) to ensure registration and retrieval scale linearly or better. The timing checks ensure the registry doesn't have quadratic or worse complexity that would make large handler counts impractical. The performance thresholds (1000ms registration, 100ms retrieval) ensure the registry remains responsive even with many handlers, validating that it can handle production-scale handler counts.</para>
     /// </remarks>
     [Fact]
-    public void HandlerRegistry_LargeNumberOfHandlers_PerformanceAcceptable()
+    public void HandlerRegistryLargeNumberOfHandlersPerformanceAcceptable()
     {
         // Arrange
         var registry = new WorkflowActionHandlerRegistry();
@@ -344,9 +340,11 @@ public class HandlerRegistryEdgeCaseTests
 
         var registrationTime = sw.Elapsed;
 
-        // Retrieve 1,000 random handlers
-        sw.Restart();
+        // Retrieve 1,000 random handlers (deterministic seed for reproducible test, not used for security)
+#pragma warning disable CA5394
         var random = new Random(42);
+#pragma warning restore CA5394
+        sw.Restart();
         for (int i = 0; i < 1000; i++)
         {
             var index = random.Next(10000);

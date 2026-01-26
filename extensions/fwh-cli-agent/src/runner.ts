@@ -44,6 +44,10 @@ export async function runInComposer(
   deps.showInfo('FWH CLI Agent: Prompt copied to clipboard. Paste into Composer (Ctrl+V).');
 }
 
+/**
+ * Runs the prompt via `agent -p` in a subprocess. Writes prompt to a temp file (CR-EXT-1.1.3: mode 0o600, unlinked in finally).
+ * Do not include secrets in prompts; the file may persist briefly if the process is killed.
+ */
 export async function runWithAgentCli(
   deps: RunWithAgentCliDeps,
   promptText: string,

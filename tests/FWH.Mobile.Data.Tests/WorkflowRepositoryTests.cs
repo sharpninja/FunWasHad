@@ -1,8 +1,7 @@
-using System.Threading.Tasks;
-using Xunit;
 using FWH.Mobile.Data.Models;
 using FWH.Mobile.Data.Repositories;
 using Microsoft.Extensions.DependencyInjection;
+using Xunit;
 
 namespace FWH.Mobile.Data.Tests;
 
@@ -36,10 +35,10 @@ public class WorkflowRepositoryTests : DataTestBase
 
         def.StartPoints.Add(new StartPointEntity { NodeId = "n1" });
 
-        var created = await repo.CreateAsync(def);
+        var created = await repo.CreateAsync(def).ConfigureAwait(true);
         Assert.Equal("wf1", created.Id);
 
-        var got = await repo.GetByIdAsync("wf1");
+        var got = await repo.GetByIdAsync("wf1").ConfigureAwait(true);
         Assert.NotNull(got);
         Assert.Equal("Test Workflow", got!.Name);
         Assert.Equal(2, got.Nodes.Count);
@@ -69,9 +68,9 @@ public class WorkflowRepositoryTests : DataTestBase
             Name = "Another Workflow"
         };
         def.Nodes.Add(new NodeEntity { NodeId = "a", Text = "A" });
-        await repo.CreateAsync(def);
+        await repo.CreateAsync(def).ConfigureAwait(true);
 
-        var all = await repo.GetAllAsync();
+        var all = await repo.GetAllAsync().ConfigureAwait(true);
         Assert.Contains(all, w => w.Id == "wf2");
     }
 }
