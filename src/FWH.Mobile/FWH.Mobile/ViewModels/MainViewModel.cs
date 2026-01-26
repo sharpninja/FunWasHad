@@ -16,6 +16,21 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _currentViewName = "Chat";
 
+    /// <summary>
+    /// Gets whether the log view should always be visible (when not in RELEASE build).
+    /// </summary>
+    public bool ShowLogViewAlways
+    {
+        get
+        {
+#if DEBUG || STAGING
+            return true;
+#else
+            return false;
+#endif
+        }
+    }
+
     public MainViewModel()
     {
         // Start with Chat view

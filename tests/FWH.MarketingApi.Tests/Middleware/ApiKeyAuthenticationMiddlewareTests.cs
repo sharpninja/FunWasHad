@@ -44,7 +44,7 @@ public class ApiKeyAuthenticationMiddlewareTests
         // Arrange
         const string apiKey = "test-api-key";
         const string apiSecret = "test-api-secret";
-        
+
         _configuration["ApiSecurity:ApiKey"].Returns(apiKey);
         _configuration["ApiSecurity:ApiSecret"].Returns(apiSecret);
 
@@ -78,7 +78,7 @@ public class ApiKeyAuthenticationMiddlewareTests
         // Arrange
         const string apiKey = "test-api-key";
         const string apiSecret = "test-api-secret";
-        
+
         _configuration["ApiSecurity:ApiKey"].Returns(apiKey);
         _configuration["ApiSecurity:ApiSecret"].Returns(apiSecret);
 
@@ -112,13 +112,13 @@ public class ApiKeyAuthenticationMiddlewareTests
         // Arrange
         const string apiKey = "test-api-key";
         const string apiSecret = "test-api-secret";
-        
+
         _configuration["ApiSecurity:ApiKey"].Returns(apiKey);
         _configuration["ApiSecurity:ApiSecret"].Returns(apiSecret);
 
         var context = new DefaultHttpContext();
         context.Request.Path = "/api/marketing/nearby";
-        context.Request.Headers.Add("X-API-Key", "wrong-key");
+        context.Request.Headers["X-API-Key"] = "wrong-key";
 
         var middleware = new ApiKeyAuthenticationMiddleware(_next, _configuration, _logger);
 
@@ -146,7 +146,7 @@ public class ApiKeyAuthenticationMiddlewareTests
         // Arrange
         const string apiKey = "test-api-key";
         const string apiSecret = "test-api-secret";
-        
+
         _configuration["ApiSecurity:ApiKey"].Returns(apiKey);
         _configuration["ApiSecurity:ApiSecret"].Returns(apiSecret);
 
@@ -180,7 +180,7 @@ public class ApiKeyAuthenticationMiddlewareTests
         // Arrange
         const string apiKey = "test-api-key";
         const string apiSecret = "test-api-secret";
-        
+
         _configuration["ApiSecurity:ApiKey"].Returns(apiKey);
         _configuration["ApiSecurity:ApiSecret"].Returns(apiSecret);
 
@@ -214,7 +214,7 @@ public class ApiKeyAuthenticationMiddlewareTests
         // Arrange
         const string apiKey = "test-api-key";
         const string apiSecret = "test-api-secret";
-        
+
         _configuration["ApiSecurity:ApiKey"].Returns(apiKey);
         _configuration["ApiSecurity:ApiSecret"].Returns(apiSecret);
 
@@ -222,13 +222,13 @@ public class ApiKeyAuthenticationMiddlewareTests
         context.Request.Path = "/api/marketing/nearby";
         context.Request.QueryString = new QueryString("?latitude=40.7128&longitude=-74.0060");
         context.Request.Method = "GET";
-        context.Request.Headers.Add("X-API-Key", apiKey);
+        context.Request.Headers["X-API-Key"] = apiKey;
 
         // Compute valid signature
         var stringToSign = $"GET/api/marketing/nearby?latitude=40.7128&longitude=-74.0060";
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(apiSecret));
         var signature = Convert.ToBase64String(hmac.ComputeHash(Encoding.UTF8.GetBytes(stringToSign)));
-        context.Request.Headers.Add("X-Request-Signature", signature);
+        context.Request.Headers["X-Request-Signature"] = signature;
 
         var middleware = new ApiKeyAuthenticationMiddleware(_next, _configuration, _logger);
 
@@ -256,7 +256,7 @@ public class ApiKeyAuthenticationMiddlewareTests
         // Arrange
         const string apiKey = "test-api-key";
         const string apiSecret = "test-api-secret";
-        
+
         _configuration["ApiSecurity:ApiKey"].Returns(apiKey);
         _configuration["ApiSecurity:ApiSecret"].Returns(apiSecret);
 
@@ -296,7 +296,7 @@ public class ApiKeyAuthenticationMiddlewareTests
         // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() =>
             new ApiKeyAuthenticationMiddleware(_next, _configuration, _logger));
-        
+
         Assert.Contains("ApiSecurity:ApiKey is required", ex.Message);
     }
 
@@ -320,7 +320,7 @@ public class ApiKeyAuthenticationMiddlewareTests
         // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() =>
             new ApiKeyAuthenticationMiddleware(_next, _configuration, _logger));
-        
+
         Assert.Contains("ApiSecurity:ApiSecret is required", ex.Message);
     }
 }

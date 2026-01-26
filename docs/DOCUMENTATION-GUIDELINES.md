@@ -11,8 +11,11 @@ The `docs/` folder is organized into the following subdirectories:
 ```
 docs/
 ├── README.md                    # Main documentation index (DO NOT MOVE)
-├── Technical-Requirements.md   # Core requirements (DO NOT MOVE)
-├── Functional-Requirements.md  # Functional spec (DO NOT MOVE)
+├── Project/                     # Project documentation
+│   ├── Technical-Requirements.md   # Core requirements
+│   ├── Functional-Requirements.md  # Functional spec
+│   ├── Status.md                  # Project status
+│   └── TODO.md                    # TODO list
 ├── index.md                    # DocFX homepage (DO NOT MOVE)
 ├── docfx.json                  # DocFX configuration (DO NOT MOVE)
 ├── toc.yml                     # DocFX navigation (DO NOT MOVE)
@@ -159,8 +162,10 @@ docs/
 These files must remain in the root `docs/` folder:
 
 - ✅ `README.md` - Main documentation index
-- ✅ `Technical-Requirements.md` - Core requirements
-- ✅ `Functional-Requirements.md` - Functional specification
+- ✅ `Project/Technical-Requirements.md` - Core requirements
+- ✅ `Project/Functional-Requirements.md` - Functional specification
+- ✅ `Project/Status.md` - Project status
+- ✅ `Project/TODO.md` - TODO list
 - ✅ `index.md` - DocFX homepage
 - ✅ `docfx.json` - DocFX configuration
 - ✅ `toc.yml` - DocFX navigation

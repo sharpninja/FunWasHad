@@ -61,7 +61,7 @@ public class ApiKeyAuthenticationIntegrationTests : IClassFixture<CustomWebAppli
     /// <para><strong>Reason for expectation:</strong> When authentication is required and no valid API key is provided, the middleware should reject the request with 401 status before it reaches the controller.</para>
     /// </remarks>
     [Fact]
-    public async Task UnauthenticatedRequest_Returns401()
+    public Task UnauthenticatedRequest_Returns401()
     {
         // Arrange
         // Note: This test would require authentication to be enabled in the test factory
@@ -72,6 +72,7 @@ public class ApiKeyAuthenticationIntegrationTests : IClassFixture<CustomWebAppli
         // This test is covered by ApiKeyAuthenticationMiddlewareTests unit tests
         // Integration tests with authentication enabled would require factory configuration
         Assert.True(true); // Placeholder - actual integration test would require factory setup
+        return Task.CompletedTask;
     }
 
     /// <summary>

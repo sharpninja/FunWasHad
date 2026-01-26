@@ -3,8 +3,9 @@
     {
       "src": [
         {
+          "src": "..",
           "files": [
-            "../FWH.Location.Api/FWH.Location.Api.csproj"
+            "src/FWH.Location.Api/FWH.Location.Api.csproj"
           ],
           "exclude": [
             "**/bin/**",
@@ -24,8 +25,9 @@
     {
       "src": [
         {
+          "src": "..",
           "files": [
-            "../FWH.MarketingApi/FWH.MarketingApi.csproj"
+            "src/FWH.MarketingApi/FWH.MarketingApi.csproj"
           ],
           "exclude": [
             "**/bin/**",
@@ -45,8 +47,9 @@
     {
       "src": [
         {
+          "src": "..",
           "files": [
-            "../FWH.Common.Location/FWH.Common.Location.csproj"
+            "src/FWH.Common.Location/FWH.Common.Location.csproj"
           ],
           "exclude": [
             "**/bin/**",
@@ -66,8 +69,9 @@
     {
       "src": [
         {
+          "src": "..",
           "files": [
-            "../FWH.Common.Chat/FWH.Common.Chat.csproj"
+            "src/FWH.Common.Chat/FWH.Common.Chat.csproj"
           ],
           "exclude": [
             "**/bin/**",
@@ -87,8 +91,9 @@
     {
       "src": [
         {
+          "src": "..",
           "files": [
-            "../FWH.Common.Workflow/FWH.Common.Workflow.csproj"
+            "src/FWH.Common.Workflow/FWH.Common.Workflow.csproj"
           ],
           "exclude": [
             "**/bin/**",
@@ -108,8 +113,9 @@
     {
       "src": [
         {
+          "src": "..",
           "files": [
-            "../FWH.Common.Imaging/FWH.Common.Imaging.csproj"
+            "src/FWH.Common.Imaging/FWH.Common.Imaging.csproj"
           ],
           "exclude": [
             "**/bin/**",
@@ -129,8 +135,9 @@
     {
       "src": [
         {
+          "src": "..",
           "files": [
-            "../FWH.Mobile.Data/FWH.Mobile.Data.csproj"
+            "src/FWH.Mobile.Data/FWH.Mobile.Data.csproj"
           ],
           "exclude": [
             "**/bin/**",
@@ -162,9 +169,16 @@
           "articles/**/toc.yml",
           "toc.yml",
           "index.md",
-          "Technical-Requirements.md",
-          "Functional-Requirements.md",
-          "README.md"
+          "Project/Technical-Requirements.md",
+          "Project/Functional-Requirements.md",
+          "README.md",
+          "Project/Status.md",
+          "Project/TODO.md",
+          "API-SECURITY.md",
+          "BLOB-STORAGE.md",
+          "TESTING-AUTHENTICATION-AND-STORAGE.md",
+          "DOCUMENTATION-GUIDELINES.md",
+          "DOCUMENTATION-SYNC-AGENT.md"
         ]
       },
       {
@@ -174,9 +188,12 @@
           "reviews/**.md",
           "architecture/**.md",
           "configuration/**.md",
+          "deployment/**.md",
+          "mobile/**.md",
           "platform/**.md",
           "testing/**.md",
-          "references/**.md"
+          "references/**.md",
+          "workflows/**.md"
         ],
         "exclude": [
           "**/obj/**",
@@ -196,6 +213,12 @@
         "exclude": [
           "**/bin/**",
           "**/obj/**"
+        ]
+      },
+      {
+        "files": [
+          "templates/**/*.js",
+          "templates/**/*.css"
         ]
       }
     ],

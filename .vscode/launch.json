@@ -51,6 +51,39 @@
             "name": ".NET Core Attach",
             "type": "coreclr",
             "request": "attach"
+        },
+        {
+            "name": "Documentation Sync (sync)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/FWH.Documentation.Sync/bin/Debug/net9.0/FWH.Documentation.Sync.dll",
+            "args": ["sync"],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "Documentation Sync (watch)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/src/FWH.Documentation.Sync/bin/Debug/net9.0/FWH.Documentation.Sync.dll",
+            "args": ["watch"],
+            "cwd": "${workspaceFolder}",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "FWH CLI Agent (Extension)",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/extensions/fwh-cli-agent",
+                "${workspaceFolder}"
+            ],
+            "preLaunchTask": "compile: fwh-cli-agent",
+            "outFiles": ["${workspaceFolder}/extensions/fwh-cli-agent/out/**/*.js"]
         }
     ],
     "compounds": [

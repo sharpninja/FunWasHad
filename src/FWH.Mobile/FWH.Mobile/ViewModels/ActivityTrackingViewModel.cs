@@ -30,10 +30,12 @@ public partial class ActivityTrackingViewModel : ObservableObject
 
     public ActivityTrackingViewModel(
         ActivityTrackingService activityTrackingService,
-        ILocationTrackingService locationTrackingService)
+        ILocationTrackingService locationTrackingService,
+        LocationSettings locationSettings)
     {
         _activityTrackingService = activityTrackingService ?? throw new ArgumentNullException(nameof(activityTrackingService));
         _locationTrackingService = locationTrackingService ?? throw new ArgumentNullException(nameof(locationTrackingService));
+        _locationSettings = locationSettings ?? throw new ArgumentNullException(nameof(locationSettings));
 
         // Subscribe to state changes
         _locationTrackingService.MovementStateChanged += OnMovementStateChanged;
@@ -54,7 +56,7 @@ public partial class ActivityTrackingViewModel : ObservableObject
     private void UpdateDisplay()
     {
         CurrentState = _locationTrackingService.CurrentMovementState.ToString();
-        
+
         // Display speed based on configured unit preference
         if (_locationSettings.UseKmh)
         {

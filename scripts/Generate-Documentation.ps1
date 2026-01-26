@@ -31,7 +31,7 @@
   - Requires .NET SDK to be installed.
   - DocFX will be installed globally if not already present.
   - Documentation is generated in the docs\_site directory.
-  - When serving, the script will attempt to use Python's http.server, falling back to Node.js http-server if Python is not available.
+  - When serving, uses DocFX's built-in host (docfx serve).
 #>
 
 param(
@@ -64,10 +64,16 @@ Push-Location $docsPath
 
 try {
     Write-Host "Building solution to generate XML documentation..." -ForegroundColor Yellow
-    Push-Location ..
+    Push-Location (Split-Path $docsPath -Parent)
     dotnet build --configuration Release --no-restore
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed. Documentation may be incomplete." -ForegroundColor Yellow
+    }
+
+    Write-Host "Rendering PlantUML workflows to docs/workflows..." -ForegroundColor Yellow
+    dotnet run --project tools/PlantUmlRender -- -o docs/workflows -f svg workflow.puml new-location.puml
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "PlantUML render had errors (remote server may be unavailable). Mermaid/PlantUML source in workflow docs will be used." -ForegroundColor Yellow
     }
     Pop-Location
 
@@ -81,18 +87,12 @@ try {
 
         if ($Serve) {
             Write-Host ""
-            Write-Host "Starting local server on port $Port..." -ForegroundColor Yellow
+            Write-Host "Starting DocFX host on port $Port..." -ForegroundColor Yellow
             Write-Host "Open http://localhost:$Port in your browser" -ForegroundColor Cyan
             Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Yellow
             Write-Host ""
 
-            Push-Location "_site"
-            python -m http.server $Port 2>$null
-            if ($LASTEXITCODE -ne 0) {
-                # Try with Node.js if Python fails
-                npx http-server -p $Port
-            }
-            Pop-Location
+            docfx serve _site -p $Port --open-browser
         }
     }
     else {

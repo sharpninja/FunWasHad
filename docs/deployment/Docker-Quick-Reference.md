@@ -185,4 +185,4 @@ docker-compose --env-file .env.prod up -d
 
 ## 📚 More Information
 
-See [docs/deployment/docker-guide.md](docs/deployment/docker-guide.md) for detailed documentation.
+See [docker-guide.md](./docker-guide.md) for detailed documentation.

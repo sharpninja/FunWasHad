@@ -25,56 +25,42 @@ FunWasHad is a location-based mobile application built with:
 
 ### For New Developers
 
-1. **[Technical Requirements](Technical-Requirements.md)** - Start here to understand the complete technical specification
-2. **[API Documentation](api/API-Documentation.md)** - Learn about the REST APIs
+1. **[Technical Requirements](Project/Technical-Requirements.md)** - Start here to understand the complete technical specification
+2. **[API Requirements](Project/Technical-Requirements.md#6-api-requirements)** - REST APIs and endpoints
 3. **[Configuration Guides](configuration/Aspire_QuickReference.md)** - Set up your development environment
-4. **[Quick Reference](references/Quick_Reference_Next_Steps.md)** - Next steps and quick guides
+4. **[Documentation README](README.md)** - Navigation and next steps
 
 ### Setting Up Development Environment
 
-1. **[PowerShell Scripts](summaries/PowerShell_Scripts_Implementation_Summary.md)** - Automation scripts
+1. **[Scripts README](https://github.com/sharpninja/FunWasHad/blob/develop/scripts/README.md)** - Automation scripts
 2. **[PostgreSQL Configuration](configuration/PostgreSQL_LocalStorage_Configuration.md)** - Database setup
-3. **[Aspire Integration](configuration/Aspire_Integration_Summary.md)** - Service orchestration
+3. **[Aspire Quick Reference](configuration/Aspire_QuickReference.md)** - Service orchestration
 
 ## Documentation Structure
 
 ### 📋 Requirements
-- [Technical Requirements](Technical-Requirements.md) - Complete technical specification (100% implemented)
-- [Functional Requirements](Functional-Requirements.md) - Functional requirements specification
+- [Technical Requirements](Project/Technical-Requirements.md) - Complete technical specification (100% implemented)
+- [Functional Requirements](Project/Functional-Requirements.md) - Functional requirements specification
 
-### 📡 API Documentation
-- [API Reference](api/API-Documentation.md) - Complete API reference
-- [Marketing API](api/Marketing_API_Implementation_Summary.md) - Marketing API implementation
-- [Location API](api/Mobile_Location_API_Integration_Summary.md) - Location API integration
-
-### 📍 Location & Movement
-- [GPS Service](summaries/GPS_Location_Service_Implementation_Summary.md) - GPS implementation
-- [Location Tracking](summaries/Location_Tracking_Implementation_Summary.md) - Location tracking system
-- [Walking/Riding Detection](summaries/Walking_Riding_Detection_Summary.md) - Movement detection (5 mph threshold)
-- [Movement State Detection](summaries/Movement_State_Detection_Summary.md) - State detection details
+### 📡 API & Backend
+- [API Requirements](Project/Technical-Requirements.md#6-api-requirements) - REST API reference
+- [API Security](API-SECURITY.md) - API authentication and security
+- [Blob Storage](BLOB-STORAGE.md) - File upload storage
 
 ### 🔄 Workflows
-- [Location-Based Workflows](summaries/Location_Based_Workflow_Integration_Summary.md) - Location-triggered workflows
-- [Nearby Businesses](summaries/Workflow_GPS_Nearby_Businesses_Implementation_Summary.md) - Business discovery workflow
-
-### 🏗️ Architecture
-- [Mediator Architecture](architecture/Mediator_Architecture_Refactoring_Summary.md) - Architecture refactoring
-- [SRP Analysis](architecture/SRP_Analysis_And_Refactoring_Plan.md) - Single Responsibility Principle
+- [Workflows Index](workflows/index.md) - Location-triggered workflows
+- [Fun Was Had](workflows/workflow.md) - Main workflow (get nearby businesses, photo, record fun)
+- [New Location Detected](workflows/new-location.md) - Welcome flow for new locations
 
 ### ⚙️ Configuration
 - [Aspire Quick Reference](configuration/Aspire_QuickReference.md) - Aspire orchestration
 - [PostgreSQL Configuration](configuration/PostgreSQL_LocalStorage_Configuration.md) - Database setup
 
-### 📱 Platform-Specific
-- [Android](platform/Android_Workflow_Deployment_Summary.md) - Android-specific documentation
-- [Windows Desktop](platform/Windows_Desktop_GPS_Implementation.md) - Windows GPS implementation
-
 ### 🧪 Testing
-- [Test Implementation](testing/TestImplementationSummary.md) - Test overview
-- [Test Coverage](testing/TestCoverageRecommendations.md) - Coverage recommendations
+- [Test Remediation Summary](testing/Test-Remediation-Summary.md) - Test fixes and coverage
 
 ### 📝 Code Reviews
-- [Recommendations Implementation](reviews/Code-Review-Recommendations-Implementation-Summary.md) - Implementation summary
+- [Code Review Report (2025-01-27)](reviews/Code-Review-Report-2025-01-27.md) - Implementation summary
 
 ## Key Features
 
@@ -123,14 +109,14 @@ The application follows a clean architecture pattern:
 - API Requirements: 100%
 - Quality & Testing: 100%
 
-See [Technical Requirements](Technical-Requirements.md) for complete details.
+See [Technical Requirements](Project/Technical-Requirements.md) for complete details.
 
 ## Getting Help
 
 - **Documentation Issues:** Check the [README](README.md) for navigation
-- **API Questions:** See [API Documentation](api/API-Documentation.md)
-- **Configuration:** Review [Configuration Guides](configuration/)
-- **Code Reviews:** See [Code Reviews](reviews/)
+- **API Questions:** See [API Requirements](Project/Technical-Requirements.md#6-api-requirements)
+- **Configuration:** Review [Configuration Guides](configuration/Aspire_QuickReference.md)
+- **Code Reviews:** See [Code Reviews](reviews/Code-Review-Report-2025-01-27.md)
 
 ---
 

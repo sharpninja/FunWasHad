@@ -1,5 +1,6 @@
 {
     "recommendations": [
-        "jebbs.plantuml"
+        "jebbs.plantuml",
+        "FunWasHad.fwh-cli-agent"
     ]
 }

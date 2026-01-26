@@ -124,6 +124,53 @@
                 "panel": "dedicated",
                 "focus": false
             }
+        },
+        {
+            "label": "doc-sync",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "run",
+                "--project",
+                "${workspaceFolder}/src/FWH.Documentation.Sync/FWH.Documentation.Sync.csproj",
+                "--",
+                "sync"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "doc-sync-watch",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "run",
+                "--project",
+                "${workspaceFolder}/src/FWH.Documentation.Sync/FWH.Documentation.Sync.csproj",
+                "--",
+                "watch"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "isBackground": true,
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false
+            }
+        },
+        {
+            "label": "compile: fwh-cli-agent",
+            "command": "npm",
+            "type": "process",
+            "args": ["run", "compile"],
+            "options": { "cwd": "${workspaceFolder}/extensions/fwh-cli-agent" },
+            "problemMatcher": "$tsc",
+            "group": "build"
         }
     ]
 }

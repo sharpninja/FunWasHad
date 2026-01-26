@@ -1,0 +1,39 @@
+{{!DocFX Footer Partial Override - Adds Mermaid.js support}}
+{{>footer}}
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ 
+    startOnLoad: true,
+    theme: 'default',
+    gantt: {
+      axisFormat: '%Y-%m-%d',
+      leftPadding: 75,
+      gridLineStartPadding: 35,
+      fontSize: 11,
+      fontFamily: '"Roboto", sans-serif',
+      numberSectionStyles: 4,
+      bottomPadding: 25
+    }
+  });
+  
+  // Initialize Mermaid for code blocks with mermaid language
+  function initMermaid() {
+    var mermaidBlocks = document.querySelectorAll('code.language-mermaid, pre code.language-mermaid');
+    mermaidBlocks.forEach(function(block) {
+      var parent = block.parentElement;
+      if (parent && parent.tagName === 'PRE') {
+        parent.className = 'mermaid';
+        parent.textContent = block.textContent;
+      }
+    });
+    if (mermaidBlocks.length > 0) {
+      mermaid.init(undefined, '.mermaid');
+    }
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMermaid);
+  } else {
+    initMermaid();
+  }
+</script>

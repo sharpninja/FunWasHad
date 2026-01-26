@@ -31,8 +31,6 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
     private readonly LocationWorkflowService? _locationWorkflowService;
     private readonly LocationSettings _locationSettings;
     private readonly ILogger<LocationTrackingService> _logger;
-    private readonly IHttpClientFactory? _httpClientFactory;
-    private readonly ApiSettings? _apiSettings;
     private readonly IImageService? _imageService;
     private readonly IThemeService? _themeService;
     private readonly string _deviceId;
@@ -55,11 +53,6 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
     private CancellationTokenSource? _stationaryCountdownCts;
     private string? _lastKnownAddress;
     private GpsCoordinates? _stationaryLocationForAddressCheck;
-
-    // City tracking
-    private string? _lastKnownCity;
-    private string? _lastKnownState;
-    private string? _lastKnownCountry;
 
     public LocationTrackingService(
         IGpsService gpsService,

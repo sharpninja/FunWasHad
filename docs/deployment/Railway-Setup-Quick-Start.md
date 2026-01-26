@@ -4,7 +4,7 @@ Quick reference for setting up Railway staging environment for FunWasHad.
 
 ## 📚 Complete Guide
 
-**Full documentation:** [docs/deployment/railway-staging-setup.md](docs/deployment/railway-staging-setup.md)
+**Full documentation:** [railway-staging-setup.md](./railway-staging-setup.md)
 
 ---
 
@@ -74,9 +74,8 @@ Expected: `{"status":"Healthy"}`
 
 ## 📖 Documentation
 
-- **Complete Setup Guide:** [docs/deployment/railway-staging-setup.md](docs/deployment/railway-staging-setup.md)
-- **Staging Environment Overview:** [docs/deployment/staging-environment-guide.md](docs/deployment/staging-environment-guide.md)
-- **GitHub Actions Workflow:** [.github/workflows/staging.yml](.github/workflows/staging.yml)
+- **Complete Setup Guide:** [railway-staging-setup.md](./railway-staging-setup.md)
+- **GitHub Actions Workflow:** [.github/workflows/staging.yml](../../.github/workflows/staging.yml)
 
 ---
 
@@ -92,7 +91,7 @@ Expected: `{"status":"Healthy"}`
 - Check Railway token hasn't expired
 - Review workflow logs
 
-**Full troubleshooting:** See [docs/deployment/railway-staging-setup.md](docs/deployment/railway-staging-setup.md#-troubleshooting)
+**Full troubleshooting:** See [railway-staging-setup.md](./railway-staging-setup.md#troubleshooting)
 
 ---
 

@@ -30,7 +30,6 @@ using FWH.Mobile.Data.Extensions;
 using FWH.Common.Imaging.Extensions;
 using FWH.Mobile.Services;
 using FWH.Mobile.Options;
-using FWH.Mobile.Services;
 using FWH.Orchestrix.Mediator.Remote.Extensions;
 
 namespace FWH.Mobile;

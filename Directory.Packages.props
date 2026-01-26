@@ -8,10 +8,13 @@
   <ItemGroup>
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageVersion Include="GPS.SimpleMVC" Version="2.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="10.0.2" />
@@ -52,12 +55,14 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.9.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.9.0" />
+    <!-- PlantUML rendering for workflow diagrams -->
+    <PackageVersion Include="PlantUml.Net" Version="1.4.80" />
     <!-- DocFX documentation generation -->
     <PackageVersion Include="Microsoft.DocAsCode.Build" Version="2.78.0" />
     <PackageVersion Include="Microsoft.DocAsCode.Dotnet" Version="2.78.0" />
     <!-- Security fix: Override KubernetesClient to fix NU1902 vulnerability (CVE-2025-9708) -->
     <PackageVersion Include="KubernetesClient" Version="17.0.14" />
     <!-- Mapsui for native map control in Avalonia -->
-    <PackageVersion Include="Mapsui.Avalonia" Version="4.3.0" />
+    <PackageVersion Include="Mapsui.Avalonia" Version="5.0.0" />
   </ItemGroup>
 </Project>

@@ -199,6 +199,37 @@ Cleans up Docker containers, volumes, and images related to FunWasHad.
 
 ---
 
+### 📋 Sync-Documentation.ps1
+
+Synchronizes Functional Requirements, Technical Requirements, TODO list, and Status documents to ensure consistency.
+
+**Usage:**
+```powershell
+# Validate documentation consistency (no changes)
+.\scripts\Sync-Documentation.ps1 -Mode Check
+
+# Synchronize all documentation
+.\scripts\Sync-Documentation.ps1 -Mode Sync
+
+# Watch for changes and auto-sync
+.\scripts\Sync-Documentation.ps1 -Mode Watch
+```
+
+**What it does:**
+1. ✅ Parses TODO.md for all items with identifiers (MVP-APP-001, etc.)
+2. ✅ Validates all TODO identifiers are referenced in requirements documents
+3. ✅ Updates Status.md statistics and completion counts
+4. ✅ Updates "Last updated" dates in all documents
+5. ✅ Detects inconsistencies and reports issues
+
+**Parameters:**
+- `-Mode` - Operation mode: `Check` (validate only), `Sync` (update documents), `Watch` (monitor for changes)
+- `-ProjectRoot` - Root directory of the project (default: script parent directory)
+
+**See also:** [Documentation Sync Agent Guide](../docs/DOCUMENTATION-SYNC-AGENT.md)
+
+---
+
 ### 🧹 Cleanup-Actions.ps1
 
 Cleans up GitHub Actions workflow runs and optionally Docker images from GitHub Container Registry.
@@ -507,6 +538,76 @@ For issues or questions:
 - ✅ Application startup
 - ✅ Docker cleanup
 - ✅ Comprehensive documentation
+
+---
+
+### 📝 FWH.Prompts Module
+
+PowerShell module providing templatized prompts for AI interactions with parameterized commands.
+
+**Installation:**
+```powershell
+# Import the module
+Import-Module .\scripts\modules\FWH.Prompts\FWH.Prompts.psd1
+```
+
+**Usage:**
+```powershell
+# List available prompts
+Get-AvailablePrompts
+
+# Get a filled prompt
+Get-Prompt -Name 'code-review' -Parameters @{
+    FeatureName = 'User Authentication'
+    FilePath = 'src/AuthService.cs'
+    Code = Get-Content 'src/AuthService.cs' -Raw
+}
+
+# Invoke prompt and copy to clipboard
+Invoke-Prompt -Name 'code-review' -Parameters @{...} -OutputToClipboard
+
+# Create custom prompt template
+New-PromptTemplate -Name 'custom-review' `
+    -Description 'Custom code review' `
+    -Template 'Review {Code} for {Issues}' `
+    -Parameters @('Code', 'Issues')
+```
+
+**Available Built-in Prompts:**
+- `code-review` - Request code review
+- `implement-feature` - Request feature implementation
+- `debug-issue` - Request debugging help
+- `refactor-code` - Request code refactoring
+- `write-tests` - Request unit test generation
+- `document-code` - Request code documentation
+- `optimize-performance` - Request performance optimization
+- `add-feature` - Request adding new feature
+- `fix-bug` - Request bug fix
+- `security-audit` - Request security audit
+
+**Functions:**
+- `Get-Prompt` - Get a filled prompt from template
+- `Invoke-Prompt` - Get prompt and optionally output/copy/save
+- `Get-AvailablePrompts` - List all available prompt templates
+- `Get-PromptTemplate` - Get template details
+- `New-PromptTemplate` - Create custom prompt template
+- `Remove-PromptTemplate` - Remove prompt template
+
+**Example:**
+```powershell
+# Import module
+Import-Module .\scripts\modules\FWH.Prompts\FWH.Prompts.psd1
+
+# Get code review prompt
+$prompt = Get-Prompt -Name 'code-review' -Parameters @{
+    FeatureName = 'User Authentication'
+    FilePath = 'src/FWH.Mobile/Services/AuthService.cs'
+    Code = Get-Content 'src/FWH.Mobile/Services/AuthService.cs' -Raw
+}
+
+# Copy to clipboard for use with AI
+Invoke-Prompt -Name 'code-review' -Parameters @{...} -OutputToClipboard
+```
 
 ---
 

@@ -3,11 +3,13 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:FWH.Mobile.ViewModels"
+             xmlns:views="using:FWH.Mobile.Views"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="FWH.Mobile.Views.MainView"
              x:DataType="vm:MainViewModel">
-    <Grid>
+    <Grid x:Name="MainGrid">
         <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -16,8 +18,13 @@
         <ContentControl Grid.Row="0"
                         Content="{Binding CurrentView}" />
 
+        <!-- Log View (shown in lower half when not in RELEASE) -->
+        <views:LogView Grid.Row="1"
+                       x:Name="LogViewControl"
+                       IsVisible="{Binding ShowLogViewAlways}" />
+
         <!-- Toolbar -->
-        <Border Grid.Row="1"
+        <Border Grid.Row="2"
                 BorderBrush="#E0E0E0"
                 BorderThickness="0,1,0,0"
                 Background="#F8F9FA"

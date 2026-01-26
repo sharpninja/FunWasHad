@@ -23,6 +23,11 @@ docker-compose down
 
 See [Docker Quick Reference](docs/deployment/Docker-Quick-Reference.md) for detailed Docker commands and [docs/deployment/docker-guide.md](docs/deployment/docker-guide.md) for complete deployment guide.
 
+## 📊 Project Status & Planning
+
+**👉 [View Project Status](docs/Project/Status.md)** - Current status of all MVP projects with timeline  
+**👉 [View TODO List](docs/Project/TODO.md)** - Detailed task breakdown by project
+
 ### Local Development
 
 ```bash
@@ -151,7 +156,9 @@ The project uses two main GitHub Actions workflows:
 
 ## 📚 Documentation
 
-- **[Technical Requirements](docs/Technical-Requirements.md)** - Complete technical specifications
+- **[Project Status](docs/Project/Status.md)** - Current status of all MVP projects with Gantt chart timeline
+- **[TODO List](docs/Project/TODO.md)** - Detailed task breakdown organized by MVP project
+- **[Technical Requirements](docs/Project/Technical-Requirements.md)** - Complete technical specifications
 - **[API Documentation](docs/api/API-Documentation.md)** - RESTful API reference
 - **[Docker Guide](docs/deployment/docker-guide.md)** - Deployment and operations
 - **[Docker Quick Reference](docs/deployment/Docker-Quick-Reference.md)** - Common Docker commands
