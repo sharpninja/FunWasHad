@@ -2,6 +2,8 @@
 
 A mobile-first application for tracking activities, discovering nearby businesses, and managing personal notes with integrated workflow capabilities.
 
+[![Staging Actions](https://github.com/sharpninja/FunWasHad/actions/workflows/staging.yml/badge.svg)](https://github.com/sharpninja/FunWasHad/actions/workflows/staging.yml)
+
 ## 🚀 Quick Start
 
 ### Using Docker (Recommended)
