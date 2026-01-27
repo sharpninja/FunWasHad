@@ -25,6 +25,10 @@ inputs:
     description: 'Prefix for build outputs cache key (default: build)'
     required: false
     default: 'build'
+  cache-version:
+    description: 'Cache key version; bump to invalidate all caches (e.g. after package/dependency changes)'
+    required: false
+    default: '2'
 
 runs:
   using: composite
@@ -33,9 +37,9 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/Directory.Build.props', '**/Directory.Build.targets', inputs.solution-file) }}
+        key: ${{ runner.os }}-nuget-${{ inputs.cache-version }}-${{ hashFiles('**/Directory.Packages.props', '**/Directory.Build.props', '**/Directory.Build.targets', inputs.solution-file) }}
         restore-keys: |
-          ${{ runner.os }}-nuget-
+          ${{ runner.os }}-nuget-${{ inputs.cache-version }}-
 
     - name: Cache .NET environment and workload assets
       uses: actions/cache@v4
@@ -43,10 +47,10 @@ runs:
         path: |
           ~/.dotnet
           ~/.nuget
-        key: ${{ runner.os }}-dotnet-env-${{ inputs.dotnet-version }}-${{ hashFiles('global.json') }}
+        key: ${{ runner.os }}-dotnet-env-${{ inputs.cache-version }}-${{ inputs.dotnet-version }}-${{ hashFiles('global.json') }}
         restore-keys: |
-          ${{ runner.os }}-dotnet-env-${{ inputs.dotnet-version }}-
-          ${{ runner.os }}-dotnet-env-
+          ${{ runner.os }}-dotnet-env-${{ inputs.cache-version }}-${{ inputs.dotnet-version }}-
+          ${{ runner.os }}-dotnet-env-${{ inputs.cache-version }}-
 
     - name: Cache build outputs
       if: inputs.cache-build-outputs == 'true'
@@ -55,7 +59,7 @@ runs:
         path: |
           **/bin
           **/obj
-        key: ${{ runner.os }}-${{ inputs.cache-key-prefix }}-${{ hashFiles(inputs.project-files-pattern, inputs.solution-file) }}${{ inputs.build-outputs-key-suffix }}
+        key: ${{ runner.os }}-${{ inputs.cache-key-prefix }}-${{ inputs.cache-version }}-${{ hashFiles(inputs.project-files-pattern, inputs.solution-file) }}${{ inputs.build-outputs-key-suffix }}
         restore-keys: |
-          ${{ runner.os }}-${{ inputs.cache-key-prefix }}-${{ hashFiles(inputs.project-files-pattern, inputs.solution-file) }}-
-          ${{ runner.os }}-${{ inputs.cache-key-prefix }}-
+          ${{ runner.os }}-${{ inputs.cache-key-prefix }}-${{ inputs.cache-version }}-${{ hashFiles(inputs.project-files-pattern, inputs.solution-file) }}-
+          ${{ runner.os }}-${{ inputs.cache-key-prefix }}-${{ inputs.cache-version }}-
