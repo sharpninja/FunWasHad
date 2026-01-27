@@ -45,6 +45,18 @@ jobs:
       - name: Detect file changes
         id: changes
         run: |
+          # Read pipeline variables: if force-build-all is true, run all actions
+          FORCE_BUILD=$(jq -r '.["force-build-all"] // false' .github/pipeline-variables.json 2>/dev/null || echo "false")
+          if [ "$FORCE_BUILD" = "true" ]; then
+            echo "🔧 force-build-all is true in .github/pipeline-variables.json; running all actions"
+            echo "location_api=true" >> $GITHUB_OUTPUT
+            echo "marketing_api=true" >> $GITHUB_OUTPUT
+            echo "legal_web=true" >> $GITHUB_OUTPUT
+            echo "mobile=true" >> $GITHUB_OUTPUT
+            echo "any_changes=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
