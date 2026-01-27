@@ -172,7 +172,6 @@ jobs:
       location_api_image: ${{ steps.config.outputs.location_api_image }}
       marketing_api_image: ${{ steps.config.outputs.marketing_api_image }}
       legal_web_image: ${{ steps.config.outputs.legal_web_image }}
-      railway_project_id: ${{ steps.config.outputs.railway_project_id }}
     steps:
       - name: Set Configuration Values
         id: config
@@ -182,7 +181,6 @@ jobs:
           echo "location_api_image=${{ env.LOCATION_API_IMAGE }}" >> $GITHUB_OUTPUT
           echo "marketing_api_image=${{ env.MARKETING_API_IMAGE }}" >> $GITHUB_OUTPUT
           echo "legal_web_image=${{ env.LEGAL_WEB_IMAGE }}" >> $GITHUB_OUTPUT
-          echo "railway_project_id=${{ secrets.RAILWAY_PRODUCTION_PROJECT_ID }}" >> $GITHUB_OUTPUT
 
   build_and_test:
     name: Build and Test
@@ -262,7 +260,7 @@ jobs:
       location_api_image: ${{ needs.get_config.outputs.location_api_image }}
       marketing_api_image: ${{ needs.get_config.outputs.marketing_api_image }}
       legal_web_image: ${{ needs.get_config.outputs.legal_web_image }}
-      railway_project_id: ${{ needs.get_config.outputs.railway_project_id }}
+      railway_project_id: ${{ secrets.RAILWAY_PRODUCTION_PROJECT_ID }}
     secrets: inherit
 
   build_mobile_android_main:
@@ -300,7 +298,7 @@ jobs:
       location_api_changed: ${{ needs.detect_changes.outputs.location_api_changed }}
       marketing_api_changed: ${{ needs.detect_changes.outputs.marketing_api_changed }}
       mobile_changed: ${{ needs.detect_changes.outputs.mobile_changed }}
-      railway_project_id: ${{ needs.get_config.outputs.railway_project_id }}
+      railway_project_id: ${{ secrets.RAILWAY_PRODUCTION_PROJECT_ID }}
       deploy_railway_result: ${{ needs.deploy_railway_main.result }}
       release_android_result: ${{ needs.release_android_main.result }}
     secrets: inherit
