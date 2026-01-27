@@ -16,6 +16,9 @@ jobs:
   build_and_test:
     name: Build and Test
     runs-on: windows-2022
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Checkout repository
