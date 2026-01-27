@@ -81,19 +81,22 @@ Write-Host "[i] Latest run: $runId - $title ($conclusion) @ $created" -Foregroun
 # Artifact name produced by staging.yml upload_logs job
 $artifactName = "workflow-logs-$runId"
 
-# Ensure output dir exists
-$null = New-Item -ItemType Directory -Force -Path $OutputPath
+# Download into a run-specific subdir to avoid "file exists" when run.log.gz is already in OutputPath
+$downloadDir = Join-Path $OutputPath $artifactName
+$null = New-Item -ItemType Directory -Force -Path $downloadDir
 
-# Download only this artifact into OutputPath
-$downloadOut = gh run download $runId --name $artifactName --dir $OutputPath 2>&1
+# Download only this artifact into the run-specific dir
+$downloadOut = gh run download $runId --name $artifactName --dir $downloadDir 2>&1
 if ($LASTEXITCODE -ne 0) {
-    Write-Warning "Run $runId has no artifact named '$artifactName'. Logs may not have been uploaded for this run."
+    Write-Warning "Run $runId has no artifact named '$artifactName'. Logs may not have been uploaded for this run (e.g. run failed before upload_logs, or upload_logs was skipped)."
     Write-Host $downloadOut
+    Write-Host ""
+    Write-Host "Try an older run, or re-run the workflow so a new run produces the artifact." -ForegroundColor Yellow
     exit 1
 }
 
-# gh run download extracts into OutputPath/artifactName/ (path from upload: _logs/run.log.gz)
-$artifactDir = Join-Path $OutputPath $artifactName
+# gh run download extracts into downloadDir (path from upload: _logs/run.log.gz or run.log.gz)
+$artifactDir = $downloadDir
 $gzPath = Get-ChildItem -Path $artifactDir -Recurse -Filter "run.log.gz" -ErrorAction SilentlyContinue | Select-Object -First 1
 $gzPath = if ($gzPath) { $gzPath.FullName } else { $null }
 
@@ -102,6 +105,7 @@ if ($gzPath -and (Test-Path $gzPath)) {
     if ($Extract) {
         $logPath = Join-Path $OutputPath "run.log"
         try {
+            if (Test-Path $logPath) { Remove-Item $logPath -Force }
             $inStream = [System.IO.File]::OpenRead($gzPath)
             $gzip = [System.IO.Compression.GZipStream]::new($inStream, [System.IO.Compression.CompressionMode]::Decompress)
             $outStream = [System.IO.File]::Create($logPath)

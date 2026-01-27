@@ -311,12 +311,16 @@ jobs:
       actions: read
       contents: read
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Download run logs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p _logs
-          gh run view ${{ github.run_id }} --log > _logs/run.log 2>&1 || true
+          gh run view ${{ github.run_id }} --repo ${{ github.repository }} --log > _logs/run.log 2>&1 || true
           gzip -c _logs/run.log > _logs/run.log.gz
       - name: Upload workflow logs
         uses: actions/upload-artifact@v4
