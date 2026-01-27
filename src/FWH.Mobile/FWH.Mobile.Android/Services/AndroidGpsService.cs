@@ -346,7 +346,8 @@ public partial class AndroidGpsService : Java.Lang.Object, IGpsService, ILocatio
                     bestLocation.Accuracy)
                 {
                     AltitudeMeters = bestLocation.HasAltitude ? bestLocation.Altitude : null,
-                    SpeedMetersPerSecond = bestLocation.HasSpeed ? bestLocation.Speed : null,
+                    // Android often reports HasSpeed true but Speed 0; treat 0 as unavailable so caller can use calculated speed
+                    SpeedMetersPerSecond = bestLocation.HasSpeed && bestLocation.Speed > 0 ? bestLocation.Speed : null,
                     Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(bestLocation.Time)
                 };
             }
@@ -383,7 +384,8 @@ public partial class AndroidGpsService : Java.Lang.Object, IGpsService, ILocatio
                 location.Accuracy)
             {
                 AltitudeMeters = location.HasAltitude ? location.Altitude : null,
-                SpeedMetersPerSecond = location.HasSpeed ? location.Speed : null,
+                // Android often reports HasSpeed true but Speed 0; treat 0 as unavailable so caller can use calculated speed
+                SpeedMetersPerSecond = location.HasSpeed && location.Speed > 0 ? location.Speed : null,
                 Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(location.Time)
             };
 

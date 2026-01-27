@@ -275,8 +275,10 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 _lastKnownLocation = currentLocation;
                 var currentTime = currentLocation.Timestamp;
 
-                // Use device's instant speed if available, otherwise calculate from distance/time
-                double? speed = currentLocation.SpeedMetersPerSecond;
+                // Use device's instant speed if available and non-zero; otherwise calculate from distance/time.
+                // On Android, device speed is often 0 even when moving, so treat 0 as unavailable.
+                var deviceSpeed = currentLocation.SpeedMetersPerSecond;
+                double? speed = deviceSpeed is > 0 ? deviceSpeed : null;
 
                 // Calculate distance from last known location
                 double? distanceMoved = null;
@@ -289,7 +291,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                         currentLocation.Latitude,
                         currentLocation.Longitude);
 
-                    // If device didn't provide speed, calculate it from distance/time
+                    // If device didn't provide usable speed, calculate it from distance/time
                     if (!speed.HasValue)
                     {
                         speed = GpsCalculator.CalculateSpeed(
@@ -311,7 +313,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                             GpsCalculator.MetersPerSecondToMph(speed.Value),
                             GpsCalculator.MetersPerSecondToKmh(speed.Value),
                             speed.Value,
-                            currentLocation.SpeedMetersPerSecond.HasValue ? "[device]" : "[calculated]");
+                            deviceSpeed is > 0 ? "[device]" : "[calculated]");
                     }
 
                     // Track recent movements for state detection

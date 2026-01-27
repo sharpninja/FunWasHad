@@ -7,6 +7,11 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="400"
              x:Class="FWH.Mobile.Views.MovementStateControl"
              x:DataType="vm:MovementStateViewModel">
+             <UserControl.Styles>
+                <Style Selector="TextBlock">
+                    <Setter Property="FontSize" Value="32" />
+                </Style>
+             </UserControl.Styles>
 
     <Border BorderBrush="#E0E0E0"
             BorderThickness="1"

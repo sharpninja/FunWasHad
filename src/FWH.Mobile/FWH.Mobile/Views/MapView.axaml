@@ -6,19 +6,18 @@
              xmlns:mapsui="using:Mapsui.UI.Avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="FWH.Mobile.Views.MapView">
-    <Grid>
+    <Grid RowSpacing="4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <views:MovementStateControl Grid.Row="0" Margin="8" Name="MovementState" />
+        <views:MovementStateControl Grid.Row="0" Name="MovementState" />
 
         <Border Grid.Row="1"
                 BorderBrush="#E0E0E0"
                 BorderThickness="1"
                 CornerRadius="4"
-                Margin="8"
                 Background="#FFFFFF">
             <mapsui:MapControl x:Name="LocationMap"
                                HorizontalAlignment="Stretch"
