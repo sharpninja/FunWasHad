@@ -34,6 +34,13 @@ jobs:
           dotnet-version: ${{ inputs.dotnet_version }}
           build-outputs-key-suffix: -${{ github.sha }}
 
+      - name: Add GitHub Packages NuGet source
+        run: |
+          $configPath = Join-Path $env:APPDATA 'NuGet\NuGet.Config'
+          $configDir = Split-Path $configPath -Parent
+          if (-not (Test-Path $configDir)) { New-Item -Path $configDir -ItemType Directory -Force | Out-Null }
+          dotnet nuget add source https://nuget.pkg.github.com/sharpninja/index.json --name github-sharpninja --username ${{ github.repository_owner }} --password "${{ secrets.GITHUB_TOKEN }}" --store-password-in-clear-text --configfile $configPath
+
       - name: Restore dependencies
         run: |
           dotnet restore FunWasHad.sln

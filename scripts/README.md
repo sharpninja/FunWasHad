@@ -297,6 +297,63 @@ Runs tests with code coverage and updates `docs/Coverage-Report.md` (MVP-SUPPORT
 
 ---
 
+### 📦 Publish-NSubstituteWithGhToken.ps1
+
+Uses **gh** to add `write:packages` to your gh credentials, runs `Push-NSubstituteToGitHubPackages.ps1` (which uses `gh auth token`), then removes `write:packages` so the token no longer has package write. Use this when you want a temporary, scoped run without leaving write:packages on your gh session.
+
+**Usage:**
+```powershell
+# Require gh auth login first, then:
+.\scripts\Publish-NSubstituteWithGhToken.ps1
+
+# Push only; do not add feed to global NuGet config
+.\scripts\Publish-NSubstituteWithGhToken.ps1 -SkipGlobalConfig
+
+# Run the push but leave write:packages on the token afterward
+.\scripts\Publish-NSubstituteWithGhToken.ps1 -SkipScopeCleanup
+```
+
+**What it does:**
+1. Runs `gh auth refresh -s write:packages` (may open browser)
+2. Invokes `Push-NSubstituteToGitHubPackages.ps1` (token from gh)
+3. Runs `gh auth refresh -r write:packages` to remove that scope from gh
+
+**Prerequisites:** [GitHub CLI (gh)](https://cli.github.com/) installed and logged in (`gh auth login`).
+
+---
+
+### 📦 Push-NSubstituteToGitHubPackages.ps1
+
+Pushes NSubstitute 6.0.0 from the local NuGet cache (`E:\packages\NuGet\cache\nsubstitute\6.0.0`) to the GitHub Packages NuGet feed for this project and adds that feed to the **global** NuGet configuration so restore can use it. For a “gh add scope → push → remove scope” flow, use `Publish-NSubstituteWithGhToken.ps1` instead.
+
+**Usage:**
+```powershell
+# Set token (PAT with write:packages) then run
+$env:GITHUB_TOKEN = 'ghp_...'
+.\scripts\Push-NSubstituteToGitHubPackages.ps1
+
+# Or use gh (run after gh auth login)
+.\scripts\Push-NSubstituteToGitHubPackages.ps1
+
+# Or pass token explicitly
+.\scripts\Push-NSubstituteToGitHubPackages.ps1 -Token (Get-Content .\pat.txt -Raw)
+
+# Push only; do not modify global NuGet config
+.\scripts\Push-NSubstituteToGitHubPackages.ps1 -SkipGlobalConfig
+
+# Custom cache path
+.\scripts\Push-NSubstituteToGitHubPackages.ps1 -CachePath 'D:\NuGetCache\nsubstitute\6.0.0'
+```
+
+**What it does:**
+1. Validates the token (GET /user) and checks for `write:packages` via X-OAuth-Scopes
+2. Pushes every `*.nupkg` under the cache path to `https://nuget.pkg.github.com/sharpninja/index.json`
+3. Adds that feed to the user-level NuGet config (`%APPDATA%\NuGet\NuGet.Config`) as source `github-sharpninja` with your token so `dotnet restore` can pull NSubstitute 6.0 from GitHub Packages
+
+**Prerequisites:** GitHub PAT (classic) with `write:packages`, or gh logged in with that scope. The project `NuGet.config` already lists the feed; credentials are stored in the global config by this script.
+
+---
+
 ### 🧹 Cleanup-Actions.ps1
 
 Cleans up GitHub Actions workflow runs and optionally Docker images from GitHub Container Registry.
