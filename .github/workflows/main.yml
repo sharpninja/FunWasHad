@@ -261,7 +261,6 @@ jobs:
       marketing_api_image: ${{ needs.get_config.outputs.marketing_api_image }}
       legal_web_image: ${{ needs.get_config.outputs.legal_web_image }}
     secrets:
-      inherit: true
       railway_project_id: ${{ secrets.RAILWAY_PRODUCTION_PROJECT_ID }}
 
   build_mobile_android_main:
