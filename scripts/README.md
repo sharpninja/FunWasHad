@@ -161,35 +161,34 @@ Restores a PostgreSQL database from a backup file.
 
 ### 📥 Get-ActionsLogs.ps1
 
-Downloads workflow logs from the last GitHub Actions run on the current branch and extracts them into the local `logs/` folder (ignored by git).
+Pulls workflow logs from the last completed GitHub Actions run on the current branch into the local `logs/` folder (ignored by git). Uses `gh run view --log` directly; no artifacts.
 
 **Prerequisite:** [GitHub CLI (gh)](https://cli.github.com/) installed and authenticated (`gh auth login`).
 
 **Usage:**
 ```powershell
-# Download and extract to .\logs\run.log (default)
+# Pull logs for latest completed run on current branch to .\logs\run.log
 .\scripts\Get-ActionsLogs.ps1
+
+# Pull logs for a specific run
+.\scripts\Get-ActionsLogs.ps1 -RunId 21415574493
 
 # Custom folder
 .\scripts\Get-ActionsLogs.ps1 -OutputPath ".\my-logs"
-
-# Skip extraction (keep .gz only)
-.\scripts\Get-ActionsLogs.ps1 -Extract:$false
 
 # Use a specific branch
 .\scripts\Get-ActionsLogs.ps1 -Branch staging
 ```
 
 **What it does:**
-1. Uses the current git branch (or `-Branch`)
-2. Finds the most recent run for the staging workflow on that branch
-3. Downloads the `workflow-logs-<run_id>` artifact and saves it under `OutputPath`
-4. By default decompresses to `.\logs\run.log` (use `-Extract:$false` to skip)
+1. If no `-RunId`: finds the most recently completed run for the workflow on the current (or `-Branch`) branch
+2. Pulls that run’s logs via `gh run view --log`
+3. Writes them to `OutputPath\run.log` (default `.\logs\run.log`)
 
 **Parameters:**
 - `-Branch` - Git branch (default: current branch)
-- `-OutputPath` - Directory for logs (default: `.\logs` at repo root)
-- `-Extract` - Decompress to `run.log` in OutputPath (default: `$true`)
+- `-RunId` - Specific run ID; skips branch/workflow lookup
+- `-OutputPath` - Directory for run.log (default: `.\logs` at repo root)
 - `-Workflow` - Workflow to filter (default: `staging.yml`)
 
 ---
