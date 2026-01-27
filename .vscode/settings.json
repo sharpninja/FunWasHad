@@ -27,8 +27,8 @@
   "powershell.integratedConsole.shellArgs": ["-NoProfile"],
   "powershell.enableProfileLoading": false,
   "github-actions.workflows.pinned.workflows": [
-    ".github/workflows/staging.yml",
     ".github/workflows/main.yml",
-    ".github/workflows/static.yml"
+    ".github/workflows/static.yml",
+    ".github/workflows/staging.yml"
   ]
 }
