@@ -2,7 +2,7 @@
 
 This document tracks the current status of each MVP project in the FunWasHad solution.
 
-*Last updated: 2025-01-27*
+*Last updated: 2026-01-27*
 
 ---
 
@@ -116,11 +116,14 @@ gantt
 - [ ] Extract Cursor CLI (PowerShell module, FWH.Documentation.Sync) to `sharpninja/cursor-cli` on GitHub *(FWH.CLI.Agent removed per MVP-SUPPORT-007)*
 - [ ] Convert solution to XML format
 
+### Completed
+- [x] **MVP-SUPPORT-003:** Code analyzers *(completed 2026-01-27)*
+
 ### Progress Summary
 - **Total Items:** 4
-- **Completed:** 0
+- **Completed:** 1 (MVP-SUPPORT-003: Code analyzers)
 - **In Progress:** 0
-- **Pending:** 4
+- **Pending:** 3
 
 ### Notes
 - Extension update for Cursor agent integration is high priority
@@ -158,13 +161,17 @@ gantt
 - **Active Projects:** 0
 - **Planning Projects:** 3
 - **Not Started Projects:** 1
-- **Total TODO Items:** 11
-- **Completed Items:** 0
-- **Completion Rate:** 0%
+- **Total TODO Items:** 12
+- **Completed Items:** 1 (MVP-SUPPORT-003: Code analyzers)
+- **Completion Rate:** 8% (1/12)
 
 ---
 
 ## Recent Updates
+
+### 2026-01-27
+- Requirements documents updated to reflect current code: Location API reverse geocoding (GET /api/locations/address), location tracking (UI on every poll; local-only persistence), movement state on startup, FR-CODE-001 (Code Analyzers) marked implemented
+- MVP-SUPPORT-003 (Code analyzers) completed
 
 ### 2025-01-27
 - Created project-based organization structure

@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FWH.Legal.Web\FWH.Legal.Web.csproj" />
     <ProjectReference Include="..\FWH.Location.Api\FWH.Location.Api.csproj" />
     <ProjectReference Include="..\FWH.MarketingApi\FWH.MarketingApi.csproj" />
   </ItemGroup>

@@ -302,6 +302,16 @@ function Install-DotNetDependencies {
         # Restore packages
         dotnet restore --verbosity minimal
         Write-Success "NuGet packages restored"
+
+        # Install Android workload (needed to build FWH.Mobile.Android)
+        Write-Info "Installing .NET Android workload..."
+        try {
+            dotnet workload install android --source https://api.nuget.org/v3/index.json
+            Write-Success "Android workload installed"
+        }
+        catch {
+            Write-Warning "Android workload install failed or was skipped. To build the Android app later, run: dotnet workload install android"
+        }
     }
     catch {
         Write-ErrorMsg "Failed to restore packages: $_"

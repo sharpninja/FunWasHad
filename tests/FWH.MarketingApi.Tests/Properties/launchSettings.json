@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "FWH.MarketingApi.Tests": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:30818;http://localhost:30819"
+    }
+  }
+}

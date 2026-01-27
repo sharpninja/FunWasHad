@@ -21,6 +21,7 @@ env:
   REGISTRY: ghcr.io
   LOCATION_API_IMAGE: ghcr.io/${{ github.repository_owner }}/fwh-location-api
   MARKETING_API_IMAGE: ghcr.io/${{ github.repository_owner }}/fwh-marketing-api
+  LEGAL_WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/fwh-legal-web
 
 jobs:
   detect_changes:
@@ -31,8 +32,9 @@ jobs:
     outputs:
       location_api_changed: ${{ steps.changes.outputs.location_api }}
       marketing_api_changed: ${{ steps.changes.outputs.marketing_api }}
+      legal_web_changed: ${{ steps.changes.outputs.legal_web }}
       mobile_changed: ${{ steps.changes.outputs.mobile }}
-      any_changes: ${{ steps.changes.outputs.location_api || steps.changes.outputs.marketing_api || steps.changes.outputs.mobile }}
+      any_changes: ${{ steps.changes.outputs.location_api || steps.changes.outputs.marketing_api || steps.changes.outputs.legal_web || steps.changes.outputs.mobile }}
 
     steps:
       - name: Checkout repository
@@ -57,6 +59,7 @@ jobs:
             echo "⚠️  Cannot determine base commit, assuming all files changed"
             echo "location_api=true" >> $GITHUB_OUTPUT
             echo "marketing_api=true" >> $GITHUB_OUTPUT
+            echo "legal_web=true" >> $GITHUB_OUTPUT
             echo "mobile=true" >> $GITHUB_OUTPUT
             echo "any_changes=true" >> $GITHUB_OUTPUT
             exit 0
@@ -64,6 +67,7 @@ jobs:
 
           LOCATION_CHANGED="false"
           MARKETING_CHANGED="false"
+          LEGAL_WEB_CHANGED="false"
           MOBILE_CHANGED="false"
 
           # Check for Location API changes
@@ -86,6 +90,16 @@ jobs:
             echo "marketing_api=false" >> $GITHUB_OUTPUT
           fi
 
+          # Check for Legal Web (MarkdownServer) changes
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Legal\.Web/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/staging\.yml|^src/FWH\.Legal\.Web/.*Dockerfile"; then
+            echo "✅ Legal Web files changed"
+            LEGAL_WEB_CHANGED="true"
+            echo "legal_web=true" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️  Legal Web files unchanged"
+            echo "legal_web=false" >> $GITHUB_OUTPUT
+          fi
+
           # Check for Mobile app changes
           if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Mobile/|^src/FWH\.Mobile\.Data/|^src/FWH\.Common\.(Location|Chat|Imaging|Workflow)/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/staging\.yml"; then
             echo "✅ Mobile app files changed"
@@ -97,7 +111,7 @@ jobs:
           fi
 
           # Determine if any changes were detected
-          if [ "$LOCATION_CHANGED" == "true" ] || [ "$MARKETING_CHANGED" == "true" ] || [ "$MOBILE_CHANGED" == "true" ]; then
+          if [ "$LOCATION_CHANGED" == "true" ] || [ "$MARKETING_CHANGED" == "true" ] || [ "$LEGAL_WEB_CHANGED" == "true" ] || [ "$MOBILE_CHANGED" == "true" ]; then
             echo "any_changes=true" >> $GITHUB_OUTPUT
           else
             echo "any_changes=false" >> $GITHUB_OUTPUT
@@ -121,7 +135,7 @@ jobs:
             "output": {
               "title": "No Build Required",
               "summary": "No relevant files changed. Build steps were skipped.",
-              "text": "This workflow run was tagged as `no-build` because no changes were detected in Location API, Marketing API, or Mobile app files."
+              "text": "This workflow run was tagged as `no-build` because no changes were detected in Location API, Marketing API, Legal Web, or Mobile app files."
             }
           }
           EOF
@@ -142,6 +156,7 @@ jobs:
       registry: ${{ steps.config.outputs.registry }}
       location_api_image: ${{ steps.config.outputs.location_api_image }}
       marketing_api_image: ${{ steps.config.outputs.marketing_api_image }}
+      legal_web_image: ${{ steps.config.outputs.legal_web_image }}
       railway_project_id: ${{ steps.config.outputs.railway_project_id }}
     steps:
       - name: Set Configuration Values
@@ -151,6 +166,7 @@ jobs:
           echo "registry=${{ env.REGISTRY }}" >> $GITHUB_OUTPUT
           echo "location_api_image=${{ env.LOCATION_API_IMAGE }}" >> $GITHUB_OUTPUT
           echo "marketing_api_image=${{ env.MARKETING_API_IMAGE }}" >> $GITHUB_OUTPUT
+          echo "legal_web_image=${{ env.LEGAL_WEB_IMAGE }}" >> $GITHUB_OUTPUT
           echo "railway_project_id=${{ secrets.RAILWAY_STAGING_PROJECT_ID }}" >> $GITHUB_OUTPUT
 
   build_and_test:
@@ -197,15 +213,40 @@ jobs:
       build_configuration: Staging
     secrets: inherit
 
+  docker_legal_web_staging:
+    name: Build Legal Web Docker Image
+    needs: [detect_changes, build_and_test, get_config]
+    if: needs.detect_changes.outputs.legal_web_changed == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/staging-docker-build-api.yml
+    with:
+      api_name: legal-web
+      image_name: ${{ needs.get_config.outputs.legal_web_image }}
+      registry: ${{ needs.get_config.outputs.registry }}
+      dockerfile_path: ./src/FWH.Legal.Web/Dockerfile.artifacts
+      artifact_name: legal-web
+      build_configuration: Staging
+    secrets: inherit
+
   deploy_railway_staging:
     name: Deploy to Railway
-    needs: [detect_changes, docker_location_api_staging, docker_marketing_api_staging, get_config]
+    needs: [detect_changes, docker_location_api_staging, docker_marketing_api_staging, docker_legal_web_staging, get_config]
+    if: |
+      always() &&
+      needs.detect_changes.outputs.any_changes == 'true' &&
+      (needs.docker_location_api_staging.result == 'success' || needs.docker_location_api_staging.result == 'skipped') &&
+      (needs.docker_marketing_api_staging.result == 'success' || needs.docker_marketing_api_staging.result == 'skipped') &&
+      (needs.docker_legal_web_staging.result == 'success' || needs.docker_legal_web_staging.result == 'skipped')
     uses: ./.github/workflows/staging-deploy-railway.yml
     with:
       location_api_changed: ${{ needs.detect_changes.outputs.location_api_changed }}
       marketing_api_changed: ${{ needs.detect_changes.outputs.marketing_api_changed }}
+      legal_web_changed: ${{ needs.detect_changes.outputs.legal_web_changed }}
       location_api_image: ${{ needs.get_config.outputs.location_api_image }}
       marketing_api_image: ${{ needs.get_config.outputs.marketing_api_image }}
+      legal_web_image: ${{ needs.get_config.outputs.legal_web_image }}
       railway_project_id: ${{ needs.get_config.outputs.railway_project_id }}
     secrets: inherit
 

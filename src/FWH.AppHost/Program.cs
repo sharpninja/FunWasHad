@@ -9,6 +9,11 @@ var postgres = builder.AddPostgres("postgres")
 var locationDb = postgres.AddDatabase("funwashad");
 var marketingDb = postgres.AddDatabase("marketing");
 
+// Add Legal website (MarkdownServer: EULA, Privacy, Contact)
+var legalWeb = builder.AddProject<Projects.FWH_Legal_Web>("legalweb")
+    .WithHttpEndpoint(port: 5050, name: "http")
+    .WithExternalHttpEndpoints();
+
 // Add Location API with PostgreSQL dependency
 // Configure with fixed HTTP port 4748 for Android emulator access
 var locationApi = builder.AddProject<Projects.FWH_Location_Api>("locationapi")
@@ -25,6 +30,8 @@ var marketingApi = builder.AddProject<Projects.FWH_MarketingApi>("marketingapi")
     .WithHttpsEndpoint(port: 4749, name: "asp-https")
     .WithExternalHttpEndpoints();
 
+// Legal website: http://localhost:5050 (EULA, Privacy Policy, Corporate Contact)
+//
 // Note: Mobile app can connect to the APIs at:
 // Location API:
 // - Android emulator: http://10.0.2.2:4748

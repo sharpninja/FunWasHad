@@ -1,7 +1,7 @@
 # Technical Requirements - FunWasHad Application
 
-**Version:** 2.0
-**Last Updated:** 2025-01-08
+**Version:** 2.4
+**Last Updated:** 2026-01-27
 **Application:** FunWasHad
 **Target Framework:** .NET 9
 
@@ -82,17 +82,20 @@ The `FWH.MarketingApi` project SHALL implement REST endpoints for:
 
 The `FWH.Location.Api` project SHALL provide location-related server capabilities:
 
-- Device location updates
-- Location history tracking
+- Nearby business discovery and closest-business lookup
+- Reverse geocoding (address resolution from coordinates) via `GET /api/locations/address`
+- Location confirmations (user-reported business at GPS coordinates)
 - Automatic database migrations
 - PostgreSQL persistence
 
 **Status:** ✅ Implemented
 
-- REST endpoints for location updates
-- Device location tracking
-- Automatic migrations on startup
-- Connection to PostgreSQL
+- `GET /api/locations/nearby` – nearby businesses by lat/lon and radius
+- `GET /api/locations/closest` – closest business within max distance
+- `GET /api/locations/address` – reverse geocode to address (business or Overpass/OSM when no business)
+- `POST /api/locations/confirmed` – record location confirmation
+- ILocationService (Overpass-based) used for address and business data
+- Automatic migrations on startup; connection to PostgreSQL
 
 ### TR-COMP-004: Mobile client
 
@@ -262,16 +265,16 @@ The mobile client SHALL provide platform-specific GPS services:
 The mobile client SHALL implement continuous location tracking:
 
 - Configurable polling interval (default: 30 seconds)
-- Minimum distance threshold (default: 50 meters)
-- Automatic location updates to backend API
-- Event system for location changes
+- Minimum distance threshold (default: 50 meters) for persisting to local SQLite (device location is not sent to backend APIs)
+- UI notified on every poll via `LocationUpdated`; persistence to local DB gated by minimum distance
+- Event system for location changes, address changes, and movement state
 
 **Status:** ✅ Implemented
 
 - ILocationTrackingService interface
-- LocationTrackingService implementation
+- LocationTrackingService implementation; local-only device location persistence (NotesDbContext)
 - Configurable thresholds and intervals
-- LocationUpdated and LocationUpdateFailed events
+- LocationUpdated (every poll for UI), LocationUpdateFailed, NewLocationAddress, MovementStateChanged events
 
 ### TR-LOC-003: Speed Calculation
 
@@ -298,12 +301,13 @@ The system SHALL detect and classify movement states:
 - **Riding:** Continuous motion ≥ 5 mph
 - Configurable speed threshold (default: 5.0 mph)
 - State history tracking (last 10 samples)
+- State determined on startup from initial location (GPS speed or default Stationary); Unknown is not retained once location is available
 
 **Status:** ✅ Implemented
 
 - MovementState enum (Unknown, Stationary, Walking, Riding, Moving)
-- State determination based on speed and movement patterns
-- Configurable thresholds
+- State determined on startup and on first fix in tracking loop; Unknown treated as Stationary once location exists
+- State determination based on speed and movement patterns; configurable thresholds
 - Statistical analysis of movement history
 
 ### TR-LOC-005: State Transition Events
@@ -415,19 +419,19 @@ APIs SHALL validate required fields and reject invalid payloads (e.g., rating ou
 
 ### TR-API-005: Location API Endpoints
 
-The Location API SHALL expose endpoints for device location tracking:
+The Location API SHALL expose endpoints for location and address resolution:
 
-- `POST /api/location/device/{deviceId}` - Update device location
-- Request validation for latitude/longitude ranges
-- GPS accuracy tracking
-- Timestamp handling
+- `GET /api/locations/nearby` – nearby businesses by latitude, longitude, radius
+- `GET /api/locations/closest` – closest business within max distance
+- `GET /api/locations/address` – reverse geocode coordinates to address (business or Overpass/OSM when no business)
+- `POST /api/locations/confirmed` – record location confirmation with business and user coordinates
+- Request validation for latitude/longitude and distance parameters
 
 **Status:** ✅ Implemented
 
-- DeviceLocationController
-- UpdateDeviceLocation endpoint
-- Request validation with data annotations
-- PostgreSQL persistence
+- LocationsController with GetNearbyAsync, GetClosestAsync, GetAddressAsync, LocationConfirmed
+- ILocationService (Overpass-based) for address and business data
+- Request validation; PostgreSQL persistence for confirmations
 
 ### TR-API-006: CORS Configuration
 
@@ -1252,6 +1256,14 @@ The FWH.Prompts PowerShell module, CLI-related scripts, FWH.Documentation.Sync, 
 ## 17. Change History
 
 This section tracks all changes made to the Technical Requirements document.
+
+### Version 2.4 (2026-01-27)
+
+**Changed:**
+- TR-COMP-003 (Location API): Added reverse geocoding via `GET /api/locations/address`; document nearby, closest, address, confirmed endpoints; ILocationService (Overpass) for address/business.
+- TR-LOC-002 (Location Tracking Service): Device location stored locally only (not sent to backend); UI notified on every poll via LocationUpdated; persistence to local DB gated by minimum distance.
+- TR-LOC-004 (Movement State Detection): State determined on startup and on first fix; Unknown not retained once location exists.
+- TR-API-005 (Location API Endpoints): Aligned with LocationsController (GET nearby, closest, address; POST confirmed); added address endpoint and Overpass-based resolution.
 
 ### Version 2.3 (2025-01-27)
 

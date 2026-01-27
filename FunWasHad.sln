@@ -1,4 +1,4 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.1.11312.151
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -86,6 +86,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlantUmlRender", "tools\PlantUmlRender\PlantUmlRender.csproj", "{B2C3D4E5-F6A7-4B89-9C0D-E12345678901}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlantUmlRender.Tests", "tests\PlantUmlRender.Tests\PlantUmlRender.Tests.csproj", "{E7F8A9B0-C1D2-5E3F-9A4B-6C7D8E9F0A1B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FWH.Legal.Web", "src\FWH.Legal.Web\FWH.Legal.Web.csproj", "{84AE87BC-197A-41B8-9A05-47EE822F69D6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -551,6 +553,24 @@ Global
 		{E7F8A9B0-C1D2-5E3F-9A4B-6C7D8E9F0A1B}.Staging|x64.Build.0 = Staging|Any CPU
 		{E7F8A9B0-C1D2-5E3F-9A4B-6C7D8E9F0A1B}.Staging|x86.ActiveCfg = Staging|Any CPU
 		{E7F8A9B0-C1D2-5E3F-9A4B-6C7D8E9F0A1B}.Staging|x86.Build.0 = Staging|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Debug|x64.Build.0 = Debug|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Debug|x86.Build.0 = Debug|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Release|x64.ActiveCfg = Release|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Release|x64.Build.0 = Release|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Release|x86.ActiveCfg = Release|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Release|x86.Build.0 = Release|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Staging|Any CPU.ActiveCfg = Debug|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Staging|Any CPU.Build.0 = Debug|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Staging|x64.ActiveCfg = Debug|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Staging|x64.Build.0 = Debug|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Staging|x86.ActiveCfg = Debug|Any CPU
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6}.Staging|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -583,6 +603,7 @@ Global
 		{E6F7A8B9-C0D1-4E2F-A3B4-5C6D7E8F9A0B} = {7EBEB263-EFB0-4582-A331-E70DCD9DBB1C}
 		{B2C3D4E5-F6A7-4B89-9C0D-E12345678901} = {7EBEB263-EFB0-4582-A331-E70DCD9DBB1C}
 		{E7F8A9B0-C1D2-5E3F-9A4B-6C7D8E9F0A1B} = {60823260-0CD0-4E4B-A88A-3D4833FCDEC1}
+		{84AE87BC-197A-41B8-9A05-47EE822F69D6} = {7EBEB263-EFB0-4582-A331-E70DCD9DBB1C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F48C7825-9775-49F4-8E82-09DE11C54162}

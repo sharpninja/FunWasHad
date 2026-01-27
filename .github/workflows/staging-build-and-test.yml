@@ -39,11 +39,13 @@ jobs:
           dotnet restore FunWasHad.sln
           dotnet restore src/FWH.Location.Api/FWH.Location.Api.csproj
           dotnet restore src/FWH.MarketingApi/FWH.MarketingApi.csproj
+          dotnet restore src/FWH.Legal.Web/FWH.Legal.Web.csproj
 
       - name: Build solution
         run: |
           dotnet build src/FWH.Location.Api/FWH.Location.Api.csproj --no-restore --configuration ${{ inputs.build_configuration }}
           dotnet build src/FWH.MarketingApi/FWH.MarketingApi.csproj --no-restore --configuration ${{ inputs.build_configuration }}
+          dotnet build src/FWH.Legal.Web/FWH.Legal.Web.csproj --no-restore --configuration ${{ inputs.build_configuration }}
 
       - name: Run tests
         run: |
@@ -79,4 +81,14 @@ jobs:
         with:
           name: marketing-api
           path: ./publish/marketing-api
+          retention-days: 1
+
+      - name: Publish Legal Web (MarkdownServer)
+        run: dotnet publish src/FWH.Legal.Web/FWH.Legal.Web.csproj --configuration ${{ inputs.build_configuration }} --output ./publish/legal-web --no-restore
+
+      - name: Upload Legal Web artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: legal-web
+          path: ./publish/legal-web
           retention-days: 1

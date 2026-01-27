@@ -1,0 +1,1 @@
+We retain personal data only as long as necessary to provide the service, comply with law, or resolve disputes. Location and usage data are typically retained for up to 24 months. You may request deletion of your data at any time by contacting privacy@funwashad.app.

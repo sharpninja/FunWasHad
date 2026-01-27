@@ -1,0 +1,1 @@
+Subject to your compliance with this Agreement, Gateway Programming School, Inc. grants you a limited, non-exclusive, non-transferable, revocable license to install and use the Fun Was Had application for your personal, non-commercial use on devices that you own or control.

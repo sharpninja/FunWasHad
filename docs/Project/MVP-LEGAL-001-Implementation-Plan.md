@@ -1,5 +1,7 @@
 # MVP-LEGAL-001: Legal Website Implementation Plan
 
+**Last Updated:** 2026-01-27
+
 ## Overview
 
 Create a website for hosting legal notices including EULA, Privacy Policy, and Corporate Contact information using ASP.NET with the MarkdownServer NuGet package.

@@ -1,7 +1,7 @@
 # Functional Requirements - FunWasHad Application
 
-**Version:** 1.1  \
-**Last Updated:** 2025-01-27  \
+**Version:** 1.3  \
+**Last Updated:** 2026-01-27  \
 **Application:** FunWasHad - Location-Based Activity Tracking & Business Marketing Platform
 
 ---
@@ -27,6 +27,9 @@ The system SHALL only attempt address-change evaluation after the user is detect
 
 #### FR-LOC-003: Raise address-change event
 When the detected address differs from the previously recorded address, the system SHALL raise a `NewLocationAddress` event.
+
+#### FR-LOC-004: Resolve and display address for current location
+The system SHALL resolve a human-readable address for the current (and startup) location via the Location API reverse-geocoding endpoint (`GET /api/locations/address`), returning business address when available or Overpass/OSM-derived address when no business is present, so that the current location address is displayed even when there is no business.
 
 ---
 
@@ -248,6 +251,15 @@ The system SHALL provide a website for hosting legal notices including EULA, Pri
 ## 5. Change History
 
 This section tracks all changes made to the Functional Requirements document.
+
+### Version 1.3 (2026-01-27)
+
+**Added:**
+- FR-LOC-004: Resolve and display address for current location (Location API reverse geocoding; address shown even when no business)
+
+**Changed:**
+- FR-CODE-001: Code Analyzers status updated to ✅ Implemented (MVP-SUPPORT-003)
+- Version and last updated date set to 1.3 / 2026-01-27
 
 ### Version 1.1 (2025-01-27)
 

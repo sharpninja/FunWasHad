@@ -47,6 +47,30 @@ cd src/FWH.Location.Api
 dotnet run
 ```
 
+### Building the Android app
+
+To build the Android project (`FWH.Mobile.Android`), install the .NET Android workload first:
+
+**Windows (PowerShell or CMD):**
+```bash
+dotnet workload install android
+```
+
+**Linux / WSL (elevated privileges required):**
+```bash
+sudo dotnet workload install android
+```
+
+Optional NuGet source (if needed):
+```bash
+dotnet workload install android --source https://api.nuget.org/v3/index.json
+```
+
+Then build:
+```bash
+dotnet build src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj
+```
+
 ## 📋 Project Structure
 
 ```
