@@ -15,6 +15,9 @@
     <PackageVersion Include="Avalonia.Browser" Version="11.3.9" />
     <PackageVersion Include="Avalonia.Android" Version="11.3.9" />
     <PackageVersion Include="Mapsui.Avalonia" Version="5.0.0" />
+    <!-- Font Awesome Icons for Avalonia UI (replacing MaterialIcons) -->
+    <PackageVersion Include="Projektanker.Icons.Avalonia" Version="9.6.2" />
+    <PackageVersion Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.6.2" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.2" />

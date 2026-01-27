@@ -8,6 +8,8 @@ using FWH.Common.Chat.Services;
 using FWH.Mobile.Droid.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Projektanker.Icons.Avalonia;
+using Projektanker.Icons.Avalonia.FontAwesome;
 using System.Runtime.Versioning;
 
 namespace FWH.Mobile.Android;
@@ -69,6 +71,11 @@ public partial class MainActivity : AvaloniaMainActivity<App>
 
     protected override AppBuilder CustomizeAppBuilder(AppBuilder builder)
     {
+        // Register Font Awesome icon provider.
+        IconProvider.Current
+            .Register<FontAwesomeIconProvider>();
+        Console.WriteLine("FWH: Icon provider = Font Awesome.");
+        
         return base.CustomizeAppBuilder(builder)
             .WithInterFont();
     }

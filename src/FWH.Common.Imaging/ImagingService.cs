@@ -8,12 +8,14 @@ public class ImagingService : IImagingService
     public SKBitmap RenderSvgOverlay(SKBitmap baseBitmap, string svg, float x = 0, float y = 0, ImagingOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(baseBitmap);
+        if (string.IsNullOrWhiteSpace(svg)) throw new ArgumentException("SVG must not be empty", nameof(svg));
         return RenderSvgOverlay(baseBitmap, svg, baseBitmap.Width, baseBitmap.Height, x, y, options);
     }
 
     public Stream RenderSvgOverlayToPngStream(SKBitmap baseBitmap, string svg, float x = 0, float y = 0, ImagingOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(baseBitmap);
+        if (string.IsNullOrWhiteSpace(svg)) throw new ArgumentException("SVG must not be empty", nameof(svg));
         return RenderSvgOverlayToPngStream(baseBitmap, svg, baseBitmap.Width, baseBitmap.Height, x, y, options);
     }
 

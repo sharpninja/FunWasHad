@@ -68,6 +68,9 @@
     <PackageVersion Include="KubernetesClient" Version="17.0.14" />
     <!-- Mapsui for native map control in Avalonia -->
     <PackageVersion Include="Mapsui.Avalonia" Version="5.0.0" />
+    <!-- Font Awesome Icons for Avalonia UI (replacing MaterialIcons) -->
+    <PackageVersion Include="Projektanker.Icons.Avalonia" Version="9.6.2" />
+    <PackageVersion Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.6.2" />
     <!-- Code analyzers (MVP-SUPPORT-003) -->
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Analyzers" Version="9.0.12" />

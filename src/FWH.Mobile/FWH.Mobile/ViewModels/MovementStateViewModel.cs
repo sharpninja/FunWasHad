@@ -21,6 +21,9 @@ public partial class MovementStateViewModel : ObservableObject
     private string _movementStateText = "Unknown";
 
     [ObservableProperty]
+    private string _movementStateEmoji = "😊"; // Default emoji
+
+    [ObservableProperty]
     private string _movementStateColor = "#808080"; // Gray for Unknown
 
     [ObservableProperty]
@@ -52,8 +55,43 @@ public partial class MovementStateViewModel : ObservableObject
 
     /// <summary>
     /// Gets the display address - shows business name if available, otherwise shows address.
+    /// Excludes coordinate strings (which are shown separately in the Location field).
     /// </summary>
-    public string DisplayAddress => !string.IsNullOrEmpty(BusinessName) ? BusinessName : CurrentAddress;
+    public string DisplayAddress
+    {
+        get
+        {
+            // Show business name if available
+            if (!string.IsNullOrEmpty(BusinessName))
+                return BusinessName;
+
+            // Don't show coordinates as address - coordinates are shown in the Location field
+            if (IsCoordinateString(CurrentAddress))
+                return "--";
+
+            // Show actual address
+            return CurrentAddress ?? "--";
+        }
+    }
+
+    /// <summary>
+    /// Checks if a string appears to be GPS coordinates (e.g., "40.123456, -74.123456").
+    /// </summary>
+    private static bool IsCoordinateString(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return false;
+
+        // Check if it matches the coordinate pattern: numbers, comma, optional space, optional minus, numbers
+        // This matches patterns like "40.123456, -74.123456" or "40.123456,-74.123456"
+        var trimmed = value.Trim();
+        var parts = trimmed.Split(',');
+        if (parts.Length != 2)
+            return false;
+
+        // Check if both parts can be parsed as doubles
+        return double.TryParse(parts[0].Trim(), out _) && double.TryParse(parts[1].Trim(), out _);
+    }
 
     public MovementStateViewModel(
         ILocationTrackingService locationTrackingService,
@@ -99,14 +137,35 @@ public partial class MovementStateViewModel : ObservableObject
     private void OnNewLocationAddress(object? sender, LocationAddressChangedEventArgs e)
     {
         _logger.LogInformation("Address changed to: {Address}", e.CurrentAddress);
-        CurrentAddress = e.CurrentAddress;
-        HasAddress = !string.IsNullOrEmpty(e.CurrentAddress);
+        
+        // Don't treat coordinates as an address - they're shown in the Location field
+        if (IsCoordinateString(e.CurrentAddress))
+        {
+            CurrentAddress = "--";
+            HasAddress = false;
+            _logger.LogDebug("Address is coordinates, treating as no address available");
+        }
+        else
+        {
+            CurrentAddress = e.CurrentAddress ?? "--";
+            HasAddress = !string.IsNullOrEmpty(e.CurrentAddress);
+        }
+        
+        OnPropertyChanged(nameof(DisplayAddress));
     }
 
     private void UpdateAddress()
     {
         var address = _locationTrackingService.CurrentAddress;
-        if (!string.IsNullOrEmpty(address))
+        
+        // Don't treat coordinates as an address - they're shown in the Location field
+        if (IsCoordinateString(address))
+        {
+            CurrentAddress = "--";
+            HasAddress = false;
+            _logger.LogDebug("Service returned coordinates as address, treating as no address available");
+        }
+        else if (!string.IsNullOrEmpty(address))
         {
             CurrentAddress = address;
             HasAddress = true;
@@ -163,6 +222,9 @@ public partial class MovementStateViewModel : ObservableObject
     private void UpdateMovementState(MovementState state)
     {
         MovementStateText = $"{state}";
+        
+        // Use same emoji icons as map
+        MovementStateEmoji = GetEmojiForMovementState(state);
 
         MovementStateColor = state switch
         {
@@ -172,6 +234,22 @@ public partial class MovementStateViewModel : ObservableObject
             MovementState.Riding => "#FFC107", // Yellow/Amber
             MovementState.Moving => "#17A2B8", // Cyan
             _ => "#6C757D"
+        };
+    }
+
+    /// <summary>
+    /// Gets the emoji icon for the movement state (same as used in MapView).
+    /// </summary>
+    private static string GetEmojiForMovementState(MovementState state)
+    {
+        return state switch
+        {
+            MovementState.Unknown => "😊",
+            MovementState.Stationary => "😊",
+            MovementState.Walking => "🚶",
+            MovementState.Riding => "🚕",
+            MovementState.Moving => "🚕", // Use taxi for Moving as well
+            _ => "😊" // Default to smiley
         };
     }
 

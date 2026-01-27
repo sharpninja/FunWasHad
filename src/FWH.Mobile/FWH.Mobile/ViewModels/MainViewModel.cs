@@ -16,6 +16,8 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _currentViewName = "Chat";
 
+    private readonly Dictionary<string, UserControl> _cachedViews = new();
+
     /// <summary>
     /// Gets whether the log view should always be visible (when not in RELEASE build).
     /// </summary>
@@ -24,7 +26,7 @@ public partial class MainViewModel : ObservableObject
         get
         {
 #if DEBUG || STAGING
-            return true;
+            return false;
 #else
             return false;
 #endif
@@ -40,35 +42,45 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void NavigateToChat()
     {
-        CurrentView = new ChatView();
+        CurrentView = GetOrCreateView("Chat", () => new ChatView());
         CurrentViewName = "Chat";
     }
 
     [RelayCommand]
     private void NavigateToMap()
     {
-        CurrentView = new MapView();
+        CurrentView = GetOrCreateView("Map", () => new MapView());
         CurrentViewName = "Map";
     }
 
     [RelayCommand]
     private void NavigateToSettings()
     {
-        CurrentView = new SettingsView();
+        CurrentView = GetOrCreateView("Settings", () => new SettingsView());
         CurrentViewName = "Settings";
     }
 
     [RelayCommand]
     private void NavigateToLog()
     {
-        CurrentView = new LogView();
+        CurrentView = GetOrCreateView("Log", () => new LogView());
         CurrentViewName = "Log";
     }
 
     [RelayCommand]
     private void NavigateToPlaces()
     {
-        CurrentView = new PlacesView();
+        CurrentView = GetOrCreateView("Places", () => new PlacesView());
         CurrentViewName = "Places";
+    }
+
+    private UserControl GetOrCreateView(string key, Func<UserControl> factory)
+    {
+        if (!_cachedViews.TryGetValue(key, out var view))
+        {
+            view = factory();
+            _cachedViews[key] = view;
+        }
+        return view;
     }
 }

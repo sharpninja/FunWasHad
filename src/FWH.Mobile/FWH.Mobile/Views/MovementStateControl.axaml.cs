@@ -18,7 +18,7 @@ public partial class MovementStateControl : UserControl
     public MovementStateControl()
     {
         InitializeComponent();
-        InitializeMap();
+        // InitializeMap(); // Map is commented out in AXAML
         DataContextChanged += OnDataContextChanged;
     }
 
@@ -35,53 +35,55 @@ public partial class MovementStateControl : UserControl
             _viewModel = viewModel;
             viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
-            // Update map with initial location
-            UpdateMapLocation();
+            // Map functionality is commented out in AXAML
+            // UpdateMapLocation();
         }
     }
 
     private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(MovementStateViewModel.Latitude) ||
-            e.PropertyName == nameof(MovementStateViewModel.Longitude))
-        {
-            UpdateMapLocation();
-        }
+        // Map functionality is commented out in AXAML
+        // if (e.PropertyName == nameof(MovementStateViewModel.Latitude) ||
+        //     e.PropertyName == nameof(MovementStateViewModel.Longitude))
+        // {
+        //     UpdateMapLocation();
+        // }
     }
 
-    private void InitializeMap()
-    {
-        if (LocationMap?.Map == null)
-            return;
-
-        // Add OpenStreetMap tile layer
-        LocationMap.Map.Layers.Add(OpenStreetMap.CreateTileLayer());
-
-        // Set initial view (Mapsui 5: use Navigator.CenterOnAndZoomTo)
-        var resolutions = LocationMap.Map.Navigator.Resolutions;
-        if (resolutions.Count > 9)
-            LocationMap.Map.Navigator.CenterOnAndZoomTo(new MPoint(0, 0), resolutions[9]);
-    }
-
-    private void UpdateMapLocation()
-    {
-        if (LocationMap?.Map == null || _viewModel == null)
-            return;
-
-        if (!_viewModel.Latitude.HasValue || !_viewModel.Longitude.HasValue)
-            return;
-
-        var lat = _viewModel.Latitude.Value;
-        var lon = _viewModel.Longitude.Value;
-
-        // Convert WGS84 (lat/lon) to Web Mercator (used by maps)
-        var (x, y) = SphericalMercator.FromLonLat(lon, lat);
-
-        // Center map on location (Mapsui 5: use Navigator.CenterOnAndZoomTo)
-        // TODO: Restore device marker when Mapsui 5 MemoryLayer API is confirmed
-        var resolutions = LocationMap.Map.Navigator.Resolutions;
-        if (resolutions.Count > 15)
-            LocationMap.Map.Navigator.CenterOnAndZoomTo(new MPoint(x, y), resolutions[15]);
-        LocationMap.Refresh();
-    }
+    // Map functionality is commented out in AXAML
+    // private void InitializeMap()
+    // {
+    //     if (LocationMap?.Map == null)
+    //         return;
+    //
+    //     // Add OpenStreetMap tile layer
+    //     LocationMap.Map.Layers.Add(OpenStreetMap.CreateTileLayer());
+    //
+    //     // Set initial view (Mapsui 5: use Navigator.CenterOnAndZoomTo)
+    //     var resolutions = LocationMap.Map.Navigator.Resolutions;
+    //     if (resolutions.Count > 9)
+    //         LocationMap.Map.Navigator.CenterOnAndZoomTo(new MPoint(0, 0), resolutions[9]);
+    // }
+    //
+    // private void UpdateMapLocation()
+    // {
+    //     if (LocationMap?.Map == null || _viewModel == null)
+    //         return;
+    //
+    //     if (!_viewModel.Latitude.HasValue || !_viewModel.Longitude.HasValue)
+    //         return;
+    //
+    //     var lat = _viewModel.Latitude.Value;
+    //     var lon = _viewModel.Longitude.Value;
+    //
+    //     // Convert WGS84 (lat/lon) to Web Mercator (used by maps)
+    //     var (x, y) = SphericalMercator.FromLonLat(lon, lat);
+    //
+    //     // Center map on location (Mapsui 5: use Navigator.CenterOnAndZoomTo)
+    //     // TODO: Restore device marker when Mapsui 5 MemoryLayer API is confirmed
+    //     var resolutions = LocationMap.Map.Navigator.Resolutions;
+    //     if (resolutions.Count > 15)
+    //         LocationMap.Map.Navigator.CenterOnAndZoomTo(new MPoint(x, y), resolutions[15]);
+    //     LocationMap.Refresh();
+    // }
 }

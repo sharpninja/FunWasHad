@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:FWH.Mobile.ViewModels"
              xmlns:views="using:FWH.Mobile.Views"
+             xmlns:i="https://github.com/projektanker/icons.avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="FWH.Mobile.Views.MainView"
              x:DataType="vm:MainViewModel">
@@ -36,36 +37,66 @@
                         Padding="16,8"
                         MinWidth="60"
                         MinHeight="60"
-                        ToolTip.Tip="Chat">
-                    <TextBlock Text="💬" FontSize="24" />
+                        ToolTip.Tip="Chat"
+                        x:Name="ChatButton"
+                        Background="White">
+                    <i:Icon Value="fa-comments"
+                            FontSize="24"
+                            Foreground="#0078D4"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
                 </Button>
                 <Button Command="{Binding NavigateToMapCommand}"
                         Padding="16,8"
                         MinWidth="60"
                         MinHeight="60"
-                        ToolTip.Tip="Map">
-                    <TextBlock Text="🗺️" FontSize="24" />
+                        ToolTip.Tip="Map"
+                        x:Name="MapButton"
+                        Background="White">
+                    <i:Icon Value="fa-map"
+                            FontSize="24"
+                            Foreground="#0078D4"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
                 </Button>
                 <Button Command="{Binding NavigateToSettingsCommand}"
                         Padding="16,8"
                         MinWidth="60"
                         MinHeight="60"
-                        ToolTip.Tip="Settings">
-                    <TextBlock Text="⚙️" FontSize="24" />
+                        ToolTip.Tip="Settings"
+                        x:Name="SettingsButton"
+                        Background="White">
+                    <i:Icon Value="fa-gear"
+                            FontSize="24"
+                            Foreground="#0078D4"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
                 </Button>
                 <Button Command="{Binding NavigateToLogCommand}"
                         Padding="16,8"
                         MinWidth="60"
                         MinHeight="60"
-                        ToolTip.Tip="Log">
-                    <TextBlock Text="📋" FontSize="24" />
+                        ToolTip.Tip="Log"
+                        x:Name="LogButton"
+                        Background="White">
+                    <i:Icon Value="fa-file-lines"
+                            FontSize="24"
+                            Foreground="#0078D4"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
                 </Button>
                 <Button Command="{Binding NavigateToPlacesCommand}"
                         Padding="16,8"
                         MinWidth="60"
                         MinHeight="60"
-                        ToolTip.Tip="Places">
-                    <TextBlock Text="📍" FontSize="24" />
+                        ToolTip.Tip="Places"
+                        x:Name="PlacesButton"
+                        Background="White">
+                    <i:Icon Value="fa-location-dot"
+                            FontSize="24"
+                            Foreground="#0078D4"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
                 </Button>
             </StackPanel>
         </Border>

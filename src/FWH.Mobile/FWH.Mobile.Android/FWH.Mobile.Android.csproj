@@ -57,6 +57,11 @@
       <Link>Assets\workflow.puml</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidAsset>
+    <!-- Include new-location.puml as Android Asset for location workflow service -->
+    <AndroidAsset Include="..\..\..\new-location.puml">
+      <Link>Assets\new-location.puml</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AndroidAsset>
   </ItemGroup>
 
   <ItemGroup>

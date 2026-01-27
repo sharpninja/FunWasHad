@@ -11,5 +11,11 @@
 
     <Application.Styles>
         <FluentTheme />
+        <!-- Font Awesome icons are registered in MainActivity.CustomizeAppBuilder for Android -->
+        
+        <!-- Default font size increased by 2 points (from 14 to 16) -->
+        <Style Selector="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+        </Style>
     </Application.Styles>
 </Application>

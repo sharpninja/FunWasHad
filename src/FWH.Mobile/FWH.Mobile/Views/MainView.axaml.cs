@@ -1,6 +1,10 @@
 using Avalonia.Controls;
+using Avalonia.Media;
+using Avalonia.VisualTree;
 using FWH.Mobile.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace FWH.Mobile.Views;
 
@@ -8,11 +12,10 @@ public partial class MainView : UserControl
 {
     public MainView()
     {
-        InitializeComponent();
+        // Set DataContext to MainViewModel before InitializeComponent
+        ViewModel = App.ServiceProvider.GetRequiredService<MainViewModel>();
 
-        // Set DataContext to MainViewModel
-        var viewModel = App.ServiceProvider.GetRequiredService<MainViewModel>();
-        DataContext = viewModel;
+        InitializeComponent();
 
         // Set up log view row height based on build configuration
         this.Loaded += (s, e) =>
@@ -21,7 +24,7 @@ public partial class MainView : UserControl
             if (grid != null && grid.RowDefinitions.Count > 1)
             {
                 var logViewRow = grid.RowDefinitions[1];
-                if (viewModel.ShowLogViewAlways)
+                if (ViewModel.ShowLogViewAlways)
                 {
                     logViewRow.Height = new GridLength(1, GridUnitType.Star);
                 }

@@ -15,6 +15,8 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+    <!-- Explicitly include App.axaml for Android builds -->
+    <AvaloniaResource Include="App.axaml" Condition="'$(TargetPlatformIdentifier)' == 'android'" />
   </ItemGroup>
 
   <ItemGroup>
@@ -33,6 +35,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
     <PackageReference Include="Mapsui.Avalonia" />
+    <PackageReference Include="Projektanker.Icons.Avalonia" />
+    <PackageReference Include="Projektanker.Icons.Avalonia.FontAwesome" />
   </ItemGroup>
 
   <ItemGroup>

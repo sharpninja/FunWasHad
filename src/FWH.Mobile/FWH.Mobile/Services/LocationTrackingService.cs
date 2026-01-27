@@ -155,6 +155,49 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                     _logger.LogInformation("Location tracking initialized with current location: {Latitude:F6}, {Longitude:F6}",
                         initialLocation.Latitude, initialLocation.Longitude);
 
+                    // Use instant GPS speed to determine initial movement state
+                    if (initialLocation.SpeedMetersPerSecond.HasValue)
+                    {
+                        var speed = initialLocation.SpeedMetersPerSecond.Value;
+                        _currentSpeedMetersPerSecond = speed;
+                        
+                        // Determine movement state immediately from speed
+                        var initialState = DetermineMovementStateFromSpeed(speed);
+                        if (initialState != MovementState.Unknown && initialState != _currentMovementState)
+                        {
+                            _currentMovementState = initialState;
+                            _lastStateChangeTime = DateTimeOffset.UtcNow;
+                            
+                            _logger.LogInformation(
+                                "Initial movement state determined from GPS speed: {State} (speed: {Speed:F1} mph)",
+                                initialState,
+                                GpsCalculator.MetersPerSecondToMph(speed));
+                            
+                            // Trigger movement state changed event
+                            var eventArgs = new MovementStateChangedEventArgs(
+                                MovementState.Unknown,
+                                initialState,
+                                DateTimeOffset.UtcNow,
+                                null,
+                                TimeSpan.Zero,
+                                speed);
+                            MovementStateChanged?.Invoke(this, eventArgs);
+                        }
+                    }
+
+                    // Immediately get address for initial location
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await CheckForAddressChangeAsync(initialLocation).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Error getting initial address");
+                        }
+                    }, cancellationToken);
+
                     // Trigger location updated event for initial location
                     LocationUpdated?.Invoke(this, initialLocation);
                 }
@@ -662,6 +705,35 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
         }
 
         return (city, state, country);
+    }
+
+    /// <summary>
+    /// Determines movement state from speed alone (for initial location when distance is not available).
+    /// </summary>
+    private MovementState DetermineMovementStateFromSpeed(double speedMetersPerSecond)
+    {
+        if (speedMetersPerSecond < 0)
+        {
+            return MovementState.Unknown;
+        }
+
+        var speedMph = GpsCalculator.MetersPerSecondToMph(speedMetersPerSecond);
+        
+        // Use a small threshold to account for GPS noise (e.g., 0.5 mph)
+        const double stationaryThresholdMph = 0.5;
+        
+        if (speedMph < stationaryThresholdMph)
+        {
+            return MovementState.Stationary;
+        }
+        else if (speedMph >= WalkingRidingSpeedThresholdMph)
+        {
+            return MovementState.Riding;
+        }
+        else
+        {
+            return MovementState.Walking;
+        }
     }
 
     private MovementState DetermineMovementState(double currentDistance, double? currentSpeed)

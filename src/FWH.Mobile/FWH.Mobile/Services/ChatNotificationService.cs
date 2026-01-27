@@ -50,6 +50,8 @@ public class ChatNotificationService : INotificationService
 
     public void ShowWarning(string message, string? title = null)
     {
+        if (string.IsNullOrWhiteSpace(message))
+            throw new ArgumentException("Message must not be null or whitespace", nameof(message));
         var fullMessage = title != null ? $"{title}: {message}" : message;
         _logger?.LogWarning("Notification: {Message}", fullMessage);
 

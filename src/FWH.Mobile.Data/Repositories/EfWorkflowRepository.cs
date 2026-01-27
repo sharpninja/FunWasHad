@@ -62,6 +62,7 @@ public partial class EfWorkflowRepository : IWorkflowRepository
                 .Include(w => w.Nodes)
                 .Include(w => w.Transitions)
                 .Include(w => w.StartPoints)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(w => w.Id == id, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -91,6 +92,7 @@ public partial class EfWorkflowRepository : IWorkflowRepository
                 .Include(w => w.Nodes)
                 .Include(w => w.Transitions)
                 .Include(w => w.StartPoints)
+                .AsSplitQuery()
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
@@ -127,11 +129,15 @@ public partial class EfWorkflowRepository : IWorkflowRepository
         {
             LogFindByPattern(_logger, namePattern, since);
 
+            // Convert DateTimeOffset to DateTime for SQLite compatibility
+            var sinceDateTime = since.UtcDateTime;
+
             return await _context.WorkflowDefinitions
                 .Include(w => w.Nodes)
                 .Include(w => w.Transitions)
                 .Include(w => w.StartPoints)
-                .Where(w => w.Name.Contains(namePattern) && w.CreatedAt >= since)
+                .AsSplitQuery()
+                .Where(w => w.Name.Contains(namePattern) && w.CreatedAt >= sinceDateTime)
                 .OrderByDescending(w => w.CreatedAt)
                 .ToListAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -169,6 +175,7 @@ public partial class EfWorkflowRepository : IWorkflowRepository
                     .Include(w => w.Nodes)
                     .Include(w => w.Transitions)
                     .Include(w => w.StartPoints)
+                    .AsSplitQuery()
                     .FirstOrDefaultAsync(w => w.Id == def.Id, cancellationToken).ConfigureAwait(false);
 
                 if (existing == null)
@@ -182,13 +189,13 @@ public partial class EfWorkflowRepository : IWorkflowRepository
 
                 // Remove existing children by querying the DbSets to ensure they have database-generated keys
                 var oldNodes = await _context.NodeEntities.Where(n => n.WorkflowDefinitionEntityId == existing.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
-                if (oldNodes.Any()) _context.NodeEntities.RemoveRange(oldNodes);
+                if (oldNodes.Count > 0) _context.NodeEntities.RemoveRange(oldNodes);
 
                 var oldTransitions = await _context.TransitionEntities.Where(t => t.WorkflowDefinitionEntityId == existing.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
-                if (oldTransitions.Any()) _context.TransitionEntities.RemoveRange(oldTransitions);
+                if (oldTransitions.Count > 0) _context.TransitionEntities.RemoveRange(oldTransitions);
 
                 var oldStartPoints = await _context.StartPointEntities.Where(s => s.WorkflowDefinitionEntityId == existing.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
-                if (oldStartPoints.Any()) _context.StartPointEntities.RemoveRange(oldStartPoints);
+                if (oldStartPoints.Count > 0) _context.StartPointEntities.RemoveRange(oldStartPoints);
 
                 // Clear tracked navigation collections
                 existing.Nodes.Clear();
@@ -221,9 +228,9 @@ public partial class EfWorkflowRepository : IWorkflowRepository
                     WorkflowDefinitionEntityId = existing.Id
                 }).ToList();
 
-                if (newNodes.Any()) await _context.NodeEntities.AddRangeAsync(newNodes, cancellationToken).ConfigureAwait(false);
-                if (newTransitions.Any()) await _context.TransitionEntities.AddRangeAsync(newTransitions, cancellationToken).ConfigureAwait(false);
-                if (newStartPoints.Any()) await _context.StartPointEntities.AddRangeAsync(newStartPoints, cancellationToken).ConfigureAwait(false);
+                if (newNodes.Count > 0) await _context.NodeEntities.AddRangeAsync(newNodes, cancellationToken).ConfigureAwait(false);
+                if (newTransitions.Count > 0) await _context.TransitionEntities.AddRangeAsync(newTransitions, cancellationToken).ConfigureAwait(false);
+                if (newStartPoints.Count > 0) await _context.StartPointEntities.AddRangeAsync(newStartPoints, cancellationToken).ConfigureAwait(false);
 
                 await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

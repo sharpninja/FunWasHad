@@ -1,8 +1,10 @@
+using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using FWH.Common.Chat;
 using FWH.Common.Chat.Extensions;
 using FWH.Common.Chat.Services;
@@ -55,7 +57,27 @@ public partial class App : Application
         services.AddLogging(builder =>
         {
             builder.AddConfiguration(configuration.GetSection("Logging"));
-            builder.AddConsole(); // Enable console logging for Android logcat
+            
+            // On Android, use only our logcat provider (filters third-party icon-related noise).
+            // On other platforms, use console so output goes to terminal.
+            if (!OperatingSystem.IsAndroid())
+            {
+                builder.AddConsole(options =>
+                {
+                    options.LogToStandardErrorThreshold = LogLevel.Trace;
+                    options.FormatterName = "simple";
+                });
+            }
+            
+            if (OperatingSystem.IsAndroid())
+            {
+                builder.SetMinimumLevel(LogLevel.Trace);
+                builder.AddFilter("FWH.Mobile", LogLevel.Trace);
+                builder.AddFilter("FWH.Common", LogLevel.Trace);
+                builder.AddFilter("FWH.Orchestrix", LogLevel.Trace);
+                builder.AddProvider(new FWH.Mobile.Logging.AndroidLogcatLoggerProvider());
+            }
+            
             builder.AddProvider(new FWH.Mobile.Logging.AvaloniaLoggerProvider(logStore));
         });
 
@@ -165,6 +187,9 @@ public partial class App : Application
 
         // Register movement state ViewModel
         services.AddSingleton<MovementStateViewModel>();
+
+        // Register map ViewModel
+        services.AddSingleton<MapViewModel>();
 
         // Register main ViewModel for navigation
         services.AddSingleton<MainViewModel>();
@@ -442,18 +467,31 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        // Test logging to verify it's working
+        var logger = ServiceProvider?.GetService<ILogger<App>>();
+        logger?.LogTrace("OnFrameworkInitializationCompleted: Trace log test");
+        logger?.LogDebug("OnFrameworkInitializationCompleted: Debug log test");
+        logger?.LogInformation("OnFrameworkInitializationCompleted: Information log test");
+        logger?.LogWarning("OnFrameworkInitializationCompleted: Warning log test");
+        System.Diagnostics.Debug.WriteLine("OnFrameworkInitializationCompleted: Debug.WriteLine test");
+        Console.WriteLine("OnFrameworkInitializationCompleted: Console.WriteLine test");
+        
+        // Font Awesome icons are registered in MainActivity.CustomizeAppBuilder for Android / Program.cs for Desktop.
+        // Toolbar uses Projektanker i:Icon with fa-* values only.
+        logger?.LogInformation("Toolbar icons: Font Awesome (Projektanker.Icons).");
+        
         // Create UI immediately to prevent ANR - don't await anything before showing UI
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
             DisableAvaloniaDataAnnotationValidation();
 
-            var chatViewModel = ServiceProvider.GetRequiredService<ChatViewModel>();
+            var mainViewModel = ServiceProvider.GetRequiredService<MainViewModel>();
             var logViewerViewModel = ServiceProvider.GetRequiredService<LogViewerViewModel>();
 
             var mainWindow = new MainWindow
             {
-                DataContext = chatViewModel,
+                DataContext = mainViewModel,
                 Tag = logViewerViewModel, // Pass log viewer ViewModel via Tag
                 Width = 800,
                 Height = 600,
@@ -494,12 +532,7 @@ public partial class App : Application
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
             // Create MainView immediately on UI thread - don't await anything
-            var chatViewModel = ServiceProvider.GetRequiredService<ChatViewModel>();
-
-            singleViewPlatform.MainView = new MainView
-            {
-                DataContext = chatViewModel
-            };
+            singleViewPlatform.MainView = new MainView();
 
             // Initialize everything in background to avoid ANR
             // Use Task.Run to ensure it's on a background thread

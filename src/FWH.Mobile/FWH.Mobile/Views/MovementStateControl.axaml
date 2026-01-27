@@ -13,16 +13,16 @@
             CornerRadius="8"
             Padding="12"
             Background="#FAFAFA">
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,200">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto">
 
             <!-- Row 0: Movement State & Tracking Status -->
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                 <!-- Movement State -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                    <!-- Status Indicator Circle -->
-                    <Ellipse Width="16" Height="16"
-                             Fill="{Binding MovementStateColor}"
-                             VerticalAlignment="Center"/>
+                    <!-- Movement State Emoji Icon -->
+                    <TextBlock Text="{Binding MovementStateEmoji}"
+                               FontSize="20"
+                               VerticalAlignment="Center"/>
 
                     <!-- Movement State Text -->
                     <TextBlock Text="{Binding MovementStateText}"
@@ -82,7 +82,7 @@
                            MaxWidth="600"/>
             </StackPanel>
 
-            <!-- Row 4: Map -->
+            <!-- Row 4: Map
             <Border Grid.Row="4"
                     BorderBrush="#E0E0E0"
                     BorderThickness="1"
@@ -92,7 +92,7 @@
                                    Height="200"
                                    HorizontalAlignment="Stretch"
                                    VerticalAlignment="Stretch" />
-            </Border>
+            </Border> -->
         </Grid>
     </Border>
 </UserControl>

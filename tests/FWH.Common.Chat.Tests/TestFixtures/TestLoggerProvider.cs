@@ -111,7 +111,11 @@ public class TestLoggerProvider : ILoggerProvider
                     {
                         dict[p.Name] = p.GetValue(scope);
                     }
-                    catch { dict[p.Name] = null; }
+                    catch (Exception ex)
+                    {
+                        dict[p.Name] = null;
+                        // Optionally log or handle ex
+                    }
                 }
                 return dict;
             }
