@@ -12,7 +12,7 @@
     the markdown report. Use when CI has already run tests with coverage.
 
 .PARAMETER Configuration
-    Build configuration (Debug, Release). Default: Release.
+    Build configuration (Debug, Staging, Release). Default: Staging for local builds.
 
 .PARAMETER ProjectRoot
     Repository root. Default: parent of scripts folder.
@@ -26,7 +26,7 @@
 [CmdletBinding()]
 param(
     [switch] $SkipTests,
-    [string] $Configuration = 'Release',
+    [string] $Configuration = 'Staging',
     [string] $ProjectRoot = (Split-Path -Parent $PSScriptRoot)
 )
 

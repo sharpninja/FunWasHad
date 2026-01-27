@@ -65,7 +65,7 @@ Push-Location $docsPath
 try {
     Write-Host "Building solution to generate XML documentation..." -ForegroundColor Yellow
     Push-Location (Split-Path $docsPath -Parent)
-    dotnet build --configuration Release --no-restore
+    dotnet build --configuration Staging --no-restore
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed. Documentation may be incomplete." -ForegroundColor Yellow
     }

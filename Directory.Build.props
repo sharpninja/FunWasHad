@@ -1,5 +1,7 @@
 <Project>
   <PropertyGroup>
+    <!-- Default to Staging for local builds when no configuration is specified (CI passes -c explicitly) -->
+    <Configuration Condition="'$(Configuration)' == ''">Staging</Configuration>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>

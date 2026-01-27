@@ -362,9 +362,9 @@ function Build-Solution {
     Push-Location $InstallPath
 
     try {
-        # Build in Release mode
-        Write-Info "Building in Release configuration..."
-        dotnet build --configuration Release --no-restore --verbosity minimal
+        # Build in Staging mode (default for local)
+        Write-Info "Building in Staging configuration..."
+        dotnet build --configuration Staging --no-restore --verbosity minimal
         Write-Success "Solution built successfully"
     }
     catch {

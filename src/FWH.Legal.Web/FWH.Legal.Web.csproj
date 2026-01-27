@@ -7,6 +7,14 @@
     <AssemblyName>FWH.Legal.Web</AssemblyName>
   </PropertyGroup>
 
+  <!-- Staging configuration: based on Debug (unoptimized, with debug symbols) -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Staging'">
+    <Optimize>false</Optimize>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>$(DefineConstants);STAGING</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="MarkdownServer" />
   </ItemGroup>

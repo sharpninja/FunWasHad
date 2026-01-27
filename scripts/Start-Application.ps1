@@ -8,7 +8,7 @@
   The script checks for Docker and required volumes before starting.
 
 .PARAMETER Configuration
-  The build configuration to use. Valid values: Debug, Release. Defaults to "Debug".
+  The build configuration to use. Valid values: Debug, Staging, Release. Defaults to "Staging" for local use.
 
 .PARAMETER NoBrowser
   When specified, prevents the browser from automatically opening the Aspire dashboard.
@@ -17,7 +17,7 @@
   When specified, enables detailed verbosity in the dotnet run command.
 
 .EXAMPLE
-  # Start application in Debug mode
+  # Start application in Staging mode (default for local)
   .\Start-Application.ps1
 
 .EXAMPLE
@@ -43,8 +43,8 @@
 
 param(
     [Parameter(Mandatory=$false)]
-    [ValidateSet("Debug", "Release")]
-    [string]$Configuration = "Debug",
+    [ValidateSet("Debug", "Staging", "Release")]
+    [string]$Configuration = "Staging",
 
     [Parameter(Mandatory=$false)]
     [switch]$NoBrowser,
