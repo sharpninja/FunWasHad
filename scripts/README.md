@@ -7,6 +7,7 @@ This directory contains PowerShell scripts for managing the FunWasHad applicatio
 - **PowerShell 5.1 or later** (Windows PowerShell or PowerShell Core)
 - **.NET 9 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/9.0)
 - **Docker Desktop** - [Download](https://www.docker.com/products/docker-desktop)
+- **GitHub CLI (gh)** - Required for `Get-ActionsLogs.ps1`; [install](https://cli.github.com/) and run `gh auth login`.
 
 ## Scripts Overview
 
@@ -155,6 +156,41 @@ Restores a PostgreSQL database from a backup file.
 - `-BackupFile` - Path to backup file (required)
 - `-VolumeName` - Docker volume name (default: `funwashad-postgres-data`)
 - `-Force` - Skip confirmation prompt
+
+---
+
+### 📥 Get-ActionsLogs.ps1
+
+Downloads workflow logs from the last GitHub Actions run on the current branch and extracts them into the local `logs/` folder (ignored by git).
+
+**Prerequisite:** [GitHub CLI (gh)](https://cli.github.com/) installed and authenticated (`gh auth login`).
+
+**Usage:**
+```powershell
+# Download and extract to .\logs\run.log (default)
+.\scripts\Get-ActionsLogs.ps1
+
+# Custom folder
+.\scripts\Get-ActionsLogs.ps1 -OutputPath ".\my-logs"
+
+# Skip extraction (keep .gz only)
+.\scripts\Get-ActionsLogs.ps1 -Extract:$false
+
+# Use a specific branch
+.\scripts\Get-ActionsLogs.ps1 -Branch staging
+```
+
+**What it does:**
+1. Uses the current git branch (or `-Branch`)
+2. Finds the most recent run for the staging workflow on that branch
+3. Downloads the `workflow-logs-<run_id>` artifact and saves it under `OutputPath`
+4. By default decompresses to `.\logs\run.log` (use `-Extract:$false` to skip)
+
+**Parameters:**
+- `-Branch` - Git branch (default: current branch)
+- `-OutputPath` - Directory for logs (default: `.\logs` at repo root)
+- `-Extract` - Decompress to `run.log` in OutputPath (default: `$true`)
+- `-Workflow` - Workflow to filter (default: `staging.yml`)
 
 ---
 
