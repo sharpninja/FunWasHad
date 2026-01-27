@@ -21,9 +21,9 @@ on:
       legal_web_image:
         required: true
         type: string
+    secrets:
       railway_project_id:
         required: true
-        type: string
 
 jobs:
   deploy_railway:
@@ -70,7 +70,7 @@ jobs:
           echo "   - Location API: ${{ inputs.location_api_image }}:staging-latest"
           echo "   - Marketing API: ${{ inputs.marketing_api_image }}:staging-latest"
           echo "   - Legal Web: ${{ inputs.legal_web_image }}:staging-latest"
-          echo "💡 Dashboard: https://railway.com/project/${{ inputs.railway_project_id }}"
+          echo "💡 Dashboard: https://railway.com/project/${{ secrets.railway_project_id }}"
 
       - name: Deploy Location API to Railway
         if: inputs.location_api_changed == 'true'
@@ -90,6 +90,6 @@ jobs:
       - name: Health check Location API
         run: |
           echo "🏥 Checking Location API health..."
-          echo "💡 Check Railway dashboard for the service URL: https://railway.com/project/${{ inputs.railway_project_id }}"
+          echo "💡 Check Railway dashboard for the service URL: https://railway.com/project/${{ secrets.railway_project_id }}"
           echo "⚠️  Health check skipped - use Railway dashboard to verify deployment status"
         continue-on-error: true

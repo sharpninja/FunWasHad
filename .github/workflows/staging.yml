@@ -257,8 +257,9 @@ jobs:
       location_api_image: ${{ needs.get_config.outputs.location_api_image }}
       marketing_api_image: ${{ needs.get_config.outputs.marketing_api_image }}
       legal_web_image: ${{ needs.get_config.outputs.legal_web_image }}
+    secrets:
+      inherit: true
       railway_project_id: ${{ secrets.RAILWAY_STAGING_PROJECT_ID }}
-    secrets: inherit
 
   build_mobile_android_staging:
     name: Build Mobile Android
@@ -295,7 +296,6 @@ jobs:
       location_api_changed: ${{ needs.detect_changes.outputs.location_api_changed }}
       marketing_api_changed: ${{ needs.detect_changes.outputs.marketing_api_changed }}
       mobile_changed: ${{ needs.detect_changes.outputs.mobile_changed }}
-      railway_project_id: ${{ secrets.RAILWAY_STAGING_PROJECT_ID }}
       deploy_railway_result: ${{ needs.deploy_railway_staging.result }}
       release_android_result: ${{ needs.release_android_staging.result }}
     secrets: inherit
