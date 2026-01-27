@@ -5,10 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace FWH.Orchestrix.Mediator.Remote.Marketing;
 
-/// <summary>
-/// Remote handler for getting business theme via HTTP API.
-/// </summary>
-public class GetBusinessThemeHandler : IMediatorHandler<GetBusinessThemeRequest, GetBusinessThemeResponse>
+public partial class GetBusinessThemeHandler : IMediatorHandler<GetBusinessThemeRequest, GetBusinessThemeResponse>
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<GetBusinessThemeHandler> _logger;
@@ -29,8 +26,7 @@ public class GetBusinessThemeHandler : IMediatorHandler<GetBusinessThemeRequest,
         ArgumentNullException.ThrowIfNull(request);
         try
         {
-            _logger.LogInformation("Getting business theme remotely for business {BusinessId}",
-                request.BusinessId);
+            Log.GettingBusinessTheme(_logger, request.BusinessId);
 
             var response = await _httpClient.GetAsync(new Uri($"/api/marketing/{request.BusinessId}/theme", UriKind.Relative), cancellationToken).ConfigureAwait(false);
 
@@ -45,8 +41,7 @@ public class GetBusinessThemeHandler : IMediatorHandler<GetBusinessThemeRequest,
             }
 
             var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogWarning("Failed to get business theme: {StatusCode} - {Error}",
-                response.StatusCode, error);
+            Log.GetBusinessThemeFailed(_logger, response.StatusCode, error);
 
             return new GetBusinessThemeResponse
             {
@@ -54,14 +49,46 @@ public class GetBusinessThemeHandler : IMediatorHandler<GetBusinessThemeRequest,
                 ErrorMessage = $"HTTP {response.StatusCode}: {error}"
             };
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Error getting business theme remotely");
+            Log.GetBusinessThemeHttpError(_logger, ex);
             return new GetBusinessThemeResponse
             {
                 Success = false,
                 ErrorMessage = ex.Message
             };
         }
+        catch (TaskCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            Log.GetBusinessThemeCanceled(_logger, ex);
+            throw;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Log.GetBusinessThemeTimeout(_logger, ex);
+            return new GetBusinessThemeResponse
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(EventId = 10, Level = LogLevel.Information, Message = "Getting business theme remotely for business {BusinessId}")]
+        public static partial void GettingBusinessTheme(ILogger logger, long businessId);
+
+        [LoggerMessage(EventId = 11, Level = LogLevel.Warning, Message = "Failed to get business theme: {StatusCode} - {Error}")]
+        public static partial void GetBusinessThemeFailed(ILogger logger, System.Net.HttpStatusCode statusCode, string error);
+
+        [LoggerMessage(EventId = 12, Level = LogLevel.Error, Message = "HTTP error getting business theme remotely")]
+        public static partial void GetBusinessThemeHttpError(ILogger logger, Exception exception);
+
+        [LoggerMessage(EventId = 13, Level = LogLevel.Error, Message = "Get business theme canceled")]
+        public static partial void GetBusinessThemeCanceled(ILogger logger, Exception exception);
+
+        [LoggerMessage(EventId = 14, Level = LogLevel.Error, Message = "Get business theme timed out")]
+        public static partial void GetBusinessThemeTimeout(ILogger logger, Exception exception);
     }
 }

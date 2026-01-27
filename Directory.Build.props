@@ -6,14 +6,6 @@
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
 
     <!--
-      Adding NoWarn to remove build warnings
-      NU1507: Warning when there are multiple package sources when using CPM with no source mapping
-      NETSDK1201: Warning that specifying RID won't create self containing app
-      PRI257: Ignore default language (en) not being one of the included resources (eg en-us, en-uk)
-    -->
-    <NoWarn>$(NoWarn);NU1507;NETSDK1201;PRI257;NU1605</NoWarn>
-
-    <!--
       Code analyzers (MVP-SUPPORT-003): .NET analyzers across the solution.
       - EnableNETAnalyzers: on by default for SDK 5+; explicit for clarity.
       - AnalysisLevel: 9.0-all = all rules recommended for .NET 9; override in .editorconfig per project if needed.

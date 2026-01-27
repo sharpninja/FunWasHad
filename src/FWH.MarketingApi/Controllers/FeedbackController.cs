@@ -17,7 +17,7 @@ namespace FWH.MarketingApi.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/[controller]")]
-internal class FeedbackController : ControllerBase
+internal partial class FeedbackController : ControllerBase
 {
     private readonly MarketingDbContext _context;
     private readonly ILogger<FeedbackController> _logger;
@@ -104,8 +104,7 @@ internal class FeedbackController : ControllerBase
         _context.Feedbacks.Add(feedback);
         await _context.SaveChangesAsync().ConfigureAwait(false);
 
-        _logger.LogInformation("Feedback {FeedbackId} submitted for business {BusinessId} by user {UserId}",
-            feedback.Id, request.BusinessId, request.UserId);
+        Log.FeedbackSubmitted(_logger, feedback.Id, request.BusinessId, request.UserId);
 
         return CreatedAtAction(nameof(GetFeedback), new { id = feedback.Id }, feedback);
     }
@@ -133,17 +132,20 @@ internal class FeedbackController : ControllerBase
     {
         if (file == null || file.Length == 0)
         {
+            Log.FileMissing(_logger);
             return BadRequest("File is required");
         }
 
         if (file.Length > MaxFileSize)
         {
-            return BadRequest($"File size exceeds maximum of {MaxFileSize / (1024 * 1024)}MB");
+            Log.FileTooLarge(_logger, file.FileName);
+            return BadRequest("File size exceeds limit");
         }
 
         if (!AllowedImageTypes.Contains(file.ContentType.ToLower()))
         {
-            return BadRequest($"Invalid image type. Allowed types: {string.Join(", ", AllowedImageTypes)}");
+            Log.FileTypeNotAllowed(_logger, file.ContentType);
+            return BadRequest("Invalid image content type");
         }
 
         var feedback = await _context.Feedbacks.FindAsync(feedbackId).ConfigureAwait(false);
@@ -167,10 +169,10 @@ internal class FeedbackController : ControllerBase
                 generateThumbnail: true,
                 cancellationToken: default).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "Failed to upload image attachment for feedback {FeedbackId}", feedbackId);
-            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to upload file");
+            Log.AttachmentUploadFailed(_logger, feedbackId, ex);
+            return BadRequest(ex.Message);
         }
 
         var attachment = new FeedbackAttachment
@@ -188,8 +190,7 @@ internal class FeedbackController : ControllerBase
         _context.FeedbackAttachments.Add(attachment);
         await _context.SaveChangesAsync().ConfigureAwait(false);
 
-        _logger.LogInformation("Image attachment {AttachmentId} uploaded for feedback {FeedbackId}",
-            attachment.Id, feedbackId);
+        Log.AttachmentUploaded(_logger, attachment.Id, feedbackId);
 
         return CreatedAtAction(nameof(GetAttachment), new { id = attachment.Id }, attachment);
     }
@@ -217,17 +218,20 @@ internal class FeedbackController : ControllerBase
     {
         if (file == null || file.Length == 0)
         {
+            Log.FileMissing(_logger);
             return BadRequest("File is required");
         }
 
         if (file.Length > MaxFileSize)
         {
-            return BadRequest($"File size exceeds maximum of {MaxFileSize / (1024 * 1024)}MB");
+            Log.FileTooLarge(_logger, file.FileName);
+            return BadRequest("File size exceeds limit");
         }
 
         if (!AllowedVideoTypes.Contains(file.ContentType.ToLower()))
         {
-            return BadRequest($"Invalid video type. Allowed types: {string.Join(", ", AllowedVideoTypes)}");
+            Log.FileTypeNotAllowed(_logger, file.ContentType);
+            return BadRequest("Invalid video content type");
         }
 
         var feedback = await _context.Feedbacks.FindAsync(feedbackId).ConfigureAwait(false);
@@ -248,13 +252,13 @@ internal class FeedbackController : ControllerBase
                 file.FileName,
                 file.ContentType,
                 $"feedback/{feedbackId}/videos",
-                generateThumbnail: false, // Video thumbnail generation not yet implemented
+                generateThumbnail: false,
                 cancellationToken: default).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "Failed to upload video attachment for feedback {FeedbackId}", feedbackId);
-            return StatusCode(StatusCodes.Status500InternalServerError, "Failed to upload file");
+            Log.AttachmentUploadFailed(_logger, feedbackId, ex);
+            return BadRequest(ex.Message);
         }
 
         var attachment = new FeedbackAttachment
@@ -273,8 +277,7 @@ internal class FeedbackController : ControllerBase
         _context.FeedbackAttachments.Add(attachment);
         await _context.SaveChangesAsync().ConfigureAwait(false);
 
-        _logger.LogInformation("Video attachment {AttachmentId} uploaded for feedback {FeedbackId}",
-            attachment.Id, feedbackId);
+        Log.AttachmentUploaded(_logger, attachment.Id, feedbackId);
 
         return CreatedAtAction(nameof(GetAttachment), new { id = attachment.Id }, attachment);
     }
@@ -371,8 +374,7 @@ internal class FeedbackController : ControllerBase
             TotalCount = totalCount
         };
 
-        _logger.LogDebug("Retrieved {Count} feedback items (page {Page}) for business {BusinessId}",
-            feedback.Count, pagination.Page, businessId);
+        Log.FeedbackPageRetrieved(_logger, feedback.Count, pagination.Page, businessId);
         return Ok(result);
     }
 
@@ -403,5 +405,29 @@ internal class FeedbackController : ControllerBase
         };
 
         return Ok(stats);
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(EventId = 2001, Level = LogLevel.Information, Message = "Feedback {FeedbackId} submitted for business {BusinessId} by user {UserId}")]
+        public static partial void FeedbackSubmitted(ILogger logger, long feedbackId, long businessId, string? userId);
+
+        [LoggerMessage(EventId = 2002, Level = LogLevel.Warning, Message = "File is required")]
+        public static partial void FileMissing(ILogger logger);
+
+        [LoggerMessage(EventId = 2003, Level = LogLevel.Warning, Message = "File {FileName} exceeds maximum size")]
+        public static partial void FileTooLarge(ILogger logger, string fileName);
+
+        [LoggerMessage(EventId = 2004, Level = LogLevel.Warning, Message = "File type {ContentType} not allowed")]
+        public static partial void FileTypeNotAllowed(ILogger logger, string? contentType);
+
+        [LoggerMessage(EventId = 2005, Level = LogLevel.Warning, Message = "Attachment upload failed for feedback {FeedbackId}")]
+        public static partial void AttachmentUploadFailed(ILogger logger, long feedbackId, Exception exception);
+
+        [LoggerMessage(EventId = 2006, Level = LogLevel.Information, Message = "Attachment {AttachmentId} uploaded for feedback {FeedbackId}")]
+        public static partial void AttachmentUploaded(ILogger logger, long attachmentId, long feedbackId);
+
+        [LoggerMessage(EventId = 2007, Level = LogLevel.Debug, Message = "Retrieved {Count} feedback items (page {Page}) for business {BusinessId}")]
+        public static partial void FeedbackPageRetrieved(ILogger logger, int count, int page, long businessId);
     }
 }

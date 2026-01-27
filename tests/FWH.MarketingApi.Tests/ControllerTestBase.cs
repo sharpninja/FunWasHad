@@ -1,9 +1,9 @@
 using FWH.MarketingApi.Data;
 using FWH.MarketingApi.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using System.IO;
 
 namespace FWH.MarketingApi.Tests;
 
@@ -13,7 +13,6 @@ namespace FWH.MarketingApi.Tests;
 /// </summary>
 public abstract class ControllerTestBase : IDisposable
 {
-    // Internal property to match internal MarketingDbContext (accessible via InternalsVisibleTo)
     internal MarketingDbContext DbContext { get; }
     protected ILogger<T> CreateLogger<T>() => Substitute.For<ILogger<T>>();
 
@@ -24,6 +23,7 @@ public abstract class ControllerTestBase : IDisposable
             .Options;
 
         DbContext = new TestMarketingDbContext(options);
+        DbContext.Database.EnsureCreated();
     }
 
     protected void SeedTestBusiness(long businessId = 1)
@@ -359,6 +359,6 @@ public abstract class ControllerTestBase : IDisposable
 
     public void Dispose()
     {
-        DbContext?.Dispose();
+        DbContext.Dispose();
     }
 }

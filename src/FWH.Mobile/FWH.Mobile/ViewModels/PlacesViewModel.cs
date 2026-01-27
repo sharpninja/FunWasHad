@@ -434,7 +434,7 @@ public class PlacesViewModel : INotifyPropertyChanged
     }
 
     // DTOs for Marketing API responses
-    private class MarketingBusinessDto
+    private sealed class MarketingBusinessDto
     {
         public long Id { get; set; }
         public string Name { get; set; } = string.Empty;
@@ -443,7 +443,7 @@ public class PlacesViewModel : INotifyPropertyChanged
         public double Longitude { get; set; }
     }
 
-    private class BusinessThemeDto
+    private sealed class BusinessThemeDto
     {
         public long Id { get; set; }
         public long BusinessId { get; set; }

@@ -65,7 +65,7 @@ public class BlobStorageIntegrationTests : ControllerTestBase
             Message = "Test message",
             Rating = 5
         };
-        var feedbackResult = await controller.SubmitFeedback(feedbackRequest).ConfigureAwait(false);
+        var feedbackResult = await controller.SubmitFeedback(feedbackRequest);
         var feedbackActionResult = Assert.IsType<ActionResult<Feedback>>(feedbackResult);
         var createdResult = Assert.IsType<CreatedAtActionResult>(feedbackActionResult.Result);
         var feedback = Assert.IsType<Feedback>(createdResult.Value);
@@ -76,7 +76,7 @@ public class BlobStorageIntegrationTests : ControllerTestBase
         var file = CreateMockFormFile(imageContent, "test-image.jpg", "image/jpeg");
 
         // Act
-        var result = await controller.UploadImage(feedback.Id, file).ConfigureAwait(false);
+        var result = await controller.UploadImage(feedback.Id, file);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<FeedbackAttachment>>(result);
@@ -135,7 +135,7 @@ public class BlobStorageIntegrationTests : ControllerTestBase
             Message = "Test message",
             Rating = 5
         };
-        var feedbackResult = await controller.SubmitFeedback(feedbackRequest).ConfigureAwait(false);
+        var feedbackResult = await controller.SubmitFeedback(feedbackRequest);
         var feedbackActionResult = Assert.IsType<ActionResult<Feedback>>(feedbackResult);
         var createdResult = Assert.IsType<CreatedAtActionResult>(feedbackActionResult.Result);
         var feedback = Assert.IsType<Feedback>(createdResult.Value);
@@ -143,19 +143,19 @@ public class BlobStorageIntegrationTests : ControllerTestBase
 
         // Upload image
         var file = CreateMockFormFile(imageContent, "test.jpg", "image/jpeg");
-        var uploadResult = await controller.UploadImage(feedback.Id, file).ConfigureAwait(false);
+        var uploadResult = await controller.UploadImage(feedback.Id, file);
         var uploadActionResult = Assert.IsType<ActionResult<FeedbackAttachment>>(uploadResult);
         var createdAttachmentResult = Assert.IsType<CreatedAtActionResult>(uploadActionResult.Result);
         var attachment = Assert.IsType<FeedbackAttachment>(createdAttachmentResult.Value);
         Assert.NotNull(attachment);
 
         // Act - Retrieve file via blob storage
-        using var retrievedStream = await blobStorage.GetAsync(attachment.StorageUrl).ConfigureAwait(false);
+        using var retrievedStream = await blobStorage.GetAsync(attachment.StorageUrl, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(retrievedStream);
         using var reader = new StreamReader(retrievedStream);
-        var retrievedContent = await reader.ReadToEndAsync().ConfigureAwait(false);
+        var retrievedContent = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
         Assert.Equal("test image content", retrievedContent);
     }
 
@@ -198,7 +198,7 @@ public class BlobStorageIntegrationTests : ControllerTestBase
             Message = "Test message",
             Rating = 5
         };
-        var feedbackResult = await controller.SubmitFeedback(feedbackRequest).ConfigureAwait(false);
+        var feedbackResult = await controller.SubmitFeedback(feedbackRequest);
         var feedbackActionResult = Assert.IsType<ActionResult<Feedback>>(feedbackResult);
         var createdResult = Assert.IsType<CreatedAtActionResult>(feedbackActionResult.Result);
         var feedback = Assert.IsType<Feedback>(createdResult.Value);
@@ -209,7 +209,7 @@ public class BlobStorageIntegrationTests : ControllerTestBase
         var file = CreateMockFormFile(videoContent, "test-video.mp4", "video/mp4");
 
         // Act
-        var result = await controller.UploadVideo(feedback.Id, file).ConfigureAwait(false);
+        var result = await controller.UploadVideo(feedback.Id, file);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<FeedbackAttachment>>(result);

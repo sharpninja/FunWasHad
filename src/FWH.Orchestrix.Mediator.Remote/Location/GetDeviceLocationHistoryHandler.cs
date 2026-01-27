@@ -5,10 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace FWH.Orchestrix.Mediator.Remote.Location;
 
-/// <summary>
-/// Remote handler for getting device location history via HTTP API.
-/// </summary>
-public class GetDeviceLocationHistoryHandler : IMediatorHandler<GetDeviceLocationHistoryRequest, GetDeviceLocationHistoryResponse>
+public partial class GetDeviceLocationHistoryHandler : IMediatorHandler<GetDeviceLocationHistoryRequest, GetDeviceLocationHistoryResponse>
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<GetDeviceLocationHistoryHandler> _logger;
@@ -29,16 +26,23 @@ public class GetDeviceLocationHistoryHandler : IMediatorHandler<GetDeviceLocatio
         ArgumentNullException.ThrowIfNull(request);
         try
         {
-            _logger.LogInformation("Getting device location history remotely for device {DeviceId}",
-                request.DeviceId);
+            Log.GettingDeviceLocationHistory(_logger, request.DeviceId);
 
             var query = $"?deviceId={Uri.EscapeDataString(request.DeviceId)}";
             if (request.Since.HasValue)
+            {
                 query += $"&since={Uri.EscapeDataString(request.Since.Value.ToString("O"))}";
+            }
+
             if (request.Until.HasValue)
+            {
                 query += $"&until={Uri.EscapeDataString(request.Until.Value.ToString("O"))}";
+            }
+
             if (request.Limit.HasValue)
+            {
                 query += $"&limit={request.Limit}";
+            }
 
             var response = await _httpClient.GetAsync(new Uri($"/api/locations{query}", UriKind.Relative), cancellationToken).ConfigureAwait(false);
 
@@ -53,8 +57,7 @@ public class GetDeviceLocationHistoryHandler : IMediatorHandler<GetDeviceLocatio
             }
 
             var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogWarning("Failed to get device location history: {StatusCode} - {Error}",
-                response.StatusCode, error);
+            Log.GetDeviceLocationHistoryFailed(_logger, response.StatusCode, error);
 
             return new GetDeviceLocationHistoryResponse
             {
@@ -62,14 +65,46 @@ public class GetDeviceLocationHistoryHandler : IMediatorHandler<GetDeviceLocatio
                 ErrorMessage = $"HTTP {response.StatusCode}: {error}"
             };
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Error getting device location history remotely");
+            Log.GetDeviceLocationHistoryHttpError(_logger, ex);
             return new GetDeviceLocationHistoryResponse
             {
                 Success = false,
                 ErrorMessage = ex.Message
             };
         }
+        catch (TaskCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            Log.GetDeviceLocationHistoryCanceled(_logger, ex);
+            throw;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Log.GetDeviceLocationHistoryTimeout(_logger, ex);
+            return new GetDeviceLocationHistoryResponse
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(EventId = 30, Level = LogLevel.Information, Message = "Getting device location history remotely for device {DeviceId}")]
+        public static partial void GettingDeviceLocationHistory(ILogger logger, string deviceId);
+
+        [LoggerMessage(EventId = 31, Level = LogLevel.Warning, Message = "Failed to get device location history: {StatusCode} - {Error}")]
+        public static partial void GetDeviceLocationHistoryFailed(ILogger logger, System.Net.HttpStatusCode statusCode, string error);
+
+        [LoggerMessage(EventId = 32, Level = LogLevel.Error, Message = "HTTP error getting device location history remotely")]
+        public static partial void GetDeviceLocationHistoryHttpError(ILogger logger, Exception exception);
+
+        [LoggerMessage(EventId = 33, Level = LogLevel.Error, Message = "Get device location history canceled")]
+        public static partial void GetDeviceLocationHistoryCanceled(ILogger logger, Exception exception);
+
+        [LoggerMessage(EventId = 34, Level = LogLevel.Error, Message = "Get device location history timed out")]
+        public static partial void GetDeviceLocationHistoryTimeout(ILogger logger, Exception exception);
     }
 }

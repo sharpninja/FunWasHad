@@ -79,9 +79,14 @@ public class ApiAuthenticationService : IApiAuthenticationService
 
             return signature;
         }
-        catch (Exception ex)
+        catch (CryptographicException ex)
         {
-            _logger?.LogWarning(ex, "Failed to generate request signature");
+            _logger?.LogWarning(ex, "Failed to generate request signature due to cryptographic error");
+            return string.Empty;
+        }
+        catch (ArgumentException ex)
+        {
+            _logger?.LogWarning(ex, "Failed to generate request signature due to invalid argument");
             return string.Empty;
         }
     }

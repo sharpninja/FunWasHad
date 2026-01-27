@@ -35,7 +35,7 @@ public class MarketingControllerTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetBusinessMarketing(1).ConfigureAwait(false);
+        var result = await controller.GetBusinessMarketing(1);
 
         // Assert
         var okResult = Assert.IsType<ActionResult<BusinessMarketingResponse>>(result);
@@ -67,7 +67,7 @@ public class MarketingControllerTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetBusinessMarketing(999).ConfigureAwait(false);
+        var result = await controller.GetBusinessMarketing(999);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<BusinessMarketingResponse>>(result);
@@ -92,7 +92,7 @@ public class MarketingControllerTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetTheme(1).ConfigureAwait(false);
+        var result = await controller.GetTheme(1);
 
         // Assert
         var okResult = Assert.IsType<ActionResult<BusinessTheme>>(result);
@@ -120,7 +120,7 @@ public class MarketingControllerTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetCoupons(1, 1, 10).ConfigureAwait(false);
+        var result = await controller.GetCoupons(1, 1, 10);
 
         // Assert
         var okResult = Assert.IsType<ActionResult<PagedResult<Coupon>>>(result);
@@ -151,7 +151,7 @@ public class MarketingControllerTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetMenu(1).ConfigureAwait(false);
+        var result = await controller.GetMenu(1);
 
         // Assert
         var okResult = Assert.IsType<ActionResult<List<MenuItem>>>(result);
@@ -180,7 +180,7 @@ public class MarketingControllerTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetMenuCategories(1).ConfigureAwait(false);
+        var result = await controller.GetMenuCategories(1);
 
         // Assert
         var okResult = Assert.IsType<ActionResult<List<string>>>(result);
@@ -202,7 +202,7 @@ public class MarketingControllerTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetNews(1, 1, 10).ConfigureAwait(false);
+        var result = await controller.GetNews(1, 1, 10).ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<ActionResult<PagedResult<NewsItem>>>(result);
@@ -234,7 +234,7 @@ public class MarketingControllerTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetNearbyBusinesses(37.7749, -122.4194, 1000).ConfigureAwait(false);
+        var result = await controller.GetNearbyBusinesses(37.7749, -122.4194, 1000).ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<ActionResult<List<Business>>>(result);
@@ -263,7 +263,7 @@ public class MarketingControllerTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetNearbyBusinesses(999, -122.4194, 1000).ConfigureAwait(false);
+        var result = await controller.GetNearbyBusinesses(999, -122.4194, 1000);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<List<Business>>>(result);
@@ -288,7 +288,7 @@ public class MarketingControllerTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetNearbyBusinesses(37.7749, 999, 1000).ConfigureAwait(false);
+        var result = await controller.GetNearbyBusinesses(37.7749, 999, 1000);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<List<Business>>>(result);

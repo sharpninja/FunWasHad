@@ -17,10 +17,40 @@ namespace FWH.MarketingApi.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/[controller]")]
-internal class MarketingController : ControllerBase
+internal partial class MarketingController : ControllerBase
 {
     private readonly MarketingDbContext _context;
     private readonly ILogger<MarketingController> _logger;
+
+    private static partial class Log
+    {
+        [LoggerMessage(EventId = 1101, Level = LogLevel.Warning, Message = "Business {BusinessId} not found or not subscribed")]
+        public static partial void BusinessNotFound(ILogger logger, long businessId);
+
+        [LoggerMessage(EventId = 1102, Level = LogLevel.Debug, Message = "Retrieved marketing data for business {BusinessId}")]
+        public static partial void BusinessMarketingRetrieved(ILogger logger, long businessId);
+
+        [LoggerMessage(EventId = 1103, Level = LogLevel.Debug, Message = "Retrieved {Count} news items (page {Page}) for business {BusinessId}")]
+        public static partial void NewsRetrieved(ILogger logger, int count, int page, long businessId);
+
+        [LoggerMessage(EventId = 1104, Level = LogLevel.Warning, Message = "City not found: {CityName}, {State}, {Country}")]
+        public static partial void CityNotFound(ILogger logger, string cityName, string? state, string? country);
+
+        [LoggerMessage(EventId = 1105, Level = LogLevel.Debug, Message = "Retrieved marketing data for city: {CityName}")]
+        public static partial void CityMarketingRetrieved(ILogger logger, string cityName);
+
+        [LoggerMessage(EventId = 1106, Level = LogLevel.Warning, Message = "Theme not found for city {CityId}")]
+        public static partial void CityThemeNotFound(ILogger logger, long cityId);
+
+        [LoggerMessage(EventId = 1107, Level = LogLevel.Warning, Message = "Theme not found for business {BusinessId}")]
+        public static partial void BusinessThemeNotFound(ILogger logger, long businessId);
+
+        [LoggerMessage(EventId = 1108, Level = LogLevel.Debug, Message = "Found {Count} businesses within {Radius}m of ({Lat}, {Lon}) using PostGIS spatial query")]
+        public static partial void NearbyPostgis(ILogger logger, int count, int radius, double lat, double lon);
+
+        [LoggerMessage(EventId = 1109, Level = LogLevel.Warning, Message = "PostGIS not available, falling back to bounding box query method")]
+        public static partial void PostgisFallback(ILogger logger, Exception exception);
+    }
 
     public MarketingController(MarketingDbContext context, ILogger<MarketingController> logger)
     {
@@ -49,7 +79,7 @@ internal class MarketingController : ControllerBase
 
         if (business == null)
         {
-            _logger.LogWarning("Business {BusinessId} not found or not subscribed", businessId);
+            Log.BusinessNotFound(_logger, businessId);
             return NotFound();
         }
 
@@ -63,7 +93,7 @@ internal class MarketingController : ControllerBase
             NewsItems = business.NewsItems.OrderByDescending(n => n.PublishedAt).Take(10).ToList()
         };
 
-        _logger.LogDebug("Retrieved marketing data for business {BusinessId}", businessId);
+        Log.BusinessMarketingRetrieved(_logger, businessId);
         return Ok(response);
     }
 
@@ -85,7 +115,7 @@ internal class MarketingController : ControllerBase
 
         if (theme == null)
         {
-            _logger.LogWarning("Theme not found for business {BusinessId}", businessId);
+            Log.BusinessThemeNotFound(_logger, businessId);
             return NotFound();
         }
 
@@ -211,12 +241,9 @@ internal class MarketingController : ControllerBase
 
         var now = DateTimeOffset.UtcNow;
         var query = _context.NewsItems
-            .Include(n => n.Business)
-            .Where(n => n.BusinessId == businessId
-                && n.IsPublished
-                && n.PublishedAt <= now
-                && n.Business.IsSubscribed
-                && (n.ExpiresAt == null || n.ExpiresAt > now));
+            .Where(n => n.BusinessId == businessId && n.IsPublished && n.PublishedAt <= now)
+            .Where(n => n.ExpiresAt == null || n.ExpiresAt > now)
+            .Where(n => n.Business.IsSubscribed);
 
         var totalCount = await query.CountAsync().ConfigureAwait(false);
         var newsItems = await query
@@ -234,8 +261,7 @@ internal class MarketingController : ControllerBase
             TotalCount = totalCount
         };
 
-        _logger.LogDebug("Retrieved {Count} news items (page {Page}) for business {BusinessId}",
-            newsItems.Count, pagination.Page, businessId);
+        Log.NewsRetrieved(_logger, newsItems.Count, pagination.Page, businessId);
         return Ok(result);
     }
 
@@ -275,69 +301,70 @@ internal class MarketingController : ControllerBase
         // If PostGIS is not available (e.g., in test environments), fall back to bounding box method
         List<Business> businesses;
 
-        try
+        if (_context.Database.IsNpgsql())
         {
-            // Use parameterized SQL with PostGIS for efficient spatial query
-            // This query uses the spatial GIST index for optimal performance
-            // FormattableString automatically parameterizes the values
-            businesses = await _context.Businesses
-                .FromSqlInterpolated($@"
-                    SELECT b.*
-                    FROM businesses b
-                    WHERE b.is_subscribed = true
-                      AND b.location_geometry IS NOT NULL
-                      AND ST_DWithin(
-                          b.location_geometry::geography,
-                          ST_SetSRID(ST_MakePoint({longitude}, {latitude}), 4326)::geography,
-                          {radiusMeters}
-                      )
-                    ORDER BY ST_Distance(
-                        b.location_geometry::geography,
-                        ST_SetSRID(ST_MakePoint({longitude}, {latitude}), 4326)::geography
-                    )
-                ")
-                .ToListAsync().ConfigureAwait(false);
+            try
+            {
+                businesses = await _context.Businesses
+                    .FromSqlInterpolated($@"
+                        SELECT b.*
+                        FROM businesses b
+                        WHERE b.is_subscribed = true
+                          AND b.location_geometry IS NOT NULL
+                          AND ST_DWithin(
+                              b.location_geometry::geography,
+                              ST_SetSRID(ST_MakePoint({longitude}, {latitude}), 4326)::geography,
+                              {radiusMeters}
+                          )
+                        ORDER BY ST_Distance(
+                            b.location_geometry::geography,
+                            ST_SetSRID(ST_MakePoint({longitude}, {latitude}), 4326)::geography
+                        )
+                    ")
+                    .ToListAsync().ConfigureAwait(false);
 
-            _logger.LogDebug("Found {Count} businesses within {Radius}m of ({Lat}, {Lon}) using PostGIS spatial query",
-                businesses.Count, radiusMeters, latitude, longitude);
+                Log.NearbyPostgis(_logger, businesses.Count, radiusMeters, latitude, longitude);
+            }
+            catch (Exception ex) when (ex is Npgsql.PostgresException pgEx && (pgEx.SqlState == "0A000" || pgEx.Message.Contains("postgis", StringComparison.OrdinalIgnoreCase)) ||
+                                         ex.Message.Contains("postgis", StringComparison.OrdinalIgnoreCase) ||
+                                         ex.Message.Contains("ST_DWithin", StringComparison.OrdinalIgnoreCase) ||
+                                         ex.Message.Contains("location_geometry", StringComparison.OrdinalIgnoreCase))
+            {
+                Log.PostgisFallback(_logger, ex);
+                businesses = await QueryByBoundingBoxAsync(latitude, longitude, radiusMeters).ConfigureAwait(false);
+            }
         }
-        catch (Exception ex) when (ex is Npgsql.PostgresException pgEx && (pgEx.SqlState == "0A000" || pgEx.Message.Contains("postgis", StringComparison.OrdinalIgnoreCase)) ||
-                                     ex.Message.Contains("postgis", StringComparison.OrdinalIgnoreCase) ||
-                                     ex.Message.Contains("ST_DWithin", StringComparison.OrdinalIgnoreCase) ||
-                                     ex.Message.Contains("location_geometry", StringComparison.OrdinalIgnoreCase))
+        else
         {
-            // PostGIS is not available, fall back to bounding box method
-            _logger.LogWarning(ex, "PostGIS not available, falling back to bounding box query method");
-
-            // Simple bounding box query (fallback when PostGIS is not available)
-            var latDelta = radiusMeters / 111000.0; // Approximate degrees
-            var lonDelta = radiusMeters / (111000.0 * Math.Cos(latitude * Math.PI / 180.0));
-
-            var allBusinesses = await _context.Businesses
-                .Where(b => b.IsSubscribed
-                    && b.Latitude >= latitude - latDelta
-                    && b.Latitude <= latitude + latDelta
-                    && b.Longitude >= longitude - lonDelta
-                    && b.Longitude <= longitude + lonDelta)
-                .ToListAsync().ConfigureAwait(false);
-
-            // Filter by actual distance
-            businesses = allBusinesses
-                .Select(b => new
-                {
-                    Business = b,
-                    Distance = CalculateDistance(latitude, longitude, b.Latitude, b.Longitude)
-                })
-                .Where(x => x.Distance <= radiusMeters)
-                .OrderBy(x => x.Distance)
-                .Select(x => x.Business)
-                .ToList();
-
-            _logger.LogDebug("Found {Count} businesses within {Radius}m of ({Lat}, {Lon}) using bounding box fallback",
-                businesses.Count, radiusMeters, latitude, longitude);
+            businesses = await QueryByBoundingBoxAsync(latitude, longitude, radiusMeters).ConfigureAwait(false);
         }
 
         return Ok(businesses);
+    }
+
+    private async Task<List<Business>> QueryByBoundingBoxAsync(double latitude, double longitude, int radiusMeters)
+    {
+        var latDelta = radiusMeters / 111000.0;
+        var lonDelta = radiusMeters / (111000.0 * Math.Cos(latitude * Math.PI / 180.0));
+
+        var allBusinesses = await _context.Businesses
+            .Where(b => b.IsSubscribed
+                && b.Latitude >= latitude - latDelta
+                && b.Latitude <= latitude + latDelta
+                && b.Longitude >= longitude - lonDelta
+                && b.Longitude <= longitude + lonDelta)
+            .ToListAsync().ConfigureAwait(false);
+
+        return allBusinesses
+            .Select(b => new
+            {
+                Business = b,
+                Distance = CalculateDistance(latitude, longitude, b.Latitude, b.Longitude)
+            })
+            .Where(x => x.Distance <= radiusMeters)
+            .OrderBy(x => x.Distance)
+            .Select(x => x.Business)
+            .ToList();
     }
 
     private static double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
@@ -374,27 +401,41 @@ internal class MarketingController : ControllerBase
             return BadRequest("City name is required");
         }
 
-        // Use EF.Functions.ILike for case-insensitive comparison (PostgreSQL-specific)
-        // For cross-database compatibility, could use ToLower() but ILike is more efficient
+        var isNpgsql = _context.Database.IsNpgsql();
         var query = _context.Cities
             .Include(c => c.Theme)
-            .Where(c => c.IsActive && EF.Functions.ILike(c.Name, cityName));
+            .Where(c => c.IsActive);
 
-        if (!string.IsNullOrWhiteSpace(state))
+        if (isNpgsql)
         {
-            query = query.Where(c => EF.Functions.ILike(c.State, state));
+            query = query.Where(c => EF.Functions.ILike(c.Name, cityName));
+            if (!string.IsNullOrWhiteSpace(state))
+            {
+                query = query.Where(c => EF.Functions.ILike(c.State, state));
+            }
+            if (!string.IsNullOrWhiteSpace(country))
+            {
+                query = query.Where(c => EF.Functions.ILike(c.Country, country));
+            }
         }
-
-        if (!string.IsNullOrWhiteSpace(country))
+        else
         {
-            query = query.Where(c => EF.Functions.ILike(c.Country, country));
+            query = query.Where(c => string.Equals(c.Name, cityName, StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrWhiteSpace(state))
+            {
+                query = query.Where(c => string.Equals(c.State, state, StringComparison.OrdinalIgnoreCase));
+            }
+            if (!string.IsNullOrWhiteSpace(country))
+            {
+                query = query.Where(c => string.Equals(c.Country, country, StringComparison.OrdinalIgnoreCase));
+            }
         }
 
         var city = await query.FirstOrDefaultAsync().ConfigureAwait(false);
 
         if (city == null)
         {
-            _logger.LogWarning("City not found: {CityName}, {State}, {Country}", cityName, state, country);
+            Log.CityNotFound(_logger, cityName, state, country);
             return NotFound();
         }
 
@@ -432,7 +473,7 @@ internal class MarketingController : ControllerBase
             Theme = themeDto
         };
 
-        _logger.LogDebug("Retrieved marketing data for city: {CityName}", city.Name);
+        Log.CityMarketingRetrieved(_logger, city.Name);
         return Ok(response);
     }
 
@@ -452,7 +493,7 @@ internal class MarketingController : ControllerBase
 
         if (theme == null)
         {
-            _logger.LogWarning("Theme not found for city {CityId}", cityId);
+            Log.CityThemeNotFound(_logger, cityId);
             return NotFound();
         }
 

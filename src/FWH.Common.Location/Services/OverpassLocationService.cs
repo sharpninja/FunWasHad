@@ -112,11 +112,6 @@ public class OverpassLocationService : ILocationService
             _logger.LogError(ex, "JSON deserialization error fetching nearby businesses from Overpass API");
             return Enumerable.Empty<BusinessLocation>();
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error fetching nearby businesses from Overpass API");
-            return Enumerable.Empty<BusinessLocation>();
-        }
     }
 
     public async Task<BusinessLocation?> GetClosestBusinessAsync(
@@ -234,11 +229,6 @@ public class OverpassLocationService : ILocationService
         catch (JsonException ex)
         {
             _logger.LogError(ex, "JSON deserialization error fetching address from Overpass API");
-            return null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error fetching address from Overpass API");
             return null;
         }
     }

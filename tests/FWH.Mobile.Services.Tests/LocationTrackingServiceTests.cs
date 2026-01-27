@@ -61,7 +61,7 @@ public class LocationTrackingServiceTests : IDisposable
     /// <para><strong>Expected outcome:</strong> After StartTrackingAsync completes and a brief delay (100ms) for the tracking loop to initialize, IsTracking should return true.</para>
     /// <para><strong>Reason for expectation:</strong> When GPS is available, StartTrackingAsync should initialize the tracking loop and set the internal tracking state. The 100ms delay allows the asynchronous tracking loop to start. IsTracking returning true confirms the service has entered the tracking state and is ready to process location updates.</para>
     /// </remarks>
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task StartTrackingAsyncWhenGpsAvailableShouldStartTracking()
     {
         // Arrange
@@ -74,10 +74,10 @@ public class LocationTrackingServiceTests : IDisposable
             .Returns(Task.FromResult<GpsCoordinates?>(testCoordinates));
 
         // Act
-        await _service.StartTrackingAsync().ConfigureAwait(true);
+        await _service.StartTrackingAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Allow some time for the tracking loop to execute
-        await Task.Delay(100).ConfigureAwait(true);
+        await Task.Delay(100, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Assert
         Assert.True(_service.IsTracking);
@@ -96,7 +96,7 @@ public class LocationTrackingServiceTests : IDisposable
     /// <para><strong>Expected outcome:</strong> After StartTrackingAsync completes, RequestLocationPermissionAsync should have been called exactly once, and IsTracking should return true.</para>
     /// <para><strong>Reason for expectation:</strong> When GPS is not available, the service should request permission before starting tracking. The permission request should be called once (not multiple times), and tracking should start after permission is granted. IsTracking returning true confirms the service successfully obtained permission and started tracking.</para>
     /// </remarks>
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task StartTrackingAsyncWhenGpsNotAvailableShouldRequestPermission()
     {
         // Arrange
@@ -112,7 +112,7 @@ public class LocationTrackingServiceTests : IDisposable
             .Returns(Task.FromResult<GpsCoordinates?>(testCoordinates));
 
         // Act
-        await _service.StartTrackingAsync().ConfigureAwait(true);
+        await _service.StartTrackingAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Assert
         await _gpsService.Received().RequestLocationPermissionAsync().ConfigureAwait(true);
@@ -132,7 +132,7 @@ public class LocationTrackingServiceTests : IDisposable
     /// <para><strong>Expected outcome:</strong> StartTrackingAsync should complete without throwing an exception, and IsTracking should return true (tracking starts but will wait for permission).</para>
     /// <para><strong>Reason for expectation:</strong> The service should be resilient to permission denials. Starting tracking even without permission allows the service to be ready if the user grants permission later. The tracking loop will handle the case where location is not available by waiting and retrying, rather than failing immediately. This provides better user experience than throwing exceptions.</para>
     /// </remarks>
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task StartTrackingAsync_WhenPermissionDenied_ShouldNotThrowButLogWarning()
     {
         // Arrange
@@ -140,7 +140,7 @@ public class LocationTrackingServiceTests : IDisposable
         _gpsService.RequestLocationPermissionAsync().Returns(Task.FromResult(false));
 
         // Act - Should not throw, but tracking will start and wait for permission
-        await _service.StartTrackingAsync().ConfigureAwait(true);
+        await _service.StartTrackingAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Assert - Tracking should start even without permission
         Assert.True(_service.IsTracking);
@@ -159,7 +159,7 @@ public class LocationTrackingServiceTests : IDisposable
     /// <para><strong>Expected outcome:</strong> After tracking starts and processes a location update, the DeviceLocationHistory table should contain at least one record with matching latitude, longitude, accuracy, altitude, and movement state "Unknown". The ILocationService should not receive any calls.</para>
     /// <para><strong>Reason for expectation:</strong> The service should store all location data locally in SQLite for offline access and privacy. The stored data should match the GPS coordinates exactly, including metadata like accuracy and altitude. Movement state starts as "Unknown" until enough location data is collected to determine movement patterns. The absence of ILocationService calls confirms compliance with TR-MOBILE-001.</para>
     /// </remarks>
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task LocationUpdateShouldStoreInLocalDatabaseNotSentToApi()
     {
         // Arrange
@@ -175,11 +175,11 @@ public class LocationTrackingServiceTests : IDisposable
             .Returns(Task.FromResult<GpsCoordinates?>(testCoordinates));
 
         // Act
-        await _service.StartTrackingAsync().ConfigureAwait(true);
-        await Task.Delay(150).ConfigureAwait(true); // Allow tracking loop to execute
+        await _service.StartTrackingAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await Task.Delay(150, TestContext.Current.CancellationToken).ConfigureAwait(true); // Allow tracking loop to execute
 
         // Assert - Location stored in local database
-        var storedLocations = await _dbContext.DeviceLocationHistory.ToListAsync().ConfigureAwait(true);
+        var storedLocations = await _dbContext.DeviceLocationHistory.ToListAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         Assert.NotEmpty(storedLocations);
 
         var storedLocation = storedLocations.First();
@@ -203,7 +203,7 @@ public class LocationTrackingServiceTests : IDisposable
     /// <para><strong>Expected outcome:</strong> After tracking starts and processes a location update, the LocationUpdated event should fire, and the captured eventCoordinates should match the test coordinates (same latitude and longitude).</para>
     /// <para><strong>Reason for expectation:</strong> The service should raise LocationUpdated whenever a new location is successfully obtained and processed. The event should contain the exact coordinates that were processed, allowing subscribers to update their state with the latest location. This enables real-time UI updates and location-based feature triggers.</para>
     /// </remarks>
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task LocationUpdateWhenStoredShouldRaiseLocationUpdatedEvent()
     {
         // Arrange
@@ -220,8 +220,8 @@ public class LocationTrackingServiceTests : IDisposable
         _service.LocationUpdated += (sender, coords) => eventCoordinates = coords;
 
         // Act
-        await _service.StartTrackingAsync().ConfigureAwait(true);
-        await Task.Delay(150).ConfigureAwait(true);
+        await _service.StartTrackingAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await Task.Delay(150, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Assert
         Assert.NotNull(eventCoordinates);
@@ -242,7 +242,7 @@ public class LocationTrackingServiceTests : IDisposable
     /// <para><strong>Expected outcome:</strong> After tracking starts and attempts to store a location update, the LocationUpdateFailed event should fire, and the captured eventException should not be null.</para>
     /// <para><strong>Reason for expectation:</strong> When database operations fail (e.g., context is disposed), the service should catch the exception, raise the LocationUpdateFailed event with the exception details, and continue running. This allows the tracking loop to continue attempting location updates while notifying subscribers of the failure. The event provides error details for debugging and user notification.</para>
     /// </remarks>
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task LocationUpdateWhenDatabaseFailsShouldRaiseLocationUpdateFailedEvent()
     {
         // Arrange - Create a disposed context to simulate failure
@@ -272,8 +272,8 @@ public class LocationTrackingServiceTests : IDisposable
         failingService.LocationUpdateFailed += (sender, ex) => eventException = ex;
 
         // Act
-        await failingService.StartTrackingAsync().ConfigureAwait(true);
-        await Task.Delay(150).ConfigureAwait(true);
+        await failingService.StartTrackingAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await Task.Delay(150, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Assert
         Assert.NotNull(eventException);
@@ -282,7 +282,7 @@ public class LocationTrackingServiceTests : IDisposable
         await failingService.StopTrackingAsync().ConfigureAwait(true);
     }
 
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task LocationUpdate_WhenGpsServiceThrowsLocationServicesException_ShouldRaiseLocationUpdateFailedEvent()
     {
         // Arrange
@@ -306,8 +306,8 @@ public class LocationTrackingServiceTests : IDisposable
         _service.LocationUpdateFailed += (sender, ex) => eventException = ex;
 
         // Act
-        await _service.StartTrackingAsync().ConfigureAwait(true);
-        await Task.Delay(150).ConfigureAwait(true);
+        await _service.StartTrackingAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await Task.Delay(150, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Assert
         Assert.NotNull(eventException);
@@ -331,7 +331,7 @@ public class LocationTrackingServiceTests : IDisposable
     /// <para><strong>Expected outcome:</strong> After StopTrackingAsync completes, IsTracking should return false, indicating the tracking loop has been stopped.</para>
     /// <para><strong>Reason for expectation:</strong> StopTrackingAsync should cancel the tracking loop's CancellationToken, wait for the loop to complete, dispose of resources, and set the internal tracking state to false. IsTracking returning false confirms the service has successfully stopped tracking and is no longer processing location updates.</para>
     /// </remarks>
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task StopTrackingAsync_ShouldStopTracking()
     {
         // Arrange
@@ -343,8 +343,8 @@ public class LocationTrackingServiceTests : IDisposable
             .GetCurrentLocationAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<GpsCoordinates?>(testCoordinates));
 
-        await _service.StartTrackingAsync().ConfigureAwait(true);
-        await Task.Delay(100).ConfigureAwait(true);
+        await _service.StartTrackingAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await Task.Delay(100, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Act
         await _service.StopTrackingAsync().ConfigureAwait(true);
@@ -353,7 +353,7 @@ public class LocationTrackingServiceTests : IDisposable
         Assert.False(_service.IsTracking);
     }
 
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task MovementStateChanged_ShouldBeRaisedWhenMoving()
     {
         // Arrange
@@ -386,11 +386,11 @@ public class LocationTrackingServiceTests : IDisposable
             });
 
         // Act
-        await _service.StartTrackingAsync().ConfigureAwait(true);
+        await _service.StartTrackingAsync(TestContext.Current.CancellationToken). ConfigureAwait(true);
 
         // Wait for multiple polling cycles - need enough time for the tracking loop to process both locations
         // The polling interval is 50ms, so we need at least 2 cycles plus processing time
-        await Task.Delay(800).ConfigureAwait(true); // Give enough time for tracking loop to process multiple cycles
+        await Task.Delay(800, TestContext.Current.CancellationToken).ConfigureAwait(true); // Give enough time for tracking loop to process multiple cycles
 
         // Assert
         Assert.NotNull(eventArgs);
@@ -398,7 +398,7 @@ public class LocationTrackingServiceTests : IDisposable
         // Verify both locations were stored in database
         var storedLocations = await _dbContext.DeviceLocationHistory
             .OrderBy(l => l.Timestamp)
-            .ToListAsync().ConfigureAwait(true);
+            .ToListAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
         // Note: Due to timing and how ShouldSendLocationUpdate works, we may only get 1 location stored
         // The first location is always stored, and the second is only stored if it meets minimum distance
         // Since this test is primarily checking that the MovementStateChanged event was raised, we verify that
@@ -408,7 +408,7 @@ public class LocationTrackingServiceTests : IDisposable
         await _service.StopTrackingAsync().ConfigureAwait(true);
     }
 
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task LocationTracking_ShouldStoreMovementState()
     {
         // Arrange
@@ -443,13 +443,13 @@ public class LocationTrackingServiceTests : IDisposable
             });
 
         // Act
-        await _service.StartTrackingAsync().ConfigureAwait(true);
-        await Task.Delay(500).ConfigureAwait(true);
+        await _service.StartTrackingAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await Task.Delay(500, TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Assert
         var storedLocations = await _dbContext.DeviceLocationHistory
             .OrderBy(l => l.Timestamp)
-            .ToListAsync().ConfigureAwait(true);
+            .ToListAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.NotEmpty(storedLocations);
         // Movement state should be recorded
@@ -469,7 +469,7 @@ public class LocationTrackingServiceTests : IDisposable
     /// <para><strong>Expected outcome:</strong> After setting the property to 100.0, reading MinimumDistanceMeters should return exactly 100.0.</para>
     /// <para><strong>Reason for expectation:</strong> The property should store and return the configured value correctly. This allows the service to be customized for different use cases (e.g., high-precision tracking vs. battery-efficient tracking) without code changes.</para>
     /// </remarks>
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public void MinimumDistanceMeters_ShouldBeConfigurable()
     {
         // Arrange & Act
@@ -489,7 +489,7 @@ public class LocationTrackingServiceTests : IDisposable
     /// <para><strong>Expected outcome:</strong> After setting the property to 60 seconds, reading PollingInterval should return exactly TimeSpan.FromSeconds(60).</para>
     /// <para><strong>Reason for expectation:</strong> The property should store and return the configured TimeSpan value correctly. This allows the service to be customized for different use cases (e.g., real-time tracking vs. periodic updates) without code changes.</para>
     /// </remarks>
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public void PollingIntervalShouldBeConfigurable()
     {
         // Arrange & Act
@@ -499,7 +499,7 @@ public class LocationTrackingServiceTests : IDisposable
         Assert.Equal(TimeSpan.FromSeconds(60), _service.PollingInterval);
     }
 
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task LocationHistory_ShouldBeQueryableByDeviceId()
     {
         // Arrange
@@ -513,15 +513,15 @@ public class LocationTrackingServiceTests : IDisposable
             .Returns(Task.FromResult<GpsCoordinates?>(testCoordinates));
 
         // Act
-        await _service.StartTrackingAsync().ConfigureAwait(true);
-        await Task.Delay(150).ConfigureAwait(true);
+        await _service.StartTrackingAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await Task.Delay(150, TestContext.Current.CancellationToken).ConfigureAwait(true);
         await _service.StopTrackingAsync().ConfigureAwait(true);
 
         // Assert - Query by device ID
-        var deviceId = (await _dbContext.DeviceLocationHistory.FirstAsync().ConfigureAwait(true)).DeviceId;
+        var deviceId = (await _dbContext.DeviceLocationHistory.FirstAsync(TestContext.Current.CancellationToken).ConfigureAwait(true)).DeviceId;
         var locationsByDevice = await _dbContext.DeviceLocationHistory
             .Where(l => l.DeviceId == deviceId)
-            .ToListAsync().ConfigureAwait(true);
+            .ToListAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.NotEmpty(locationsByDevice);
         foreach (var l in locationsByDevice)
@@ -530,7 +530,7 @@ public class LocationTrackingServiceTests : IDisposable
         }
     }
 
-    [Fact(Skip = "NSubstitute 5.3.0 incompatible with .NET 9 - AppDomain.DefineDynamicAssembly removed. Waiting for NSubstitute 6.0.")]
+    [Fact]
     public async Task LocationHistoryShouldBeQueryableByTimestamp()
     {
         // Arrange
@@ -544,15 +544,15 @@ public class LocationTrackingServiceTests : IDisposable
             .Returns(Task.FromResult<GpsCoordinates?>(testCoordinates));
 
         // Act
-        await _service.StartTrackingAsync().ConfigureAwait(true);
-        await Task.Delay(150).ConfigureAwait(true);
+        await _service.StartTrackingAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
+        await Task.Delay(150, TestContext.Current.CancellationToken).ConfigureAwait(true);
         await _service.StopTrackingAsync().ConfigureAwait(true);
 
         // Assert - Query by time range
         var now = DateTimeOffset.UtcNow;
         var recentLocations = await _dbContext.DeviceLocationHistory
             .Where(l => l.Timestamp >= now.AddMinutes(-5))
-            .ToListAsync().ConfigureAwait(true);
+            .ToListAsync(TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         Assert.NotEmpty(recentLocations);
     }

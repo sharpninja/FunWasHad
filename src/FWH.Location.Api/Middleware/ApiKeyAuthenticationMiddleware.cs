@@ -88,7 +88,11 @@ internal class ApiKeyAuthenticationMiddleware
 
             return string.Equals(computedSignature, providedSignature, StringComparison.Ordinal);
         }
-        catch
+        catch (CryptographicException)
+        {
+            return false;
+        }
+        catch (ArgumentException)
         {
             return false;
         }

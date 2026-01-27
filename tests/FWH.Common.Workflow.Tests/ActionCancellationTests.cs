@@ -46,7 +46,8 @@ public class ActionCancellationTests
         var executor = sp.GetRequiredService<IWorkflowActionExecutor>();
         var def = new FWH.Common.Workflow.Models.WorkflowDefinition("w", "n", new System.Collections.Generic.List<FWH.Common.Workflow.Models.WorkflowNode> { new FWH.Common.Workflow.Models.WorkflowNode("A", "A", "{\"action\":\"LongRunning\", \"params\": {}}") }, new System.Collections.Generic.List<FWH.Common.Workflow.Models.Transition>(), new System.Collections.Generic.List<FWH.Common.Workflow.Models.StartPoint>());
 
-        using var cts = new CancellationTokenSource(100);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromMilliseconds(100));
         var result = await executor.ExecuteAsync("w", def.Nodes[0], def, cts.Token).ConfigureAwait(true);
         Assert.False(result);
     }

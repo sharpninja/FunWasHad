@@ -68,7 +68,8 @@ public class GpsServiceFactoryTests
     {
         // Arrange
         var service = new NoGpsService();
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromMilliseconds(100));
 
         // Act
         var startTime = DateTimeOffset.UtcNow;

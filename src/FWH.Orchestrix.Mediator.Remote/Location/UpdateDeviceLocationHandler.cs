@@ -5,17 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace FWH.Orchestrix.Mediator.Remote.Location;
 
-/// <summary>
-/// Remote handler for updating device location via HTTP API.
-///
-/// ⚠️ WARNING: This handler should NOT be used in the mobile app.
-/// TR-MOBILE-001: Device location is tracked in the local SQLite database only.
-/// Device location should NEVER be sent to the API for privacy and performance reasons.
-///
-/// This handler exists for potential future server-to-server scenarios only.
-/// The mobile app uses LocationTrackingService with NotesDbContext for local storage.
-/// </summary>
-public class UpdateDeviceLocationHandler : IMediatorHandler<UpdateDeviceLocationRequest, UpdateDeviceLocationResponse>
+public partial class UpdateDeviceLocationHandler : IMediatorHandler<UpdateDeviceLocationRequest, UpdateDeviceLocationResponse>
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<UpdateDeviceLocationHandler> _logger;
@@ -36,8 +26,7 @@ public class UpdateDeviceLocationHandler : IMediatorHandler<UpdateDeviceLocation
         ArgumentNullException.ThrowIfNull(request);
         try
         {
-            _logger.LogInformation("Updating device location remotely for device {DeviceId}",
-                request.DeviceId);
+            Log.UpdatingDeviceLocation(_logger, request.DeviceId);
 
             var response = await _httpClient.PostAsJsonAsync(
                 "/api/locations",
@@ -65,8 +54,7 @@ public class UpdateDeviceLocationHandler : IMediatorHandler<UpdateDeviceLocation
             }
 
             var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogWarning("Failed to update device location: {StatusCode} - {Error}",
-                response.StatusCode, error);
+            Log.UpdateDeviceLocationFailed(_logger, response.StatusCode, error);
 
             return new UpdateDeviceLocationResponse
             {
@@ -74,9 +62,23 @@ public class UpdateDeviceLocationHandler : IMediatorHandler<UpdateDeviceLocation
                 ErrorMessage = $"HTTP {response.StatusCode}: {error}"
             };
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Error updating device location remotely");
+            Log.UpdateDeviceLocationHttpError(_logger, ex);
+            return new UpdateDeviceLocationResponse
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
+        catch (TaskCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            Log.UpdateDeviceLocationCanceled(_logger, ex);
+            throw;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Log.UpdateDeviceLocationTimeout(_logger, ex);
             return new UpdateDeviceLocationResponse
             {
                 Success = false,
@@ -86,4 +88,22 @@ public class UpdateDeviceLocationHandler : IMediatorHandler<UpdateDeviceLocation
     }
 
     private record LocationCreatedDto(long Id);
+
+    private static partial class Log
+    {
+        [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Updating device location remotely for device {DeviceId}")]
+        public static partial void UpdatingDeviceLocation(ILogger logger, string deviceId);
+
+        [LoggerMessage(EventId = 2, Level = LogLevel.Warning, Message = "Failed to update device location: {StatusCode} - {Error}")]
+        public static partial void UpdateDeviceLocationFailed(ILogger logger, System.Net.HttpStatusCode statusCode, string error);
+
+        [LoggerMessage(EventId = 3, Level = LogLevel.Error, Message = "HTTP error updating device location remotely")]
+        public static partial void UpdateDeviceLocationHttpError(ILogger logger, Exception exception);
+
+        [LoggerMessage(EventId = 4, Level = LogLevel.Error, Message = "Update device location canceled")]
+        public static partial void UpdateDeviceLocationCanceled(ILogger logger, Exception exception);
+
+        [LoggerMessage(EventId = 5, Level = LogLevel.Error, Message = "Update device location timed out")]
+        public static partial void UpdateDeviceLocationTimeout(ILogger logger, Exception exception);
+    }
 }

@@ -112,7 +112,8 @@ public class WindowsGpsServiceTests
     {
         // Arrange
         var service = new WindowsGpsService();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(5));
 
         // Act
         var coordinates = await service.GetCurrentLocationAsync(cts.Token);
@@ -126,8 +127,8 @@ public class WindowsGpsServiceTests
     {
         // Arrange
         var service = new WindowsGpsService();
-        using var cts = new CancellationTokenSource();
-        
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+
         // Act
         var task = service.GetCurrentLocationAsync(cts.Token);
         cts.Cancel(); // Cancel immediately

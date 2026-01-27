@@ -4,7 +4,7 @@ namespace FWH.MarketingApi.Services;
 /// Service for storing and retrieving blob files (images, videos, etc.).
 /// Abstracts storage implementation to support different backends (local filesystem, cloud storage, etc.).
 /// </summary>
-internal interface IBlobStorageService
+public interface IBlobStorageService
 {
     /// <summary>
     /// Uploads a file and returns the storage URL.

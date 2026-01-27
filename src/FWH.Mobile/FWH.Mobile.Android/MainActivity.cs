@@ -8,6 +8,7 @@ using FWH.Common.Chat.Services;
 using FWH.Mobile.Droid.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Runtime.Versioning;
 
 namespace FWH.Mobile.Android;
 
@@ -17,7 +18,7 @@ namespace FWH.Mobile.Android;
     Icon = "@drawable/icon",
     MainLauncher = true,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
-public class MainActivity : AvaloniaMainActivity<App>
+public partial class MainActivity : AvaloniaMainActivity<App>
 {
     private AndroidCameraService? _cameraService;
     private ILogger<MainActivity>? _logger;
@@ -25,11 +26,18 @@ public class MainActivity : AvaloniaMainActivity<App>
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
-        savedInstanceState ??= new(0);
+        Bundle? createdBundle = null;
+        if (savedInstanceState is null)
+        {
+            createdBundle = new Bundle();
+            savedInstanceState = createdBundle;
+        }
 
         // Prevents issues with Avalonia restoring state
         savedInstanceState.Remove("Avalonia");
         base.OnCreate(savedInstanceState);
+
+        createdBundle?.Dispose();
 
         // Set current activity for camera service
         AndroidCameraPlatform.CurrentActivity = this;
@@ -47,11 +55,11 @@ public class MainActivity : AvaloniaMainActivity<App>
 
         if (_cameraService != null)
         {
-            _logger?.LogInformation("Camera service instance retrieved successfully");
+            LogMessages.CameraServiceRetrieved(_logger);
         }
         else
         {
-            _logger?.LogWarning("Camera service instance not found in DI container");
+            LogMessages.CameraServiceMissing(_logger);
         }
 
         // Request all required permissions on startup
@@ -71,10 +79,8 @@ public class MainActivity : AvaloniaMainActivity<App>
         base.OnActivityResult(requestCode, resultCode, data);
 
         Log.Error(TAG, $"MainActivity.OnActivityResult: RequestCode={requestCode}, ResultCode={resultCode}, HasData={data != null}");
-        _logger?.LogDebug("OnActivityResult: RequestCode={RequestCode}, ResultCode={ResultCode}, HasData={HasData}",
-            requestCode, resultCode, data != null);
+        LogMessages.OnActivityResult(_logger, requestCode, resultCode, data != null);
 
-        // Forward result to camera service
         if (_cameraService != null)
         {
             Log.Error(TAG, "OnActivityResult: Forwarding to camera service");
@@ -83,8 +89,7 @@ public class MainActivity : AvaloniaMainActivity<App>
         else
         {
             Log.Error(TAG, "OnActivityResult: Camera service is null, trying to retrieve again");
-            _logger?.LogWarning("OnActivityResult: Camera service is null, cannot forward result");
-            // Try to get camera service again in case it wasn't available during OnCreate
+            LogMessages.CameraServiceNull(_logger);
             _cameraService = App.ServiceProvider?.GetService<ICameraService>() as AndroidCameraService;
             if (_cameraService != null)
             {
@@ -131,7 +136,7 @@ public class MainActivity : AvaloniaMainActivity<App>
 #pragma warning restore CA1416
     }
 
-#pragma warning disable CA1416 // Platform compatibility - protected by version check in RequestRequiredPermissions
+    [SupportedOSPlatform("android23.0")]
     public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Permission[] grantResults)
     {
         ArgumentNullException.ThrowIfNull(permissions);
@@ -147,14 +152,34 @@ public class MainActivity : AvaloniaMainActivity<App>
 
                 if (result == Permission.Granted)
                 {
-                    _logger?.LogInformation("Permission granted: {Permission}", permission);
+                    LogMessages.PermissionGranted(_logger, permission);
                 }
                 else
                 {
-                    _logger?.LogWarning("Permission denied: {Permission}", permission);
+                    LogMessages.PermissionDenied(_logger, permission);
                 }
             }
         }
-#pragma warning restore CA1416
+    }
+
+    private static partial class LogMessages
+    {
+        [LoggerMessage(EventId = 200, Level = LogLevel.Information, Message = "Camera service instance retrieved successfully")]
+        public static partial void CameraServiceRetrieved(ILogger? logger);
+
+        [LoggerMessage(EventId = 201, Level = LogLevel.Warning, Message = "Camera service instance not found in DI container")]
+        public static partial void CameraServiceMissing(ILogger? logger);
+
+        [LoggerMessage(EventId = 202, Level = LogLevel.Debug, Message = "OnActivityResult: RequestCode={RequestCode}, ResultCode={ResultCode}, HasData={HasData}")]
+        public static partial void OnActivityResult(ILogger? logger, int requestCode, Result resultCode, bool hasData);
+
+        [LoggerMessage(EventId = 203, Level = LogLevel.Warning, Message = "OnActivityResult: Camera service is null, cannot forward result")]
+        public static partial void CameraServiceNull(ILogger? logger);
+
+        [LoggerMessage(EventId = 204, Level = LogLevel.Information, Message = "Permission granted: {Permission}")]
+        public static partial void PermissionGranted(ILogger? logger, string permission);
+
+        [LoggerMessage(EventId = 205, Level = LogLevel.Warning, Message = "Permission denied: {Permission}")]
+        public static partial void PermissionDenied(ILogger? logger, string permission);
     }
 }

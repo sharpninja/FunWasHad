@@ -190,7 +190,7 @@ public class EntityRelationshipTests : ControllerTestBase
         var city = await DbContext.Cities
             .Include(c => c.CityTourismMarkets)
                 .ThenInclude(ctm => ctm.TourismMarket)
-            .FirstOrDefaultAsync(c => c.Id == 1).ConfigureAwait(false);
+            .FirstOrDefaultAsync(c => c.Id == 1, TestContext.Current.CancellationToken);
 
         Assert.NotNull(city);
         Assert.Equal("San Francisco", city.Name);
@@ -208,7 +208,7 @@ public class EntityRelationshipTests : ControllerTestBase
         var market = await DbContext.TourismMarkets
             .Include(tm => tm.CityTourismMarkets)
                 .ThenInclude(ctm => ctm.City)
-            .FirstOrDefaultAsync(tm => tm.Id == 2).ConfigureAwait(false); // Mountain Tourism
+            .FirstOrDefaultAsync(tm => tm.Id == 2, TestContext.Current.CancellationToken); // Mountain Tourism
 
         Assert.NotNull(market);
         Assert.Equal("Mountain Tourism", market.Name);
@@ -226,7 +226,7 @@ public class EntityRelationshipTests : ControllerTestBase
         var airport = await DbContext.Airports
             .Include(a => a.AirportTourismMarkets)
                 .ThenInclude(atm => atm.TourismMarket)
-            .FirstOrDefaultAsync(a => a.Id == 1).ConfigureAwait(false);
+            .FirstOrDefaultAsync(a => a.Id == 1, TestContext.Current.CancellationToken);
 
         Assert.NotNull(airport);
         Assert.Equal("SFO", airport.IataCode);
@@ -244,7 +244,7 @@ public class EntityRelationshipTests : ControllerTestBase
         var market = await DbContext.TourismMarkets
             .Include(tm => tm.AirportTourismMarkets)
                 .ThenInclude(atm => atm.Airport)
-            .FirstOrDefaultAsync(tm => tm.Id == 2).ConfigureAwait(false); // Mountain Tourism
+            .FirstOrDefaultAsync(tm => tm.Id == 2, TestContext.Current.CancellationToken); // Mountain Tourism
 
         Assert.NotNull(market);
         Assert.Equal("Mountain Tourism", market.Name);
@@ -274,11 +274,11 @@ public class EntityRelationshipTests : ControllerTestBase
         };
 
         DbContext.Cities.Add(city);
-        await DbContext.SaveChangesAsync().ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var retrievedCity = await DbContext.Cities
             .Include(c => c.CityTourismMarkets)
-            .FirstOrDefaultAsync(c => c.Name == uniqueCityName).ConfigureAwait(false);
+            .FirstOrDefaultAsync(c => c.Name == uniqueCityName, TestContext.Current.CancellationToken);
 
         Assert.NotNull(retrievedCity);
         Assert.Empty(retrievedCity.CityTourismMarkets);
@@ -308,11 +308,11 @@ public class EntityRelationshipTests : ControllerTestBase
         };
 
         DbContext.Airports.Add(airport);
-        await DbContext.SaveChangesAsync().ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var retrievedAirport = await DbContext.Airports
             .Include(a => a.AirportTourismMarkets)
-            .FirstOrDefaultAsync(a => a.IataCode == uniqueIataCode).ConfigureAwait(false);
+            .FirstOrDefaultAsync(a => a.IataCode == uniqueIataCode, TestContext.Current.CancellationToken);
 
         Assert.NotNull(retrievedAirport);
         Assert.Empty(retrievedAirport.AirportTourismMarkets);
@@ -326,18 +326,18 @@ public class EntityRelationshipTests : ControllerTestBase
     {
         var city = await DbContext.Cities
             .Include(c => c.CityTourismMarkets)
-            .FirstOrDefaultAsync(c => c.Id == 2).ConfigureAwait(false); // Seattle
+            .FirstOrDefaultAsync(c => c.Id == 2, TestContext.Current.CancellationToken);
 
         Assert.NotNull(city);
         var relationshipCount = city.CityTourismMarkets.Count;
         Assert.True(relationshipCount > 0);
 
         DbContext.Cities.Remove(city);
-        await DbContext.SaveChangesAsync().ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var relationships = await DbContext.CityTourismMarkets
             .Where(ctm => ctm.CityId == 2)
-            .ToListAsync().ConfigureAwait(false);
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.Empty(relationships);
     }
@@ -350,18 +350,18 @@ public class EntityRelationshipTests : ControllerTestBase
     {
         var airport = await DbContext.Airports
             .Include(a => a.AirportTourismMarkets)
-            .FirstOrDefaultAsync(a => a.Id == 2).ConfigureAwait(false); // SEA
+            .FirstOrDefaultAsync(a => a.Id == 2, TestContext.Current.CancellationToken);
 
         Assert.NotNull(airport);
         var relationshipCount = airport.AirportTourismMarkets.Count;
         Assert.True(relationshipCount > 0);
 
         DbContext.Airports.Remove(airport);
-        await DbContext.SaveChangesAsync().ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var relationships = await DbContext.AirportTourismMarkets
             .Where(atm => atm.AirportId == 2)
-            .ToListAsync().ConfigureAwait(false);
+            .ToListAsync(TestContext.Current.CancellationToken);
 
         Assert.Empty(relationships);
     }
@@ -382,15 +382,10 @@ public class EntityRelationshipTests : ControllerTestBase
 
         DbContext.CityTourismMarkets.Add(duplicate);
 
-        try
+        await Assert.ThrowsAsync<DbUpdateException>(async () =>
         {
-            await DbContext.SaveChangesAsync().ConfigureAwait(false);
-            Assert.True(false, "Expected DbUpdateException");
-        }
-        catch (DbUpdateException)
-        {
-            // Expected exception
-        }
+            await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        });
     }
 
     /// <summary>
@@ -409,14 +404,9 @@ public class EntityRelationshipTests : ControllerTestBase
 
         DbContext.AirportTourismMarkets.Add(duplicate);
 
-        try
+        await Assert.ThrowsAsync<DbUpdateException>(async () =>
         {
-            await DbContext.SaveChangesAsync().ConfigureAwait(false);
-            Assert.True(false, "Expected DbUpdateException");
-        }
-        catch (DbUpdateException)
-        {
-            // Expected exception
-        }
+            await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        });
     }
 }

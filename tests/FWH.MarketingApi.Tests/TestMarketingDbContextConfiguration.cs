@@ -26,7 +26,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.Latitude).HasColumnName("latitude");
             entity.Property(e => e.Longitude).HasColumnName("longitude");
             entity.Property(e => e.IsSubscribed).HasColumnName("is_subscribed");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.SubscriptionExpiresAt).HasColumnName("subscription_expires_at");
 
             entity.HasIndex(e => new { e.Latitude, e.Longitude });
@@ -50,7 +50,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.BackgroundImageUrl).HasColumnName("background_image_url");
             entity.Property(e => e.CustomCss).HasColumnName("custom_css");
             entity.Property(e => e.IsActive).HasColumnName("is_active");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
             entity.HasOne(e => e.Business)
@@ -78,7 +78,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.ValidUntil).HasColumnName("valid_until");
             entity.Property(e => e.CurrentRedemptions).HasColumnName("current_redemptions");
             entity.Property(e => e.MaxRedemptions).HasColumnName("max_redemptions");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
 
             entity.HasOne(e => e.Business)
                 .WithMany(b => b.Coupons)
@@ -107,7 +107,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.Calories).HasColumnName("calories");
             entity.Property(e => e.Allergens).HasColumnName("allergens");
             entity.Property(e => e.DietaryTags).HasColumnName("dietary_tags");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
             entity.HasOne(e => e.Business)
@@ -134,7 +134,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.PublishedAt).HasColumnName("published_at");
             entity.Property(e => e.ExpiresAt).HasColumnName("expires_at");
             entity.Property(e => e.IsFeatured).HasColumnName("is_featured");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
             entity.HasOne(e => e.Business)
@@ -159,7 +159,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.Subject).IsRequired().HasMaxLength(200).HasColumnName("subject");
             entity.Property(e => e.Message).IsRequired().HasColumnName("message");
             entity.Property(e => e.Rating).HasColumnName("rating");
-            entity.Property(e => e.SubmittedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("submitted_at");
+            entity.Property(e => e.SubmittedAt).HasColumnName("submitted_at");
             entity.Property(e => e.ReviewedAt).HasColumnName("reviewed_at");
             entity.Property(e => e.ReviewedBy).HasColumnName("reviewed_by");
             entity.Property(e => e.BusinessResponse).HasColumnName("business_response");
@@ -194,7 +194,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.ThumbnailUrl).HasColumnName("thumbnail_url");
             entity.Property(e => e.FileSizeBytes).HasColumnName("file_size_bytes");
             entity.Property(e => e.DurationSeconds).HasColumnName("duration_seconds");
-            entity.Property(e => e.UploadedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("uploaded_at");
+            entity.Property(e => e.UploadedAt).HasColumnName("uploaded_at");
 
             entity.HasOne(e => e.Feedback)
                 .WithMany(f => f.Attachments)
@@ -216,7 +216,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.Description).HasMaxLength(2000).HasColumnName("description");
             entity.Property(e => e.Website).HasMaxLength(500).HasColumnName("website");
             entity.Property(e => e.IsActive).HasColumnName("is_active");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
             entity.HasIndex(e => new { e.Name, e.State, e.Country });
@@ -240,7 +240,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.BackgroundImageUrl).HasColumnName("background_image_url");
             entity.Property(e => e.CustomCss).HasColumnName("custom_css");
             entity.Property(e => e.IsActive).HasColumnName("is_active");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
             entity.HasOne(e => e.City)
@@ -258,7 +258,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.Name).IsRequired().HasMaxLength(200).HasColumnName("name");
             entity.Property(e => e.Description).HasMaxLength(2000).HasColumnName("description");
             entity.Property(e => e.IsActive).HasColumnName("is_active");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
             entity.HasIndex(e => e.IsActive);
@@ -272,7 +272,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.CityId).HasColumnName("city_id");
             entity.Property(e => e.TourismMarketId).HasColumnName("tourism_market_id");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
 
             entity.HasOne(e => e.City)
                 .WithMany(c => c.CityTourismMarkets)
@@ -303,7 +303,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.Longitude).IsRequired().HasColumnName("longitude");
             entity.Property(e => e.Description).HasMaxLength(2000).HasColumnName("description");
             entity.Property(e => e.IsActive).HasColumnName("is_active");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
             entity.HasIndex(e => e.IataCode);
@@ -320,7 +320,7 @@ internal static class TestMarketingDbContextConfiguration
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.AirportId).HasColumnName("airport_id");
             entity.Property(e => e.TourismMarketId).HasColumnName("tourism_market_id");
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("now() at time zone 'utc'").HasColumnName("created_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
 
             entity.HasOne(e => e.Airport)
                 .WithMany(a => a.AirportTourismMarkets)

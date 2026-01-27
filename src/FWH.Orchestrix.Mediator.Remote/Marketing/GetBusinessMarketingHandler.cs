@@ -5,10 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace FWH.Orchestrix.Mediator.Remote.Marketing;
 
-/// <summary>
-/// Remote handler for getting business marketing data via HTTP API.
-/// </summary>
-public class GetBusinessMarketingHandler : IMediatorHandler<GetBusinessMarketingRequest, GetBusinessMarketingResponse>
+public partial class GetBusinessMarketingHandler : IMediatorHandler<GetBusinessMarketingRequest, GetBusinessMarketingResponse>
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<GetBusinessMarketingHandler> _logger;
@@ -29,8 +26,7 @@ public class GetBusinessMarketingHandler : IMediatorHandler<GetBusinessMarketing
         ArgumentNullException.ThrowIfNull(request);
         try
         {
-            _logger.LogInformation("Getting business marketing data remotely for business {BusinessId}",
-                request.BusinessId);
+            Log.GettingBusinessMarketing(_logger, request.BusinessId);
 
             var response = await _httpClient.GetAsync(new Uri($"/api/marketing/{request.BusinessId}", UriKind.Relative), cancellationToken).ConfigureAwait(false);
 
@@ -45,8 +41,7 @@ public class GetBusinessMarketingHandler : IMediatorHandler<GetBusinessMarketing
             }
 
             var error = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-            _logger.LogWarning("Failed to get business marketing data: {StatusCode} - {Error}",
-                response.StatusCode, error);
+            Log.GetBusinessMarketingFailed(_logger, response.StatusCode, error);
 
             return new GetBusinessMarketingResponse
             {
@@ -54,14 +49,46 @@ public class GetBusinessMarketingHandler : IMediatorHandler<GetBusinessMarketing
                 ErrorMessage = $"HTTP {response.StatusCode}: {error}"
             };
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Error getting business marketing data remotely");
+            Log.GetBusinessMarketingHttpError(_logger, ex);
             return new GetBusinessMarketingResponse
             {
                 Success = false,
                 ErrorMessage = ex.Message
             };
         }
+        catch (TaskCanceledException ex) when (cancellationToken.IsCancellationRequested)
+        {
+            Log.GetBusinessMarketingCanceled(_logger, ex);
+            throw;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Log.GetBusinessMarketingTimeout(_logger, ex);
+            return new GetBusinessMarketingResponse
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(EventId = 20, Level = LogLevel.Information, Message = "Getting business marketing data remotely for business {BusinessId}")]
+        public static partial void GettingBusinessMarketing(ILogger logger, long businessId);
+
+        [LoggerMessage(EventId = 21, Level = LogLevel.Warning, Message = "Failed to get business marketing data: {StatusCode} - {Error}")]
+        public static partial void GetBusinessMarketingFailed(ILogger logger, System.Net.HttpStatusCode statusCode, string error);
+
+        [LoggerMessage(EventId = 22, Level = LogLevel.Error, Message = "HTTP error getting business marketing data remotely")]
+        public static partial void GetBusinessMarketingHttpError(ILogger logger, Exception exception);
+
+        [LoggerMessage(EventId = 23, Level = LogLevel.Error, Message = "Get business marketing canceled")]
+        public static partial void GetBusinessMarketingCanceled(ILogger logger, Exception exception);
+
+        [LoggerMessage(EventId = 24, Level = LogLevel.Error, Message = "Get business marketing timed out")]
+        public static partial void GetBusinessMarketingTimeout(ILogger logger, Exception exception);
     }
 }

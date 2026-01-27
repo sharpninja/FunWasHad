@@ -28,7 +28,7 @@ public class CityMarketingTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetCityMarketing("San Francisco", "California", "USA").ConfigureAwait(false);
+        var result = await controller.GetCityMarketing("San Francisco", "California", "USA").ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
@@ -57,7 +57,7 @@ public class CityMarketingTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetCityMarketing("Portland", "Oregon", "USA").ConfigureAwait(false);
+        var result = await controller.GetCityMarketing("Portland", "Oregon", "USA").ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
@@ -81,7 +81,7 @@ public class CityMarketingTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetCityMarketing("Seattle", "Washington", "USA").ConfigureAwait(false);
+        var result = await controller.GetCityMarketing("Seattle", "Washington", "USA");
 
         // Assert
         var okResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
@@ -103,7 +103,7 @@ public class CityMarketingTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetCityMarketing("NonExistent", "Nowhere", "USA").ConfigureAwait(false);
+        var result = await controller.GetCityMarketing("NonExistent", "Nowhere", "USA");
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
@@ -120,7 +120,7 @@ public class CityMarketingTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetCityMarketing("", "California", "USA").ConfigureAwait(false);
+        var result = await controller.GetCityMarketing("", "California", "USA").ConfigureAwait(true);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
@@ -138,7 +138,7 @@ public class CityMarketingTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetCityMarketing("san francisco", "california", "usa").ConfigureAwait(false);
+        var result = await controller.GetCityMarketing("san francisco", "california", "usa").ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<ActionResult<CityMarketingResponse>>(result);
@@ -159,7 +159,7 @@ public class CityMarketingTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetCityTheme(1).ConfigureAwait(false);
+        var result = await controller.GetCityTheme(1).ConfigureAwait(true);
 
         // Assert
         var okResult = Assert.IsType<ActionResult<CityTheme>>(result);
@@ -183,7 +183,7 @@ public class CityMarketingTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetCityTheme(2).ConfigureAwait(false);
+        var result = await controller.GetCityTheme(2).ConfigureAwait(true);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<CityTheme>>(result);
@@ -201,7 +201,7 @@ public class CityMarketingTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetCityTheme(3).ConfigureAwait(false);
+        var result = await controller.GetCityTheme(3);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<CityTheme>>(result);
@@ -218,7 +218,7 @@ public class CityMarketingTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetCityTheme(999).ConfigureAwait(false);
+        var result = await controller.GetCityTheme(999);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<CityTheme>>(result);
@@ -243,10 +243,10 @@ public class CityMarketingTests : ControllerTestBase
             CreatedAt = DateTimeOffset.UtcNow
         };
         DbContext.TourismMarkets.Add(market);
-        await DbContext.SaveChangesAsync().ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Create city and link to market
-        var city = await DbContext.Cities.FirstOrDefaultAsync(c => c.Id == 1).ConfigureAwait(false);
+        var city = await DbContext.Cities.FirstOrDefaultAsync(c => c.Id == 1, TestContext.Current.CancellationToken);
         Assert.NotNull(city);
 
         var relationship = new CityTourismMarket
@@ -258,13 +258,13 @@ public class CityMarketingTests : ControllerTestBase
             CreatedAt = DateTimeOffset.UtcNow
         };
         DbContext.CityTourismMarkets.Add(relationship);
-        await DbContext.SaveChangesAsync().ConfigureAwait(false);
+        await DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         // Act - Retrieve city with markets
         var cityWithMarkets = await DbContext.Cities
             .Include(c => c.CityTourismMarkets)
                 .ThenInclude(ctm => ctm.TourismMarket)
-            .FirstOrDefaultAsync(c => c.Id == city.Id).ConfigureAwait(false);
+            .FirstOrDefaultAsync(c => c.Id == city.Id, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(cityWithMarkets);

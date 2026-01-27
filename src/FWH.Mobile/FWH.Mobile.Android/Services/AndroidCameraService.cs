@@ -13,17 +13,17 @@ namespace FWH.Mobile.Droid.Services;
 /// <summary>
 /// Android implementation of camera service using MediaStore and FileProvider (EXTRA_OUTPUT).
 /// </summary>
-public class AndroidCameraService : ICameraService
+public partial class AndroidCameraService : ICameraService
 {
     private const string FileProviderAuthority = "app.funwashad.fileprovider";
 
-    private Activity? GetActivity()
+    private static Activity? GetActivity()
     {
         try
         {
             return AndroidCameraPlatform.CurrentActivity;
         }
-        catch
+        catch (InvalidOperationException)
         {
             return null;
         }
@@ -36,8 +36,6 @@ public class AndroidCameraService : ICameraService
 
     public AndroidCameraService(ILogger<AndroidCameraService>? logger = null)
     {
-        // Don't access AndroidCameraPlatform.CurrentActivity in constructor
-        // It will be accessed lazily when methods/properties are called
         _logger = logger;
     }
 
@@ -50,7 +48,7 @@ public class AndroidCameraService : ICameraService
                 var activity = GetActivity();
                 if (activity == null)
                 {
-                    _logger?.LogWarning("IsCameraAvailable: Activity not available");
+                    Logger.IsCameraUnavailable(_logger);
                     return false;
                 }
 
@@ -58,7 +56,7 @@ public class AndroidCameraService : ICameraService
 
                 if (packageManager == null)
                 {
-                    _logger?.LogWarning("IsCameraAvailable: PackageManager is null");
+                    Logger.PackageManagerNull(_logger);
                     return false;
                 }
 
@@ -72,25 +70,18 @@ public class AndroidCameraService : ICameraService
 
                 var isAvailable = hardwareAvailable && permissionGranted;
 
-                _logger?.LogDebug("IsCameraAvailable: HasCamera={HasCamera}, HasCameraAny={HasCameraAny}, PermissionGranted={PermissionGranted}, Result={Result}",
-                    hasCamera, hasCameraAny, permissionGranted, isAvailable);
+                Logger.IsCameraAvailableDebug(_logger, hasCamera, hasCameraAny, permissionGranted, isAvailable);
 
                 if (hardwareAvailable && !permissionGranted)
                 {
-                    _logger?.LogWarning("IsCameraAvailable: Camera hardware available but permission not granted (Status={Status})", permission);
+                    Logger.CameraPermissionMissing(_logger, permission);
                 }
 
                 return isAvailable;
             }
             catch (InvalidOperationException ex)
             {
-                // Activity not available yet, camera not available
-                _logger?.LogWarning(ex, "IsCameraAvailable: Activity not available");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "IsCameraAvailable: Unexpected error");
+                Logger.ActivityNotAvailable(_logger, ex);
                 return false;
             }
         }
@@ -104,7 +95,7 @@ public class AndroidCameraService : ICameraService
         if (!IsCameraAvailable)
         {
             Log.Warn(TAG, "TakePhotoAsync: Camera not available - IsCameraAvailable returned false");
-            _logger?.LogWarning("Camera not available - IsCameraAvailable returned false");
+            Logger.CameraNotAvailable(_logger);
             return Task.FromResult<byte[]?>(null);
         }
 
@@ -115,7 +106,7 @@ public class AndroidCameraService : ICameraService
             if (activity == null)
             {
                 Log.Error(TAG, "TakePhotoAsync: Activity not available");
-                _logger?.LogError("TakePhotoAsync: Activity not available");
+                Logger.ActivityNotAvailableError(_logger);
                 return Task.FromResult<byte[]?>(null);
             }
 
@@ -134,8 +125,9 @@ public class AndroidCameraService : ICameraService
             catch (Java.IO.IOException ioEx)
             {
                 Log.Error(TAG, $"TakePhotoAsync: Failed to create temp file: {ioEx.Message}", ioEx);
-                _logger?.LogError(ioEx, "Failed to create temp file for camera");
+                Logger.TempFileCreateFailed(_logger, ioEx);
                 _photoTcs.TrySetResult(null);
+                photoFile.Dispose();
                 return photoTask;
             }
 
@@ -145,12 +137,13 @@ public class AndroidCameraService : ICameraService
             {
                 photoUri = FileProvider.GetUriForFile(activity, FileProviderAuthority, photoFile);
             }
-            catch (Exception fpEx)
+            catch (Java.Lang.IllegalArgumentException fpEx)
             {
                 Log.Error(TAG, $"TakePhotoAsync: FileProvider.GetUriForFile failed: {fpEx.Message}", fpEx);
-                _logger?.LogError(fpEx, "FileProvider.GetUriForFile failed");
+                Logger.FileProviderFailed(_logger, fpEx);
                 _currentPhotoFile = null;
                 TryDelete(photoFile);
+                photoFile.Dispose();
                 _photoTcs.TrySetResult(null);
                 return photoTask;
             }
@@ -161,7 +154,7 @@ public class AndroidCameraService : ICameraService
                 return photoTask;
             }
 
-            var intent = new Intent(MediaStore.ActionImageCapture);
+            using var intent = new Intent(MediaStore.ActionImageCapture);
             intent.PutExtra(MediaStore.ExtraOutput, photoUri);
             intent.AddFlags(ActivityFlags.GrantWriteUriPermission | ActivityFlags.GrantReadUriPermission);
 
@@ -169,7 +162,7 @@ public class AndroidCameraService : ICameraService
             if (packageManager == null)
             {
                 Log.Error(TAG, "TakePhotoAsync: PackageManager is null - cannot resolve camera intent");
-                _logger?.LogError("PackageManager is null - cannot resolve camera intent");
+                Logger.PackageManagerNull(_logger);
                 CleanupAndComplete(null);
                 return photoTask;
             }
@@ -178,7 +171,7 @@ public class AndroidCameraService : ICameraService
             if (resolvedActivity == null)
             {
                 Log.Error(TAG, "TakePhotoAsync: Camera intent could not be resolved - no camera app available or permission denied");
-                _logger?.LogError("Camera intent could not be resolved - no camera app available or permission denied");
+                Logger.CameraIntentNotResolved(_logger);
                 CleanupAndComplete(null);
                 return photoTask;
             }
@@ -189,31 +182,32 @@ public class AndroidCameraService : ICameraService
             {
                 var packageName = resolveInfo.ActivityInfo?.PackageName;
                 if (!string.IsNullOrEmpty(packageName))
+                {
                     activity.GrantUriPermission(packageName, photoUri, ActivityFlags.GrantWriteUriPermission | ActivityFlags.GrantReadUriPermission);
+                }
             }
 
             Log.Info(TAG, $"TakePhotoAsync: Starting camera activity: {resolvedActivity.ClassName}, RequestCode={CameraRequestCode}");
-            _logger?.LogInformation("Starting camera activity: {ActivityName}, RequestCode={RequestCode}",
-                resolvedActivity.ClassName, CameraRequestCode);
+            Logger.StartingCameraActivity(_logger, resolvedActivity.ClassName, CameraRequestCode);
 
             try
             {
                 activity.StartActivityForResult(intent, CameraRequestCode);
                 Log.Info(TAG, "TakePhotoAsync: Camera activity started successfully");
-                _logger?.LogDebug("Camera activity started successfully");
+                Logger.CameraActivityStarted(_logger);
             }
-            catch (Exception startEx)
+            catch (ActivityNotFoundException startEx)
             {
                 Log.Error(TAG, $"TakePhotoAsync: Failed to start camera activity: {startEx.Message}", startEx);
-                _logger?.LogError(startEx, "Failed to start camera activity");
+                Logger.StartCameraFailed(_logger, startEx);
                 CleanupAndComplete(null);
                 return photoTask;
             }
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
-            Log.Error(TAG, $"TakePhotoAsync: Exception while starting camera: {ex.Message}", ex);
-            _logger?.LogError(ex, "Exception while starting camera");
+            Log.Error(TAG, $"TakePhotoAsync: Invalid operation: {ex.Message}", ex);
+            Logger.StartCameraInvalidOperation(_logger, ex);
             var t = _photoTcs?.Task;
             CleanupAndComplete(null);
             return t ?? Task.FromResult<byte[]?>(null);
@@ -225,6 +219,7 @@ public class AndroidCameraService : ICameraService
     private void CleanupAndComplete(byte[]? bytes)
     {
         TryDelete(_currentPhotoFile);
+        _currentPhotoFile?.Dispose();
         _currentPhotoFile = null;
         _photoTcs?.TrySetResult(bytes);
         _photoTcs = null;
@@ -235,11 +230,13 @@ public class AndroidCameraService : ICameraService
         try
         {
             if (file != null && file.Exists())
+            {
                 file.Delete();
+            }
         }
-        catch
+        catch (Java.IO.IOException)
         {
-            // Ignore
+            // Ignore delete failures
         }
     }
 
@@ -250,22 +247,22 @@ public class AndroidCameraService : ICameraService
     {
         const string TAG = "FWH_CAMERA";
         Log.Error(TAG, $"OnActivityResult: RequestCode={requestCode}, ExpectedCode={CameraRequestCode}, ResultCode={resultCode}, HasTaskCompletionSource={_photoTcs != null}");
-        _logger?.LogDebug("OnActivityResult called: RequestCode={RequestCode}, ExpectedCode={ExpectedCode}, ResultCode={ResultCode}, HasTaskCompletionSource={HasTaskCompletionSource}",
-            requestCode, CameraRequestCode, resultCode, _photoTcs != null);
+        Logger.OnActivityResultDebug(_logger, requestCode, CameraRequestCode, resultCode, _photoTcs != null);
 
         if (requestCode != CameraRequestCode || _photoTcs == null)
+        {
             return;
+        }
 
         if (resultCode != Result.Ok)
         {
-            _logger?.LogWarning("Camera activity returned non-OK result: {ResultCode}", resultCode);
+            Logger.CameraResultNonOk(_logger, resultCode);
             CleanupAndComplete(null);
             return;
         }
 
         try
         {
-            // Prefer full-resolution file from EXTRA_OUTPUT; fallback to thumbnail "data" extra.
             byte[]? bytes = null;
             if (_currentPhotoFile != null && _currentPhotoFile.Exists() && _currentPhotoFile.Length() > 0)
             {
@@ -286,11 +283,73 @@ public class AndroidCameraService : ICameraService
 
             CleanupAndComplete(bytes);
         }
-        catch (Exception ex)
+        catch (IOException ex)
         {
-            _logger?.LogError(ex, "Error processing camera result");
+            Logger.CameraResultIoError(_logger, ex);
             CleanupAndComplete(null);
         }
+        catch (InvalidOperationException ex)
+        {
+            Logger.CameraResultInvalidState(_logger, ex);
+            CleanupAndComplete(null);
+        }
+    }
+
+    private static partial class Logger
+    {
+        [LoggerMessage(EventId = 100, Level = LogLevel.Warning, Message = "IsCameraAvailable: Activity not available")]
+        public static partial void IsCameraUnavailable(ILogger? logger);
+
+        [LoggerMessage(EventId = 101, Level = LogLevel.Warning, Message = "IsCameraAvailable: PackageManager is null")]
+        public static partial void PackageManagerNull(ILogger? logger);
+
+        [LoggerMessage(EventId = 102, Level = LogLevel.Debug, Message = "IsCameraAvailable: HasCamera={HasCamera}, HasCameraAny={HasCameraAny}, PermissionGranted={PermissionGranted}, Result={Result}")]
+        public static partial void IsCameraAvailableDebug(ILogger? logger, bool hasCamera, bool hasCameraAny, bool permissionGranted, bool result);
+
+        [LoggerMessage(EventId = 103, Level = LogLevel.Warning, Message = "IsCameraAvailable: Camera hardware available but permission not granted (Status={Status})")]
+        public static partial void CameraPermissionMissing(ILogger? logger, Permission status);
+
+        [LoggerMessage(EventId = 104, Level = LogLevel.Warning, Message = "IsCameraAvailable: Activity not available")]
+        public static partial void ActivityNotAvailable(ILogger? logger, Exception exception);
+
+        [LoggerMessage(EventId = 110, Level = LogLevel.Error, Message = "TakePhotoAsync: Activity not available")]
+        public static partial void ActivityNotAvailableError(ILogger? logger);
+
+        [LoggerMessage(EventId = 111, Level = LogLevel.Error, Message = "Failed to create temp file for camera")]
+        public static partial void TempFileCreateFailed(ILogger? logger, Exception exception);
+
+        [LoggerMessage(EventId = 112, Level = LogLevel.Error, Message = "FileProvider.GetUriForFile failed")]
+        public static partial void FileProviderFailed(ILogger? logger, Exception exception);
+
+        [LoggerMessage(EventId = 113, Level = LogLevel.Error, Message = "Camera intent could not be resolved - no camera app available or permission denied")]
+        public static partial void CameraIntentNotResolved(ILogger? logger);
+
+        [LoggerMessage(EventId = 114, Level = LogLevel.Information, Message = "Starting camera activity: {ActivityName}, RequestCode={RequestCode}")]
+        public static partial void StartingCameraActivity(ILogger? logger, string activityName, int requestCode);
+
+        [LoggerMessage(EventId = 115, Level = LogLevel.Debug, Message = "Camera activity started successfully")]
+        public static partial void CameraActivityStarted(ILogger? logger);
+
+        [LoggerMessage(EventId = 116, Level = LogLevel.Error, Message = "Failed to start camera activity")]
+        public static partial void StartCameraFailed(ILogger? logger, Exception exception);
+
+        [LoggerMessage(EventId = 117, Level = LogLevel.Error, Message = "Exception while starting camera")]
+        public static partial void StartCameraInvalidOperation(ILogger? logger, Exception exception);
+
+        [LoggerMessage(EventId = 118, Level = LogLevel.Warning, Message = "Camera not available - IsCameraAvailable returned false")]
+        public static partial void CameraNotAvailable(ILogger? logger);
+
+        [LoggerMessage(EventId = 120, Level = LogLevel.Debug, Message = "OnActivityResult called: RequestCode={RequestCode}, ExpectedCode={ExpectedCode}, ResultCode={ResultCode}, HasTaskCompletionSource={HasTaskCompletionSource}")]
+        public static partial void OnActivityResultDebug(ILogger? logger, int requestCode, int expectedCode, Result resultCode, bool hasTaskCompletionSource);
+
+        [LoggerMessage(EventId = 121, Level = LogLevel.Warning, Message = "Camera activity returned non-OK result: {ResultCode}")]
+        public static partial void CameraResultNonOk(ILogger? logger, Result resultCode);
+
+        [LoggerMessage(EventId = 122, Level = LogLevel.Error, Message = "IO error processing camera result")]
+        public static partial void CameraResultIoError(ILogger? logger, Exception exception);
+
+        [LoggerMessage(EventId = 123, Level = LogLevel.Error, Message = "Invalid state processing camera result")]
+        public static partial void CameraResultInvalidState(ILogger? logger, Exception exception);
     }
 }
 

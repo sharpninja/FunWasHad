@@ -14,6 +14,7 @@
 - Every public feature must have appropriate Unit Tests and be part of an integration test suite.
 - Incorporate all Technical Requirements (`./docs/Project/Technical-Requirements.md`) into the implementation.
 - Keep Technical (`./docs/Project/Technical-Requirements.md`) and Functional (`./docs/Project/Functional-Requirements.md`) requirements up-to-date.
+- All tests must use `ConfigureAwait(true)` to satisfy xUnit1030.
 
 ## Architecture Guidelines
 
@@ -67,6 +68,7 @@
 - All public methods must have unit tests.
 - Integration tests required for all public features.
 - Use `NSubstitute` for mocking.
+- All tests must use `ConfigureAwait(true)` to satisfy xUnit1030.
 
 ## Documentation Requirements
 - XML documentation comments required for all public APIs.

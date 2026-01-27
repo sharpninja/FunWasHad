@@ -174,7 +174,9 @@ internal class DatabaseMigrationService
         var quotedDbName = '"' + targetDatabase.Replace("\"", "\"\"", StringComparison.Ordinal) + '"';
         var createSql = $"CREATE DATABASE {quotedDbName}";
 
+#pragma warning disable CA2100
         await using (var createCommand = new NpgsqlCommand(createSql, adminConnection))
+#pragma warning restore CA2100
         {
             await createCommand.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
@@ -196,7 +198,9 @@ internal class DatabaseMigrationService
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync().ConfigureAwait(false);
 
+#pragma warning disable CA2100
         await using var command = new NpgsqlCommand(sql, connection);
+#pragma warning restore CA2100
         await command.ExecuteNonQueryAsync().ConfigureAwait(false);
     }
 
@@ -226,7 +230,9 @@ internal class DatabaseMigrationService
         try
         {
             // Execute migration SQL
+#pragma warning disable CA2100
             await using (var command = new NpgsqlCommand(sql, connection, transaction))
+#pragma warning restore CA2100
             {
                 await command.ExecuteNonQueryAsync().ConfigureAwait(false);
             }

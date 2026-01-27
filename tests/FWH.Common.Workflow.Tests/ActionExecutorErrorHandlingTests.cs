@@ -214,13 +214,13 @@ public class ActionExecutorErrorHandlingTests : IDisposable
 
         var plant = "@startuml\n[*] --> A\n:A\nnote right: {\"action\": \"LongRunning\", \"params\": {}}\nA --> B\n:B\n@enduml";
 
-        var cts = new CancellationTokenSource();
-        cts.CancelAfter(100); // Cancel after 100ms
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromMilliseconds(100)); // Cancel after 100ms
 
         try
         {
             var def = await svc.ImportWorkflowAsync(plant, "error4", "ErrorTest4").ConfigureAwait(true);
-            await Task.Delay(200).ConfigureAwait(true); // Wait a bit
+            await Task.Delay(200, cts.Token).ConfigureAwait(true); // Wait a bit
         }
         catch (OperationCanceledException)
         {

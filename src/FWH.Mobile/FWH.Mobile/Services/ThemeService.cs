@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http.Json;
 using Avalonia;
 using Avalonia.Media;
@@ -247,8 +248,9 @@ public class ThemeService : IThemeService
         }
     }
 
+    [SuppressMessage("Performance", "CA1812", Justification = "Used for JSON serialization/deserialization of marketing responses")]
     // DTOs for API responses
-    private class BusinessThemeDto
+    private sealed class BusinessThemeDto
     {
         public string ThemeName { get; set; } = string.Empty;
         public string? PrimaryColor { get; set; }
@@ -259,12 +261,14 @@ public class ThemeService : IThemeService
         public bool IsActive { get; set; }
     }
 
-    private class CityMarketingResponseDto
+    [SuppressMessage("Performance", "CA1812", Justification = "Used for JSON serialization/deserialization of marketing responses")]
+    private sealed class CityMarketingResponseDto
     {
         public CityThemeDto? Theme { get; set; }
     }
 
-    private class CityThemeDto
+    [SuppressMessage("Performance", "CA1812", Justification = "Used for JSON serialization/deserialization of marketing responses")]
+    private sealed class CityThemeDto
     {
         public string ThemeName { get; set; } = string.Empty;
         public string? PrimaryColor { get; set; }

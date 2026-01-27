@@ -39,7 +39,7 @@ public class ApiKeyAuthenticationIntegrationTests : IClassFixture<CustomWebAppli
         // client.DefaultRequestHeaders.Add("X-API-Key", "test-api-key");
 
         // Act
-        var response = await client.GetAsync(new Uri("/api/marketing/nearby?latitude=40.7128&longitude=-74.0060", UriKind.Relative)).ConfigureAwait(true);
+        var response = await client.GetAsync(new Uri("/api/marketing/nearby?latitude=40.7128&longitude=-74.0060", UriKind.Relative), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Assert
         // Should not be 401 Unauthorized (may be 200 OK or 400 BadRequest depending on business logic)
@@ -90,7 +90,7 @@ public class ApiKeyAuthenticationIntegrationTests : IClassFixture<CustomWebAppli
         // No API key header - health checks should work without authentication
 
         // Act
-        var response = await client.GetAsync(new Uri("/health", UriKind.Relative)).ConfigureAwait(true);
+        var response = await client.GetAsync(new Uri("/health", UriKind.Relative), TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Assert
         // Health check should succeed even without authentication

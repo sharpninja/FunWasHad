@@ -51,7 +51,7 @@ public class FeedbackControllerTests : ControllerTestBase
         };
 
         // Act
-        var result = await controller.SubmitFeedback(request).ConfigureAwait(false);
+        var result = await controller.SubmitFeedback(request).ConfigureAwait(true);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<Feedback>>(result);
@@ -90,7 +90,7 @@ public class FeedbackControllerTests : ControllerTestBase
         };
 
         // Act
-        var result = await controller.SubmitFeedback(request).ConfigureAwait(false);
+        var result = await controller.SubmitFeedback(request).ConfigureAwait(true);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<Feedback>>(result);
@@ -117,7 +117,7 @@ public class FeedbackControllerTests : ControllerTestBase
         };
 
         // Act
-        var result = await controller.SubmitFeedback(request).ConfigureAwait(false);
+        var result = await controller.SubmitFeedback(request).ConfigureAwait(true);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<Feedback>>(result);
@@ -143,7 +143,7 @@ public class FeedbackControllerTests : ControllerTestBase
         };
 
         // Act
-        var result = await controller.SubmitFeedback(request).ConfigureAwait(false);
+        var result = await controller.SubmitFeedback(request).ConfigureAwait(true);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<Feedback>>(result);
@@ -171,14 +171,14 @@ public class FeedbackControllerTests : ControllerTestBase
             IsPublic = true
         };
 
-        var createResult = await controller.SubmitFeedback(createRequest).ConfigureAwait(false);
+        var createResult = await controller.SubmitFeedback(createRequest).ConfigureAwait(true);
         var createdActionResult = Assert.IsType<ActionResult<Feedback>>(createResult);
         var createdResult = Assert.IsType<CreatedAtActionResult>(createdActionResult.Result);
         var created = Assert.IsType<Feedback>(createdResult.Value);
         Assert.NotNull(created);
 
         // Act - retrieve it
-        var getResult = await controller.GetFeedback(created.Id).ConfigureAwait(false);
+        var getResult = await controller.GetFeedback(created.Id).ConfigureAwait(true);
 
         // Assert
         var getActionResult = Assert.IsType<ActionResult<Feedback>>(getResult);
@@ -198,7 +198,7 @@ public class FeedbackControllerTests : ControllerTestBase
         var controller = CreateController();
 
         // Act
-        var result = await controller.GetFeedback(999).ConfigureAwait(false);
+        var result = await controller.GetFeedback(999).ConfigureAwait(true);
 
         // Assert
         var actionResult = Assert.IsType<ActionResult<Feedback>>(result);

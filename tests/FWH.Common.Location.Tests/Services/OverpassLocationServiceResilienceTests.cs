@@ -104,7 +104,8 @@ public sealed class OverpassLocationServiceResilienceTests
         var businesses = await service.GetNearbyBusinessesAsync(
             latitude: 47.6062,
             longitude: -122.3321,
-            radiusMeters: 1000).ConfigureAwait(true);
+            radiusMeters: 1000,
+            cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Assert
         var businessList = businesses as System.Collections.Generic.List<Models.BusinessLocation>
@@ -179,7 +180,8 @@ public sealed class OverpassLocationServiceResilienceTests
         var businesses = await service.GetNearbyBusinessesAsync(
             latitude: 47.6062,
             longitude: -122.3321,
-            radiusMeters: 1000).ConfigureAwait(true);
+            radiusMeters: 1000,
+            cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true);
 
         // Assert
         var businessList = businesses as System.Collections.Generic.List<Models.BusinessLocation>
@@ -234,7 +236,8 @@ public sealed class OverpassLocationServiceResilienceTests
             await service.GetNearbyBusinessesAsync(
                 latitude: 91.0, // Invalid latitude
                 longitude: -122.3321,
-                radiusMeters: 1000).ConfigureAwait(true));
+                radiusMeters: 1000,
+                cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true));
     }
 
     /// <summary>
@@ -282,7 +285,8 @@ public sealed class OverpassLocationServiceResilienceTests
             await service.GetNearbyBusinessesAsync(
                 latitude: 47.6062,
                 longitude: 181.0, // Invalid longitude
-                radiusMeters: 1000).ConfigureAwait(true));
+                radiusMeters: 1000,
+                cancellationToken: TestContext.Current.CancellationToken).ConfigureAwait(true));
     }
 
     /// <summary>

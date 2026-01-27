@@ -54,9 +54,14 @@ public partial class CameraCaptureViewModel : ObservableObject
             {
                 IsCameraAvailable = _cameraService.IsCameraAvailable;
             }
-            catch (Exception ex)
+            catch (InvalidOperationException ex)
             {
                 _logger?.LogWarning(ex, "Failed to check camera availability");
+                IsCameraAvailable = false;
+            }
+            catch (PlatformNotSupportedException ex)
+            {
+                _logger?.LogWarning(ex, "Camera not supported on this platform");
                 IsCameraAvailable = false;
             }
         }
@@ -82,7 +87,12 @@ public partial class CameraCaptureViewModel : ObservableObject
                 StatusMessage = "Photo capture cancelled";
             }
         }
-        catch (Exception ex)
+        catch (OperationCanceledException ex)
+        {
+            StatusMessage = "Photo capture cancelled";
+            _logger?.LogInformation(ex, "Camera capture canceled");
+        }
+        catch (InvalidOperationException ex)
         {
             StatusMessage = $"Error: {ex.Message}";
             _logger?.LogError(ex, "Camera capture error");
