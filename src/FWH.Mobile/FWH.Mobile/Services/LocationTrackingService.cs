@@ -155,35 +155,34 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                     _logger.LogInformation("Location tracking initialized with current location: {Latitude:F6}, {Longitude:F6}",
                         initialLocation.Latitude, initialLocation.Longitude);
 
-                    // Use instant GPS speed to determine initial movement state
+                    // Always determine movement state on startup. Unknown is never valid once we have location.
+                    MovementState initialState;
                     if (initialLocation.SpeedMetersPerSecond.HasValue)
                     {
                         var speed = initialLocation.SpeedMetersPerSecond.Value;
                         _currentSpeedMetersPerSecond = speed;
-                        
-                        // Determine movement state immediately from speed
-                        var initialState = DetermineMovementStateFromSpeed(speed);
-                        if (initialState != MovementState.Unknown && initialState != _currentMovementState)
-                        {
-                            _currentMovementState = initialState;
-                            _lastStateChangeTime = DateTimeOffset.UtcNow;
-                            
-                            _logger.LogInformation(
-                                "Initial movement state determined from GPS speed: {State} (speed: {Speed:F1} mph)",
-                                initialState,
-                                GpsCalculator.MetersPerSecondToMph(speed));
-                            
-                            // Trigger movement state changed event
-                            var eventArgs = new MovementStateChangedEventArgs(
-                                MovementState.Unknown,
-                                initialState,
-                                DateTimeOffset.UtcNow,
-                                null,
-                                TimeSpan.Zero,
-                                speed);
-                            MovementStateChanged?.Invoke(this, eventArgs);
-                        }
+                        initialState = DetermineMovementStateFromSpeed(speed);
+                        _logger.LogInformation(
+                            "Initial movement state determined from GPS speed: {State} (speed: {Speed:F1} mph)",
+                            initialState,
+                            GpsCalculator.MetersPerSecondToMph(speed));
                     }
+                    else
+                    {
+                        initialState = MovementState.Stationary;
+                        _logger.LogInformation("Initial movement state set to Stationary (no speed data yet)");
+                    }
+
+                    _currentMovementState = initialState;
+                    _lastStateChangeTime = DateTimeOffset.UtcNow;
+                    var initialEventArgs = new MovementStateChangedEventArgs(
+                        MovementState.Unknown,
+                        initialState,
+                        DateTimeOffset.UtcNow,
+                        null,
+                        TimeSpan.Zero,
+                        _currentSpeedMetersPerSecond);
+                    MovementStateChanged?.Invoke(this, initialEventArgs);
 
                     // Immediately get address for initial location
                     _ = Task.Run(async () =>
@@ -324,11 +323,33 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 }
                 else
                 {
-                    // First location reading
+                    // First location reading in loop (startup may not have run or may have failed).
+                    // Unknown is never valid once we have location; determine state now.
                     _lastLocationTime = currentTime;
+                    if (_currentMovementState == MovementState.Unknown)
+                    {
+                        var deviceSpeedMps = currentLocation.SpeedMetersPerSecond;
+                        var stateFromSpeed = (deviceSpeedMps.HasValue && deviceSpeedMps.Value > 0)
+                            ? DetermineMovementStateFromSpeed(deviceSpeedMps.Value)
+                            : MovementState.Stationary;
+                        _currentMovementState = stateFromSpeed;
+                        _lastStateChangeTime = DateTimeOffset.UtcNow;
+                        _logger.LogInformation("Movement state set on first fix: {State}", stateFromSpeed);
+                        MovementStateChanged?.Invoke(this, new MovementStateChangedEventArgs(
+                            MovementState.Unknown,
+                            stateFromSpeed,
+                            DateTimeOffset.UtcNow,
+                            null,
+                            TimeSpan.Zero,
+                            currentLocation.SpeedMetersPerSecond));
+                    }
                 }
 
-                // Check if we should send update
+                // Always notify UI of current location so coordinates display updates in real time.
+                // Persistence to DB (SendLocationUpdateAsync) is still gated by minimum distance.
+                LocationUpdated?.Invoke(this, currentLocation);
+
+                // Check if we should persist update to local DB
                 if (ShouldSendLocationUpdate(currentLocation))
                 {
                     await SendLocationUpdateAsync(currentLocation, cancellationToken).ConfigureAwait(false);
@@ -396,9 +417,12 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
     private void UpdateMovementState(double distanceMoved, double? speed)
     {
         var newState = DetermineMovementState(distanceMoved, speed);
+        // Unknown is never valid once we have location; treat as Stationary
+        if (newState == MovementState.Unknown)
+            newState = MovementState.Stationary;
 
         // Check if state has changed
-        if (newState != _currentMovementState && newState != MovementState.Unknown)
+        if (newState != _currentMovementState)
         {
             var previousState = _currentMovementState;
             var transitionTime = DateTimeOffset.UtcNow;
@@ -711,12 +735,13 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
 
     /// <summary>
     /// Determines movement state from speed alone (for initial location when distance is not available).
+    /// Unknown is never returned: invalid/negative speed is treated as Stationary.
     /// </summary>
     private MovementState DetermineMovementStateFromSpeed(double speedMetersPerSecond)
     {
         if (speedMetersPerSecond < 0)
         {
-            return MovementState.Unknown;
+            return MovementState.Stationary; // Invalid reading, assume not moving
         }
 
         var speedMph = GpsCalculator.MetersPerSecondToMph(speedMetersPerSecond);

@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
 using FWH.Mobile.Options;
@@ -89,22 +90,34 @@ public sealed class LocationApiClient : ILocationService
         int maxDistanceMeters = 500,
         CancellationToken cancellationToken = default)
     {
-        // Try to get address from closest business first
-        var closestBusiness = await GetClosestBusinessAsync(
-            latitude,
-            longitude,
-            maxDistanceMeters,
-            cancellationToken).ConfigureAwait(false);
+        var requestUri = BuildAddressUri(latitude, longitude, maxDistanceMeters);
 
-        if (closestBusiness != null && !string.IsNullOrEmpty(closestBusiness.Address))
+        try
         {
-            return closestBusiness.Address;
-        }
+            using var response = await _httpClient.GetAsync(new Uri(requestUri, UriKind.Relative), cancellationToken).ConfigureAwait(false);
 
-        // Location API doesn't have a dedicated reverse geocoding endpoint yet
-        // Return null to indicate address could not be determined
-        // The OverpassLocationService implementation handles actual reverse geocoding
-        return null;
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogDebug("Location API returned 404 for address at ({Latitude}, {Longitude})", latitude, longitude);
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+            var dto = await response.Content.ReadFromJsonAsync<AddressResponseDto>(_serializerOptions, cancellationToken).ConfigureAwait(false);
+            var address = dto?.Address;
+
+            if (!string.IsNullOrEmpty(address))
+            {
+                _logger.LogDebug("Location API resolved address for ({Latitude}, {Longitude}): {Address}", latitude, longitude, address);
+            }
+
+            return address;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            _logger.LogError(ex, "Failed to fetch address from Location API for ({Latitude}, {Longitude})", latitude, longitude);
+            return null;
+        }
     }
 
     /// <summary>
@@ -197,6 +210,15 @@ public sealed class LocationApiClient : ILocationService
         return builder.ToString();
     }
 
+    private static string BuildAddressUri(double latitude, double longitude, int maxDistanceMeters)
+    {
+        var builder = new StringBuilder("api/locations/address?");
+        AppendCoordinateParameters(builder, latitude, longitude);
+        builder.Append("&maxDistanceMeters=");
+        builder.Append(maxDistanceMeters.ToString(CultureInfo.InvariantCulture));
+        return builder.ToString();
+    }
+
     private static void AppendCoordinateParameters(StringBuilder builder, double latitude, double longitude)
     {
         builder.Append("latitude=");
@@ -211,3 +233,9 @@ public sealed class LocationApiClient : ILocationService
         return new Uri(formatted, UriKind.Absolute);
     }
 }
+
+/// <summary>
+/// DTO for Location API address response (GET /api/locations/address).
+/// </summary>
+internal sealed record AddressResponseDto(
+    [property: JsonPropertyName("address")] string? Address);

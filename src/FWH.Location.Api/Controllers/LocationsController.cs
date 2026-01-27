@@ -130,6 +130,57 @@ internal sealed class LocationsController : ControllerBase
     }
 
     /// <summary>
+    /// Reverse-geocodes coordinates to a human-readable address.
+    /// Uses nearby business address when available, otherwise Overpass/OpenStreetMap address data.
+    /// </summary>
+    /// <param name="latitude">Latitude coordinate (-90 to 90)</param>
+    /// <param name="longitude">Longitude coordinate (-180 to 180)</param>
+    /// <param name="maxDistanceMeters">Maximum distance to search for address data in meters (default: 500)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Resolved address string, or 404 when none found</returns>
+    [HttpGet("address")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AddressResponse>> GetAddressAsync(
+        [FromQuery] double latitude,
+        [FromQuery] double longitude,
+        [FromQuery] int maxDistanceMeters = 500,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsValidCoordinate(latitude, -90, 90))
+        {
+            return BadRequest("Latitude must be between -90 and 90 degrees.");
+        }
+
+        if (!IsValidCoordinate(longitude, -180, 180))
+        {
+            return BadRequest("Longitude must be between -180 and 180 degrees.");
+        }
+
+        if (maxDistanceMeters <= 0)
+        {
+            return BadRequest("Max distance must be greater than zero.");
+        }
+
+        var address = await _locationService.GetAddressAsync(
+            latitude,
+            longitude,
+            maxDistanceMeters,
+            cancellationToken).ConfigureAwait(false);
+
+        if (string.IsNullOrEmpty(address))
+        {
+            _logger.LogDebug("No address resolved for ({Latitude}, {Longitude}) within {MaxDistance}m",
+                latitude, longitude, maxDistanceMeters);
+            return NotFound();
+        }
+
+        _logger.LogDebug("Resolved address for ({Latitude}, {Longitude}): {Address}", latitude, longitude, address);
+        return Ok(new AddressResponse(address));
+    }
+
+    /// <summary>
     /// Records a confirmed business location with the reporting GPS coordinates.
     /// </summary>
     /// <param name="request">Location confirmation request with business and user coordinates</param>
