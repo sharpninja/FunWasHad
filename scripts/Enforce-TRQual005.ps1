@@ -19,8 +19,8 @@ $ErrorActionPreference = 'Stop'
 # Normalize repo root (MSBuild may pass path with trailing backslash)
 $RepoRoot = $RepoRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
 $excludeDirs = @(
-    (Join-Path $RepoRoot 'tools' 'PlantUmlRender'),
-    (Join-Path $RepoRoot 'lib' 'NSubstitute.6.0.0')
+    (Join-Path (Join-Path $RepoRoot 'tools') 'PlantUmlRender'),
+    (Join-Path (Join-Path $RepoRoot 'lib') 'NSubstitute.6.0.0')
 )
 $excludeFileNames = @('AndroidLogcatLoggerProvider.cs')
 $pattern = 'Console\.(Write|WriteLine|Read|Error\.Write)'
