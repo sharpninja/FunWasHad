@@ -131,8 +131,9 @@ jobs:
             Write-Host "   Full path: $fullPath" -ForegroundColor Gray
             Write-Host "   Relative path: $relativePath" -ForegroundColor Gray
             Write-Host "   File name: $($apkPath.Name)" -ForegroundColor Gray
-            Write-Host "APK_PATH=$relativePath" >> $env:GITHUB_OUTPUT
-            Write-Host "APK_NAME=$($apkPath.Name)" >> $env:GITHUB_OUTPUT
+            # Use UTF8NoBOM so runner reads step outputs reliably (fixes skipped Upload APK artifact)
+            "APK_PATH=$relativePath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8NoBOM -Append
+            "APK_NAME=$($apkPath.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8NoBOM -Append
           } else {
             Write-Host "" -ForegroundColor Red
             Write-Error "APK file not found in any location"
@@ -148,7 +149,7 @@ jobs:
           }
 
       - name: Upload APK artifact
-        if: steps.find_apk.outputs.APK_PATH != ''
+        if: success() && steps.find_apk.outputs.APK_PATH != ''
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.artifact_name }}
