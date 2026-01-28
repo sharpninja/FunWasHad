@@ -27,17 +27,37 @@ jobs:
         id: fetch_details
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Note: GITHUB_TOKEN has a rate limit of 1,000 requests per hour per repository.
+          # For workflows with many jobs, consider implementing retry logic if rate limiting occurs.
         run: |
           RUN_ID="${{ github.event.workflow_run.id }}"
           REPO="${{ github.repository }}"
           
           echo "Fetching details for workflow run $RUN_ID"
           
-          # Get workflow run details
-          gh api "/repos/$REPO/actions/runs/$RUN_ID" > /tmp/workflow_run.json
+          # Get workflow run details with error handling
+          if ! gh api "/repos/$REPO/actions/runs/$RUN_ID" > /tmp/workflow_run.json 2>&1; then
+            echo "Error: Failed to fetch workflow run details"
+            exit 1
+          fi
           
-          # Get all jobs for this run
-          gh api "/repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate > /tmp/jobs.json
+          # Verify workflow_run.json is valid JSON
+          if ! jq empty /tmp/workflow_run.json 2>/dev/null; then
+            echo "Error: Invalid JSON in workflow run response"
+            exit 1
+          fi
+          
+          # Get all jobs for this run with error handling
+          if ! gh api "/repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate > /tmp/jobs.json 2>&1; then
+            echo "Error: Failed to fetch jobs data"
+            exit 1
+          fi
+          
+          # Verify jobs.json is valid JSON
+          if ! jq empty /tmp/jobs.json 2>/dev/null; then
+            echo "Error: Invalid JSON in jobs response"
+            exit 1
+          fi
           
           echo "Details fetched successfully"
 
@@ -57,6 +77,15 @@ jobs:
           HEAD_SHA=$(jq -r '.head_sha' /tmp/workflow_run.json)
           HEAD_BRANCH=$(jq -r '.head_branch' /tmp/workflow_run.json)
           
+          # Sanitize variables to prevent markdown injection
+          # Replace special markdown characters with escaped versions
+          sanitize() {
+            echo "$1" | sed 's/[`*_{}[\]()#+\-\.!|\\]/\\&/g'
+          }
+          
+          SAFE_BRANCH=$(sanitize "$HEAD_BRANCH")
+          SAFE_CONCLUSION=$(sanitize "$RUN_CONCLUSION")
+          
           # Start building the status document
           cat > /tmp/staging-status.md << 'HEADER'
           # Staging Workflow Status
@@ -71,8 +100,8 @@ jobs:
           
           - **Run Number**: #$RUN_NUMBER
           - **Run ID**: $RUN_ID
-          - **Status**: $RUN_CONCLUSION
-          - **Branch**: $HEAD_BRANCH
+          - **Status**: $SAFE_CONCLUSION
+          - **Branch**: $SAFE_BRANCH
           - **Commit**: [\`${HEAD_SHA:0:7}\`](https://github.com/$REPO/commit/$HEAD_SHA)
           - **Started**: $CREATED_AT
           - **Completed**: $UPDATED_AT
@@ -101,14 +130,21 @@ jobs:
           # Get the job count
           JOB_COUNT=$(jq '.jobs | length' /tmp/jobs.json)
           
-          for i in $(seq 0 $(($JOB_COUNT - 1))); do
+          # Validate JOB_COUNT is a number and greater than 0
+          if ! [[ "$JOB_COUNT" =~ ^[0-9]+$ ]] || [ "$JOB_COUNT" -eq 0 ]; then
+            echo "No jobs found or invalid job count"
+          else
+            for i in $(seq 0 $(($JOB_COUNT - 1))); do
             JOB_NAME=$(jq -r ".jobs[$i].name" /tmp/jobs.json)
             JOB_STATUS=$(jq -r ".jobs[$i].status" /tmp/jobs.json)
             JOB_CONCLUSION=$(jq -r ".jobs[$i].conclusion // \"N/A\"" /tmp/jobs.json)
             JOB_ID=$(jq -r ".jobs[$i].id" /tmp/jobs.json)
             JOB_URL=$(jq -r ".jobs[$i].html_url" /tmp/jobs.json)
             
-            echo "### $JOB_NAME" >> /tmp/staging-status.md
+            # Sanitize job name for markdown
+            SAFE_JOB_NAME=$(echo "$JOB_NAME" | sed 's/[`*_{}[\]()#+\-\.!|\\]/\\&/g')
+            
+            echo "### $SAFE_JOB_NAME" >> /tmp/staging-status.md
             echo "" >> /tmp/staging-status.md
             echo "- **Status**: $JOB_STATUS" >> /tmp/staging-status.md
             echo "- **Conclusion**: $JOB_CONCLUSION" >> /tmp/staging-status.md
@@ -118,7 +154,8 @@ jobs:
             # Get step count for this job
             STEP_COUNT=$(jq ".jobs[$i].steps | length" /tmp/jobs.json)
             
-            if [ "$STEP_COUNT" -gt 0 ]; then
+            # Validate STEP_COUNT is a number before comparison
+            if [[ "$STEP_COUNT" =~ ^[0-9]+$ ]] && [ "$STEP_COUNT" -gt 0 ]; then
               echo "#### Steps:" >> /tmp/staging-status.md
               echo "" >> /tmp/staging-status.md
               echo "| Step | Status | Conclusion |" >> /tmp/staging-status.md
@@ -128,7 +165,9 @@ jobs:
                 STEP_NAME=$(jq -r ".jobs[$i].steps[$j].name" /tmp/jobs.json)
                 STEP_STATUS=$(jq -r ".jobs[$i].steps[$j].status" /tmp/jobs.json)
                 STEP_CONCLUSION=$(jq -r ".jobs[$i].steps[$j].conclusion // \"N/A\"" /tmp/jobs.json)
-                echo "| $STEP_NAME | $STEP_STATUS | $STEP_CONCLUSION |" >> /tmp/staging-status.md
+                # Sanitize step name for markdown table
+                SAFE_STEP_NAME=$(echo "$STEP_NAME" | sed 's/[|]/\\|/g')
+                echo "| $SAFE_STEP_NAME | $STEP_STATUS | $STEP_CONCLUSION |" >> /tmp/staging-status.md
               done
               
               echo "" >> /tmp/staging-status.md
@@ -136,6 +175,7 @@ jobs:
             
             echo "" >> /tmp/staging-status.md
           done
+          fi
           
           echo "---" >> /tmp/staging-status.md
           echo "" >> /tmp/staging-status.md
@@ -209,8 +249,8 @@ jobs:
             fi
             
             if [ -f "/tmp/job_${JOB_ID}_logs.txt" ]; then
-              # Extract analyzer warnings (CS, CA codes)
-              grep -oE '(CS|CA)[0-9]{4}:.*' "/tmp/job_${JOB_ID}_logs.txt" >> /tmp/all_warnings.txt 2>/dev/null || true
+              # Extract analyzer warnings (CS, CA codes) with flexible pattern
+              grep -oE '(CS|CA)[0-9]{4}[[:space:]]*:.*' "/tmp/job_${JOB_ID}_logs.txt" >> /tmp/all_warnings.txt 2>/dev/null || true
             fi
           done
           
@@ -223,8 +263,8 @@ jobs:
             while IFS= read -r line; do
               # Extract warning code (CS#### or CA####)
               CODE=$(echo "$line" | grep -oE '(CS|CA)[0-9]{4}' | head -1)
-              # Extract description (everything after the code and colon)
-              DESC=$(echo "$line" | sed -E 's/.*((CS|CA)[0-9]{4}): //g' | head -c 100)
+              # Extract description (everything after the code and colon) and limit to 100 chars for processing
+              DESC=$(echo "$line" | sed -E 's/.*(CS|CA)[0-9]{4}[[:space:]]*:[[:space:]]*//' | head -c 100)
               
               if [ -n "$CODE" ]; then
                 echo "$CODE|$DESC" >> /tmp/warning_summary.txt
@@ -236,14 +276,16 @@ jobs:
               echo "| Warning Code | Count | Description |" >> /tmp/staging-status.md
               echo "|--------------|-------|-------------|" >> /tmp/staging-status.md
               
-              # Sort, count unique warnings, and format as table
-              sort /tmp/warning_summary.txt | uniq -c | sort -rn | while read -r count entry; do
-                CODE=$(echo "$entry" | cut -d'|' -f1)
-                DESC=$(echo "$entry" | cut -d'|' -f2-)
-                # Trim and clean description
-                DESC=$(echo "$DESC" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | head -c 80)
-                echo "| $CODE | $count | $DESC |" >> /tmp/staging-status.md
-              done
+              # Extract codes, count them, then get sample descriptions
+              # First, count warning codes
+              cut -d'|' -f1 /tmp/warning_summary.txt | sort | uniq -c | sort -rn > /tmp/warning_counts.txt
+              
+              # For each unique code, get count and a sample description
+              while read -r count code; do
+                # Get first description for this code (limit to 80 chars for display)
+                DESC=$(grep "^$code|" /tmp/warning_summary.txt | head -1 | cut -d'|' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | head -c 80)
+                echo "| $code | $count | $DESC |" >> /tmp/staging-status.md
+              done < /tmp/warning_counts.txt
               
               echo "" >> /tmp/staging-status.md
             else
@@ -280,6 +322,17 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "chore: update staging workflow status [skip ci]"
-            git push origin develop
-            echo "Status document updated successfully"
+            
+            # Push with error handling
+            if git push origin develop; then
+              echo "Status document updated successfully"
+            else
+              echo "Error: Failed to push status document update"
+              echo "This could be due to:"
+              echo "  - Branch protection rules"
+              echo "  - Merge conflicts"
+              echo "  - Network issues"
+              echo "  - Insufficient permissions"
+              exit 1
+            fi
           fi
