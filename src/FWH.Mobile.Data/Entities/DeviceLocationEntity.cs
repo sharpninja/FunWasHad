@@ -48,9 +48,9 @@ public class DeviceLocationEntity
     public double? HeadingDegrees { get; set; }
 
     /// <summary>
-    /// Movement state at time of recording (Unknown, Stationary, Walking, Riding)
+    /// Movement state at time of recording (Stationary, Walking, Riding, Moving)
     /// </summary>
-    public string MovementState { get; set; } = "Unknown";
+    public string MovementState { get; set; } = "Stationary";
 
     /// <summary>
     /// Timestamp when the location was recorded

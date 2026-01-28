@@ -15,7 +15,7 @@ public partial class ActivityTrackingViewModel : ObservableObject
     private readonly LocationSettings _locationSettings;
 
     [ObservableProperty]
-    private string _currentState = "Unknown";
+    private string _currentState = "Stationary";
 
     [ObservableProperty]
     private string _currentSpeed = "0.0 mph";

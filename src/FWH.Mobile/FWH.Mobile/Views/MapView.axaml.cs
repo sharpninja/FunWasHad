@@ -16,7 +16,7 @@ public partial class MapView : UserControl
 {
     private MapViewModel? _mapViewModel;
     private Services.ILocationTrackingService? _locationTrackingService;
-    private MovementState _currentMovementState = FWH.Mobile.Services.MovementState.Unknown;
+    private MovementState _currentMovementState = FWH.Mobile.Services.MovementState.Stationary;
     private MemoryLayer? _deviceLocationLayer;
     private PointFeature? _deviceLocationFeature;
 
@@ -183,12 +183,11 @@ public partial class MapView : UserControl
     {
         return state switch
         {
-            FWH.Mobile.Services.MovementState.Unknown => "😊",
             FWH.Mobile.Services.MovementState.Stationary => "😊",
             FWH.Mobile.Services.MovementState.Walking => "🚶",
             FWH.Mobile.Services.MovementState.Riding => "🚕",
             FWH.Mobile.Services.MovementState.Moving => "🚕", // Use taxi for Moving as well
-            _ => "😊" // Default to smiley
+            _ => "😊"
         };
     }
 }

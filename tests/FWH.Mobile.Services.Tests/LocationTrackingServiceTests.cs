@@ -155,9 +155,9 @@ public class LocationTrackingServiceTests : IDisposable
     /// <remarks>
     /// <para><strong>What is being tested:</strong> The location tracking service's local storage behavior and verification that locations are not sent to remote APIs.</para>
     /// <para><strong>Data involved:</strong> GpsCoordinates with San Francisco location (37.7749, -122.4194), accuracy 10.0 meters, altitude 100.0 meters, and current timestamp. The service uses an in-memory SQLite database. The ILocationService mock is used to verify no API calls are made.</para>
-    /// <para><strong>Why the data matters:</strong> TR-MOBILE-001 specifies that device location must be tracked locally only and never sent to APIs for privacy compliance. This test validates that location data is persisted locally with all coordinate details (latitude, longitude, accuracy, altitude) and that the ILocationService (which would send to API) is never called. The "Unknown" movement state is expected for the first location update before movement state is calculated.</para>
-    /// <para><strong>Expected outcome:</strong> After tracking starts and processes a location update, the DeviceLocationHistory table should contain at least one record with matching latitude, longitude, accuracy, altitude, and movement state "Unknown". The ILocationService should not receive any calls.</para>
-    /// <para><strong>Reason for expectation:</strong> The service should store all location data locally in SQLite for offline access and privacy. The stored data should match the GPS coordinates exactly, including metadata like accuracy and altitude. Movement state starts as "Unknown" until enough location data is collected to determine movement patterns. The absence of ILocationService calls confirms compliance with TR-MOBILE-001.</para>
+    /// <para><strong>Why the data matters:</strong> TR-MOBILE-001 specifies that device location must be tracked locally only and never sent to APIs for privacy compliance. This test validates that location data is persisted locally with all coordinate details (latitude, longitude, accuracy, altitude) and that the ILocationService (which would send to API) is never called. The "Stationary" movement state is the default for the first location update before movement state is calculated.</para>
+    /// <para><strong>Expected outcome:</strong> After tracking starts and processes a location update, the DeviceLocationHistory table should contain at least one record with matching latitude, longitude, accuracy, altitude, and movement state "Stationary". The ILocationService should not receive any calls.</para>
+    /// <para><strong>Reason for expectation:</strong> The service should store all location data locally in SQLite for offline access and privacy. The stored data should match the GPS coordinates exactly, including metadata like accuracy and altitude. Movement state defaults to "Stationary" until enough location data is collected to determine movement patterns. The absence of ILocationService calls confirms compliance with TR-MOBILE-001.</para>
     /// </remarks>
     [Fact]
     public async Task LocationUpdateShouldStoreInLocalDatabaseNotSentToApi()
@@ -187,7 +187,7 @@ public class LocationTrackingServiceTests : IDisposable
         Assert.Equal(testCoordinates.Longitude, storedLocation.Longitude);
         Assert.Equal(testCoordinates.AccuracyMeters, storedLocation.AccuracyMeters);
         Assert.Equal(testCoordinates.AltitudeMeters, storedLocation.AltitudeMeters);
-        Assert.Equal("Unknown", storedLocation.MovementState); // Initial state
+        Assert.Equal("Stationary", storedLocation.MovementState); // Default state
 
         // Cleanup
         await _service.StopTrackingAsync().ConfigureAwait(true);
@@ -453,7 +453,7 @@ public class LocationTrackingServiceTests : IDisposable
 
         Assert.NotEmpty(storedLocations);
         // Movement state should be recorded
-        Assert.True(storedLocations.Any(l => l.MovementState != "Unknown"), "Expected at least one location with MovementState != 'Unknown'");
+        Assert.True(storedLocations.Any(l => l.MovementState != "Stationary"), "Expected at least one location with MovementState indicating movement (e.g. Walking)");
 
         // Cleanup
         await _service.StopTrackingAsync().ConfigureAwait(true);

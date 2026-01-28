@@ -1,4 +1,22 @@
 <Project>
+  <!-- When a project references lib/NSubstitute, add a direct Reference to the NSubstitute DLL so the compiler can resolve NSubstitute types. -->
+  <Target Name="AddNSubstituteDirectRef" BeforeTargets="ResolveAssemblyReferences" Condition="'@(ProjectReference)' != '' and $([System.String]::Copy('@(ProjectReference)').Contains('NSubstitute'))">
+    <PropertyGroup>
+      <_NSubLibDir>$(MSBuildThisFileDirectory)lib/NSubstitute.6.0.0/lib</_NSubLibDir>
+      <_NSubDllNet9>$(_NSubLibDir)/net9.0/NSubstitute.dll</_NSubDllNet9>
+      <_NSubDllNet8>$(_NSubLibDir)/net8.0/NSubstitute.dll</_NSubDllNet8>
+      <_NSubDllNetStd>$(_NSubLibDir)/netstandard2.0/NSubstitute.dll</_NSubDllNetStd>
+      <_NSubDllToUse Condition="Exists('$(_NSubDllNet9)')">$(_NSubDllNet9)</_NSubDllToUse>
+      <_NSubDllToUse Condition="'$(_NSubDllToUse)' == '' and Exists('$(_NSubDllNet8)')">$(_NSubDllNet8)</_NSubDllToUse>
+      <_NSubDllToUse Condition="'$(_NSubDllToUse)' == ''">$(_NSubDllNetStd)</_NSubDllToUse>
+    </PropertyGroup>
+    <ItemGroup Condition="Exists('$(_NSubDllToUse)')">
+      <Reference Include="NSubstitute">
+        <HintPath>$(_NSubDllToUse)</HintPath>
+      </Reference>
+    </ItemGroup>
+  </Target>
+
   <!-- TR-QUAL-005: Enforce no Console.WriteLine/Write/Read; use ILogger. Excludes: CLI tools (PlantUmlRender), ILogger sink impl (AndroidLogcatLoggerProvider). -->
   <Target Name="EnforceTRQual005" AfterTargets="Build" Condition="'$(EnforceTRQual005)' != 'false'">
     <PropertyGroup>

@@ -14,20 +14,19 @@ public class MovementStateTests
     /// </summary>
     /// <remarks>
     /// <para><strong>What is being tested:</strong> The MovementState enum's underlying integer values to ensure they match expected values.</para>
-    /// <para><strong>Data involved:</strong> The MovementState enum with values: Unknown=0, Stationary=1, Walking=2, Riding=3, Moving=4. These values are used for database storage and state comparisons.</para>
-    /// <para><strong>Why the data matters:</strong> Enum values are often persisted to databases as integers. If the values change, existing database records may become invalid or misclassified. This test ensures the enum values remain stable, preventing data corruption during migrations or when reading historical data. The sequential values (0-4) also enable range queries and ordering.</para>
-    /// <para><strong>Expected outcome:</strong> Each MovementState enum value should match its expected integer: Unknown=0, Stationary=1, Walking=2, Riding=3, Moving=4.</para>
+    /// <para><strong>Data involved:</strong> The MovementState enum with values: Stationary=0, Walking=1, Riding=2, Moving=3. These values are used for database storage and state comparisons.</para>
+    /// <para><strong>Why the data matters:</strong> Enum values are often persisted to databases as integers. If the values change, existing database records may become invalid or misclassified. This test ensures the enum values remain stable, preventing data corruption during migrations or when reading historical data. Stationary is the default (0).</para>
+    /// <para><strong>Expected outcome:</strong> Each MovementState enum value should match its expected integer: Stationary=0, Walking=1, Riding=2, Moving=3.</para>
     /// <para><strong>Reason for expectation:</strong> Enum values are typically assigned sequentially starting from 0 unless explicitly specified. These specific values may be used in database schemas, API contracts, or serialization formats. Verifying the values ensures compatibility with existing data and prevents breaking changes if the enum is modified.</para>
     /// </remarks>
     [Fact]
     public void MovementStateHasExpectedValues()
     {
-        // Assert - Verify enum values
-        Assert.Equal(0, (int)MovementState.Unknown);
-        Assert.Equal(1, (int)MovementState.Stationary);
-        Assert.Equal(2, (int)MovementState.Walking);
-        Assert.Equal(3, (int)MovementState.Riding);
-        Assert.Equal(4, (int)MovementState.Moving);
+        // Assert - Verify enum values (Stationary is default 0)
+        Assert.Equal(0, (int)MovementState.Stationary);
+        Assert.Equal(1, (int)MovementState.Walking);
+        Assert.Equal(2, (int)MovementState.Riding);
+        Assert.Equal(3, (int)MovementState.Moving);
     }
 
     /// <summary>
@@ -138,9 +137,9 @@ public class MovementStateTests
     /// </summary>
     /// <remarks>
     /// <para><strong>What is being tested:</strong> The MovementStateChangedEventArgs.ToString method's handling of null speed values, ensuring it formats correctly without including speed information.</para>
-    /// <para><strong>Data involved:</strong> Event args with Unknown→Stationary transition, null trigger distance, duration 90 seconds, and null speed. The ToString method should format the available information without attempting to display speed.</para>
+    /// <para><strong>Data involved:</strong> Event args with Stationary→Walking transition, null trigger distance, duration 90 seconds, and null speed. The ToString method should format the available information without attempting to display speed.</para>
     /// <para><strong>Why the data matters:</strong> Speed may be unavailable in some scenarios (e.g., GPS signal lost, device stationary). The ToString method must handle null speed gracefully without throwing exceptions or displaying misleading information. This ensures robust string formatting for all event args scenarios.</para>
-    /// <para><strong>Expected outcome:</strong> The ToString result should contain "Unknown", "Stationary", and "90s" (duration), but should NOT contain "mph" (speed unit indicator).</para>
+    /// <para><strong>Expected outcome:</strong> The ToString result should contain "Stationary", "Walking", and "90s" (duration), but should NOT contain "mph" (speed unit indicator).</para>
     /// <para><strong>Reason for expectation:</strong> When speed is null, the ToString method should skip speed-related formatting. The presence of state names and duration confirms basic formatting works, while the absence of "mph" confirms that speed information is correctly omitted when null. This prevents displaying misleading or invalid speed information.</para>
     /// </remarks>
     [Fact]
@@ -148,8 +147,8 @@ public class MovementStateTests
     {
         // Arrange
         var eventArgs = new MovementStateChangedEventArgs(
-            MovementState.Unknown,
             MovementState.Stationary,
+            MovementState.Walking,
             DateTimeOffset.UtcNow,
             null,
             TimeSpan.FromSeconds(90),
@@ -159,8 +158,8 @@ public class MovementStateTests
         var result = eventArgs.ToString();
 
         // Assert
-        Assert.Contains("Unknown", result);
         Assert.Contains("Stationary", result);
+        Assert.Contains("Walking", result);
         Assert.Contains("90s", result);
         Assert.DoesNotContain("mph", result);
     }
@@ -170,20 +169,18 @@ public class MovementStateTests
     /// </summary>
     /// <remarks>
     /// <para><strong>What is being tested:</strong> The MovementStateChangedEventArgs constructor's ability to handle all possible state transition combinations, validating that any state can transition to any other state.</para>
-    /// <para><strong>Data involved:</strong> Eight different state transition pairs covering common scenarios: Unknown→Stationary, Stationary→Walking, Walking→Riding, Riding→Walking (bidirectional), Walking→Stationary, Riding→Stationary, Unknown→Walking, Unknown→Riding. Each transition is tested with sample event data (50m distance, 1 minute duration, 2.0 m/s speed).</para>
+    /// <para><strong>Data involved:</strong> Six state transition pairs covering common scenarios: Stationary→Walking, Stationary→Riding, Walking→Riding, Riding→Walking, Walking→Stationary, Riding→Stationary. Each transition is tested with sample event data (50m distance, 1 minute duration, 2.0 m/s speed).</para>
     /// <para><strong>Why the data matters:</strong> Movement state transitions can occur in any order depending on user behavior (e.g., walking→riding when getting on a bike, riding→walking when getting off). The event args must support all transition combinations without restrictions. This test validates that the constructor doesn't enforce artificial transition rules and can represent any state change.</para>
     /// <para><strong>Expected outcome:</strong> For each transition pair, the event args should be created successfully with PreviousState matching the "from" state and CurrentState matching the "to" state.</para>
     /// <para><strong>Reason for expectation:</strong> The constructor should accept any two MovementState values without validation, allowing the event system to represent any state change. The PreviousState and CurrentState properties should be set exactly as provided, confirming that all transition combinations are supported. This flexibility is important for accurately tracking movement state changes regardless of the transition pattern.</para>
     /// </remarks>
     [Theory]
-    [InlineData(MovementState.Unknown, MovementState.Stationary)]
     [InlineData(MovementState.Stationary, MovementState.Walking)]
+    [InlineData(MovementState.Stationary, MovementState.Riding)]
     [InlineData(MovementState.Walking, MovementState.Riding)]
     [InlineData(MovementState.Riding, MovementState.Walking)]
     [InlineData(MovementState.Walking, MovementState.Stationary)]
     [InlineData(MovementState.Riding, MovementState.Stationary)]
-    [InlineData(MovementState.Unknown, MovementState.Walking)]
-    [InlineData(MovementState.Unknown, MovementState.Riding)]
     public void MovementStateChangedEventArgsSupportsAllTransitions(
         MovementState from, MovementState to)
     {
@@ -206,27 +203,25 @@ public class MovementStateTests
     /// </summary>
     /// <remarks>
     /// <para><strong>What is being tested:</strong> The MovementState enum's comparison capabilities, including equality comparison and ordering based on underlying integer values.</para>
-    /// <para><strong>Data involved:</strong> All five MovementState enum values: Unknown=0, Stationary=1, Walking=2, Riding=3, Moving=4. The test compares values for equality (same values equal, different values not equal) and ordering (integer values increase sequentially).</para>
-    /// <para><strong>Why the data matters:</strong> Enum comparison is used in conditional logic, sorting, and state machine transitions. The enum must support standard comparison operations (==, !=, <, >) for use in if statements, switch cases, and LINQ queries. Sequential integer values enable range queries and ordering operations.</para>
-    /// <para><strong>Expected outcome:</strong> Equality comparisons should work (Unknown==Unknown, Stationary!=Walking), and ordering should follow integer values (Unknown < Stationary < Walking < Riding < Moving).</para>
+    /// <para><strong>Data involved:</strong> All four MovementState enum values: Stationary=0, Walking=1, Riding=2, Moving=3. The test compares values for equality (same values equal, different values not equal) and ordering (integer values increase sequentially).</para>
+    /// <para><strong>Why the data matters:</strong> Enum comparison is used in conditional logic, sorting, and state machine transitions. The enum must support standard comparison operations (==, !=, <, >) for use in if statements, switch cases, and LINQ queries. Stationary=0 is the default.</para>
+    /// <para><strong>Expected outcome:</strong> Equality comparisons should work (Stationary==Stationary, Stationary!=Walking), and ordering should follow integer values (Stationary < Walking < Riding < Moving).</para>
     /// <para><strong>Reason for expectation:</strong> Enums in C# support equality comparison by default, and can be compared using their underlying integer values. The sequential values (0-4) ensure predictable ordering. The equality assertions confirm enum comparison works, and the ordering assertions confirm integer-based ordering is correct. This validates that the enum can be used in comparison operations throughout the codebase.</para>
     /// </remarks>
     [Fact]
     public void MovementStateEnumCanBeCompared()
     {
         // Arrange
-        var unknown = MovementState.Unknown;
         var stationary = MovementState.Stationary;
         var walking = MovementState.Walking;
         var riding = MovementState.Riding;
         var moving = MovementState.Moving;
 
         // Assert - Test equality
-        Assert.Equal(MovementState.Unknown, unknown);
+        Assert.Equal(MovementState.Stationary, stationary);
         Assert.NotEqual(stationary, walking);
 
-        // Assert - Test ordering
-        Assert.True((int)unknown < (int)stationary);
+        // Assert - Test ordering (Stationary=0 is default)
         Assert.True((int)stationary < (int)walking);
         Assert.True((int)walking < (int)riding);
         Assert.True((int)riding < (int)moving);

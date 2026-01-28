@@ -18,13 +18,13 @@ public partial class MovementStateViewModel : ObservableObject
     private readonly ILogger<MovementStateViewModel> _logger;
 
     [ObservableProperty]
-    private string _movementStateText = "Unknown";
+    private string _movementStateText = "Stationary";
 
     [ObservableProperty]
     private string _movementStateEmoji = "😊"; // Default emoji
 
     [ObservableProperty]
-    private string _movementStateColor = "#808080"; // Gray for Unknown
+    private string _movementStateColor = "#007BFF"; // Blue for Stationary
 
     [ObservableProperty]
     private string _speedText = "--";
@@ -228,12 +228,11 @@ public partial class MovementStateViewModel : ObservableObject
 
         MovementStateColor = state switch
         {
-            MovementState.Unknown => "#6C757D", // Gray
             MovementState.Stationary => "#007BFF", // Blue
             MovementState.Walking => "#28A745", // Green
             MovementState.Riding => "#FFC107", // Yellow/Amber
             MovementState.Moving => "#17A2B8", // Cyan
-            _ => "#6C757D"
+            _ => "#007BFF"
         };
     }
 
@@ -244,12 +243,11 @@ public partial class MovementStateViewModel : ObservableObject
     {
         return state switch
         {
-            MovementState.Unknown => "😊",
             MovementState.Stationary => "😊",
             MovementState.Walking => "🚶",
             MovementState.Riding => "🚕",
             MovementState.Moving => "🚕", // Use taxi for Moving as well
-            _ => "😊" // Default to smiley
+            _ => "😊"
         };
     }
 

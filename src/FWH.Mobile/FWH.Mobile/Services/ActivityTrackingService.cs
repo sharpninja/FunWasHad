@@ -15,7 +15,7 @@ public class ActivityTrackingService
     // Activity tracking state
     private bool _isTrackingActivity;
     private DateTimeOffset _activityStartTime;
-    private MovementState _currentActivityType = MovementState.Unknown;
+    private MovementState _currentActivityType = MovementState.Stationary;
     private double _totalDistanceMeters;
     private double _maxSpeedMph;
     private int _transitionCount;
@@ -116,7 +116,7 @@ public class ActivityTrackingService
                 e.CurrentSpeedMph ?? 0);
 
             // Handle transitions from stationary
-            if (e.PreviousState == MovementState.Stationary || e.PreviousState == MovementState.Unknown)
+            if (e.PreviousState == MovementState.Stationary)
             {
                 if (e.CurrentState == MovementState.Walking)
                 {
@@ -254,7 +254,7 @@ public class ActivityTrackingService
     private void EndActivity()
     {
         _isTrackingActivity = false;
-        _currentActivityType = MovementState.Unknown;
+        _currentActivityType = MovementState.Stationary;
     }
 
     /// <summary>

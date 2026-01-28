@@ -27,6 +27,8 @@
     <PackageVersion Include="Polly.Extensions" Version="8.5.0" />
     <PackageVersion Include="Refit.HttpClientFactory" Version="9.0.2" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.0.1" />
+    <!-- NSubstitute 6.0 local lib dependency (see lib/NSubstitute.6.0.0) -->
+    <PackageVersion Include="Castle.Core" Version="5.1.1" />
     <!-- Test packages required by FWH.Common.Workflow.Tests -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageVersion Include="xunit.v3" Version="3.2.1" />

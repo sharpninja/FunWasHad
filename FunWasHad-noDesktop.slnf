@@ -1,0 +1,32 @@
+{
+  "solution": {
+    "path": "FunWasHad.sln",
+    "projects": [
+      "docs/FWH.Documentation.csproj",
+      "lib/NSubstitute/NSubstitute.csproj",
+      "src/FWH.AppHost/FWH.AppHost.csproj",
+      "src/FWH.Common.Chat/FWH.Common.Chat.csproj",
+      "src/FWH.Common.Imaging/FWH.Common.Imaging.csproj",
+      "src/FWH.Common.Location/FWH.Common.Location.csproj",
+      "src/FWH.Common.Workflow/FWH.Common.Workflow.csproj",
+      "src/FWH.Documentation.Sync/FWH.Documentation.Sync.csproj",
+      "src/FWH.Legal.Web/FWH.Legal.Web.csproj",
+      "src/FWH.Location.Api/FWH.Location.Api.csproj",
+      "src/FWH.MarketingApi/FWH.MarketingApi.csproj",
+      "src/FWH.Mobile.Data/FWH.Mobile.Data.csproj",
+      "src/FWH.Mobile/FWH.Mobile/FWH.Mobile.csproj",
+      "src/FWH.Orchestrix.Contracts/FWH.Orchestrix.Contracts.csproj",
+      "src/FWH.Orchestrix.Mediator.Remote/FWH.Orchestrix.Mediator.Remote.csproj",
+      "src/FWH.ServiceDefaults/FWH.ServiceDefaults.csproj",
+      "tests/FWH.Common.Chat.Tests/FWH.Common.Chat.Tests.csproj",
+      "tests/FWH.Common.Imaging.Tests/FWH.Common.Imaging.Tests.csproj",
+      "tests/FWH.Common.Location.Tests/FWH.Common.Location.Tests.csproj",
+      "tests/FWH.Common.Workflow.Tests/FWH.Common.Workflow.Tests.csproj",
+      "tests/FWH.MarketingApi.Tests/FWH.MarketingApi.Tests.csproj",
+      "tests/FWH.Mobile.Data.Tests/FWH.Mobile.Data.Tests.csproj",
+      "tests/FWH.Mobile.Services.Tests/FWH.Mobile.Services.Tests.csproj",
+      "tests/PlantUmlRender.Tests/PlantUmlRender.Tests.csproj",
+      "tools/PlantUmlRender/PlantUmlRender.csproj"
+    ]
+  }
+}
