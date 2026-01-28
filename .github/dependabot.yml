@@ -9,3 +9,5 @@ updates:
   labels:
   - kind/dependency
   - do-not-merge/work-in-progress
+  ignore:
+  - dependency-name: "NSubstitute"
