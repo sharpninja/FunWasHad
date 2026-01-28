@@ -488,6 +488,39 @@ steps:
 
 ---
 
+### 🔍 check-staging-report.sh
+
+**NEW** - Bash script to check the status of the staging workflow monitoring system.
+
+**Usage:**
+```bash
+# Check if monitoring workflow is active and if report is available
+./scripts/check-staging-report.sh
+```
+
+**What it does:**
+1. ✅ Checks if monitoring workflow exists on develop branch
+2. ✅ Checks if status document has been generated
+3. ✅ Shows latest staging workflow run information
+4. ✅ Provides clear next steps based on current state
+
+**Output includes:**
+- Workflow activation status
+- Report availability status  
+- Latest run information
+- Direct links to the report
+- Next steps to get the report
+
+**Related Documentation:**
+- [WHERE-IS-THE-REPORT.md](../WHERE-IS-THE-REPORT.md) - Complete guide on finding the report
+- [Staging Workflow Monitoring Implementation](../docs/deployment/Staging_Workflow_Monitoring_Implementation.md)
+
+**Report Location:**
+- File path: `docs/STAGING-STATUS.md`
+- GitHub: [View Report](https://github.com/sharpninja/FunWasHad/blob/develop/docs/STAGING-STATUS.md)
+
+---
+
 ## Support
 
 For issues or questions:

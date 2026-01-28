@@ -13,7 +13,7 @@
 - [🚀 Quick Start Guide](../scripts/README.md)
 - [✅ Latest Completion Summary](summaries/Technical_Requirements_Completion_Summary.md)
 - [📝 Latest Code Review](reviews/Code-Review-Report-2025-01-09.md)
-- [🔄 Staging Workflow Status](STAGING-STATUS.md) - **Auto-updated after each staging run**
+- [🔄 Staging Workflow Status](STAGING-STATUS.md) - **Auto-updated after each staging run** ([How to find it?](../WHERE-IS-THE-REPORT.md))
 - [📚 Generate Documentation](references/DocFX-Quick-Start.md) - DocFX documentation generation
 - [📖 Documentation Guidelines](DOCUMENTATION-GUIDELINES.md) - **Where to place new documentation**
 

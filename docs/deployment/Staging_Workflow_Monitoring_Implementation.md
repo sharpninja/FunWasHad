@@ -4,6 +4,10 @@
 
 This document describes the implementation of an automated monitoring system for the `staging.yml` workflow that runs on the `develop` branch. The system automatically generates and updates a status document after each workflow run completes.
 
+**📍 Report Location**: `docs/STAGING-STATUS.md`
+
+**⚠️ Important**: The report will only be generated after this feature is merged to the develop branch and a staging workflow completes.
+
 ## Implementation Date
 
 **Implemented:** January 28, 2026
