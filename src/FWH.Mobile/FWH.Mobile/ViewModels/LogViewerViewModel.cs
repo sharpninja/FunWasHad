@@ -11,7 +11,7 @@ namespace FWH.Mobile.ViewModels;
 public sealed class LogViewerViewModel : INotifyPropertyChanged
 {
     private readonly AvaloniaLogStore _store;
-    private LogLevel _selectedLogLevel = LogLevel.Trace;
+    private LogLevel _selectedLogLevel = LogLevel.Information;
     private readonly ObservableCollection<AvaloniaLogEntry> _filteredEntries = new();
     private bool _isPaused;
 
