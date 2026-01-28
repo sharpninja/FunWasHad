@@ -5,14 +5,14 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 ## Latest Run Information
 
-- **Run Number**: #113
-- **Run ID**: 21450983771
+- **Run Number**: #114
+- **Run ID**: 21454397285
 - **Status**: success
 - **Branch**: develop
-- **Commit**: [`185133e`](https://github.com/sharpninja/FunWasHad/commit/185133e5592e89fe35fd11aea0ee207a9680c4c8)
-- **Started**: 2026-01-28T18:40:04Z
-- **Completed**: 2026-01-28T18:40:19Z
-- **Run URL**: [View on GitHub](https://github.com/sharpninja/FunWasHad/actions/runs/21450983771)
+- **Commit**: [`c601ede`](https://github.com/sharpninja/FunWasHad/commit/c601ede0492bd51da36fb690035a32749491e146)
+- **Started**: 2026-01-28T20:30:43Z
+- **Completed**: 2026-01-28T20:31:01Z
+- **Run URL**: [View on GitHub](https://github.com/sharpninja/FunWasHad/actions/runs/21454397285)
 
 ---
 
@@ -20,16 +20,16 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 | Job Name | Status | Duration | Conclusion |
 |----------|--------|----------|------------|
-| Get Configuration | completed | 4s | success |
-| Detect Changes | completed | 5s | success |
+| Get Configuration | completed | 3s | success |
+| Detect Changes | completed | 6s | success |
+| Build Location API Docker Image | completed | 0s | skipped |
+| Build Legal Web Docker Image | completed | 0s | skipped |
 | Build and Test | completed | 0s | skipped |
 | Build Marketing API Docker Image | completed | 0s | skipped |
-| Build Location API Docker Image | completed | 0s | skipped |
-| Build Legal Web Docker Image | completed | -1s | skipped |
-| Build Mobile Android | completed | -1s | skipped |
-| Deploy to Railway | completed | -1s | skipped |
-| Notify Deployment Status / Notify Deployment Status | completed | 3s | success |
-| Create Android Release | completed | -1s | skipped |
+| Build Mobile Android | completed | 0s | skipped |
+| Deploy to Railway | completed | 0s | skipped |
+| Notify Deployment Status / Notify Deployment Status | completed | 4s | success |
+| Create Android Release | completed | 0s | skipped |
 
 ---
 
@@ -39,7 +39,7 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61779406191`](https://github.com/sharpninja/FunWasHad/actions/runs/21450983771/job/61779406191)
+- **Job ID**: [`61791307667`](https://github.com/sharpninja/FunWasHad/actions/runs/21454397285/job/61791307667)
 
 #### Steps:
 
@@ -54,7 +54,7 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61779406200`](https://github.com/sharpninja/FunWasHad/actions/runs/21450983771/job/61779406200)
+- **Job ID**: [`61791307675`](https://github.com/sharpninja/FunWasHad/actions/runs/21454397285/job/61791307675)
 
 #### Steps:
 
@@ -68,53 +68,53 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 | Complete job | completed | success |
 
 
-### Build and Test
-
-- **Status**: completed
-- **Conclusion**: skipped
-- **Job ID**: [`61779420254`](https://github.com/sharpninja/FunWasHad/actions/runs/21450983771/job/61779420254)
-
-
-### Build Marketing API Docker Image
-
-- **Status**: completed
-- **Conclusion**: skipped
-- **Job ID**: [`61779420641`](https://github.com/sharpninja/FunWasHad/actions/runs/21450983771/job/61779420641)
-
-
 ### Build Location API Docker Image
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61779420653`](https://github.com/sharpninja/FunWasHad/actions/runs/21450983771/job/61779420653)
+- **Job ID**: [`61791322924`](https://github.com/sharpninja/FunWasHad/actions/runs/21454397285/job/61791322924)
 
 
 ### Build Legal Web Docker Image
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61779420667`](https://github.com/sharpninja/FunWasHad/actions/runs/21450983771/job/61779420667)
+- **Job ID**: [`61791322948`](https://github.com/sharpninja/FunWasHad/actions/runs/21454397285/job/61791322948)
+
+
+### Build and Test
+
+- **Status**: completed
+- **Conclusion**: skipped
+- **Job ID**: [`61791322977`](https://github.com/sharpninja/FunWasHad/actions/runs/21454397285/job/61791322977)
+
+
+### Build Marketing API Docker Image
+
+- **Status**: completed
+- **Conclusion**: skipped
+- **Job ID**: [`61791322996`](https://github.com/sharpninja/FunWasHad/actions/runs/21454397285/job/61791322996)
 
 
 ### Build Mobile Android
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61779420727`](https://github.com/sharpninja/FunWasHad/actions/runs/21450983771/job/61779420727)
+- **Job ID**: [`61791323090`](https://github.com/sharpninja/FunWasHad/actions/runs/21454397285/job/61791323090)
 
 
 ### Deploy to Railway
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61779420810`](https://github.com/sharpninja/FunWasHad/actions/runs/21450983771/job/61779420810)
+- **Job ID**: [`61791323127`](https://github.com/sharpninja/FunWasHad/actions/runs/21454397285/job/61791323127)
 
 
 ### Notify Deployment Status / Notify Deployment Status
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61779421005`](https://github.com/sharpninja/FunWasHad/actions/runs/21450983771/job/61779421005)
+- **Job ID**: [`61791323341`](https://github.com/sharpninja/FunWasHad/actions/runs/21454397285/job/61791323341)
 
 #### Steps:
 
@@ -132,7 +132,7 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61779421046`](https://github.com/sharpninja/FunWasHad/actions/runs/21450983771/job/61779421046)
+- **Job ID**: [`61791323523`](https://github.com/sharpninja/FunWasHad/actions/runs/21454397285/job/61791323523)
 
 
 ---
@@ -150,4 +150,4 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 ---
 
 
-*Last updated: 2026-01-28 18:40:31 UTC*
+*Last updated: 2026-01-28 20:31:12 UTC*
