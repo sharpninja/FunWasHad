@@ -1,0 +1,285 @@
+name: Monitor Staging Workflow
+
+on:
+  workflow_run:
+    workflows: ["Staging Actions"]
+    types: [completed]
+    branches: [develop]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  update_status:
+    name: Update Staging Status Document
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion != 'cancelled'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 1
+
+      - name: Fetch workflow run details
+        id: fetch_details
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          REPO="${{ github.repository }}"
+          
+          echo "Fetching details for workflow run $RUN_ID"
+          
+          # Get workflow run details
+          gh api "/repos/$REPO/actions/runs/$RUN_ID" > /tmp/workflow_run.json
+          
+          # Get all jobs for this run
+          gh api "/repos/$REPO/actions/runs/$RUN_ID/jobs" --paginate > /tmp/jobs.json
+          
+          echo "Details fetched successfully"
+
+      - name: Generate status document
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          REPO="${{ github.repository }}"
+          
+          # Read workflow run details
+          RUN_URL=$(jq -r '.html_url' /tmp/workflow_run.json)
+          RUN_CONCLUSION=$(jq -r '.conclusion' /tmp/workflow_run.json)
+          RUN_NUMBER=$(jq -r '.run_number' /tmp/workflow_run.json)
+          CREATED_AT=$(jq -r '.created_at' /tmp/workflow_run.json)
+          UPDATED_AT=$(jq -r '.updated_at' /tmp/workflow_run.json)
+          HEAD_SHA=$(jq -r '.head_sha' /tmp/workflow_run.json)
+          HEAD_BRANCH=$(jq -r '.head_branch' /tmp/workflow_run.json)
+          
+          # Start building the status document
+          cat > /tmp/staging-status.md << 'HEADER'
+          # Staging Workflow Status
+          
+          This document is automatically generated and updated by the monitoring workflow.
+          It shows the status of the most recent staging.yml workflow run on the develop branch.
+          
+          HEADER
+          
+          cat >> /tmp/staging-status.md << EOF
+          ## Latest Run Information
+          
+          - **Run Number**: #$RUN_NUMBER
+          - **Run ID**: $RUN_ID
+          - **Status**: $RUN_CONCLUSION
+          - **Branch**: $HEAD_BRANCH
+          - **Commit**: [\`${HEAD_SHA:0:7}\`](https://github.com/$REPO/commit/$HEAD_SHA)
+          - **Started**: $CREATED_AT
+          - **Completed**: $UPDATED_AT
+          - **Run URL**: [View on GitHub]($RUN_URL)
+          
+          ---
+          
+          ## Job Status Summary
+          
+          EOF
+          
+          # Parse jobs and create status table
+          echo "| Job Name | Status | Duration | Conclusion |" >> /tmp/staging-status.md
+          echo "|----------|--------|----------|------------|" >> /tmp/staging-status.md
+          
+          jq -r '.jobs[] | "| \(.name) | \(.status) | \(if .started_at and .completed_at then ((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601) | tostring + "s") else "N/A" end) | \(.conclusion // "N/A") |"' /tmp/jobs.json >> /tmp/staging-status.md
+          
+          echo "" >> /tmp/staging-status.md
+          echo "---" >> /tmp/staging-status.md
+          echo "" >> /tmp/staging-status.md
+          
+          # Detailed job information with steps
+          echo "## Detailed Job Information" >> /tmp/staging-status.md
+          echo "" >> /tmp/staging-status.md
+          
+          # Get the job count
+          JOB_COUNT=$(jq '.jobs | length' /tmp/jobs.json)
+          
+          for i in $(seq 0 $(($JOB_COUNT - 1))); do
+            JOB_NAME=$(jq -r ".jobs[$i].name" /tmp/jobs.json)
+            JOB_STATUS=$(jq -r ".jobs[$i].status" /tmp/jobs.json)
+            JOB_CONCLUSION=$(jq -r ".jobs[$i].conclusion // \"N/A\"" /tmp/jobs.json)
+            JOB_ID=$(jq -r ".jobs[$i].id" /tmp/jobs.json)
+            JOB_URL=$(jq -r ".jobs[$i].html_url" /tmp/jobs.json)
+            
+            echo "### $JOB_NAME" >> /tmp/staging-status.md
+            echo "" >> /tmp/staging-status.md
+            echo "- **Status**: $JOB_STATUS" >> /tmp/staging-status.md
+            echo "- **Conclusion**: $JOB_CONCLUSION" >> /tmp/staging-status.md
+            echo "- **Job ID**: [\`$JOB_ID\`]($JOB_URL)" >> /tmp/staging-status.md
+            echo "" >> /tmp/staging-status.md
+            
+            # Get step count for this job
+            STEP_COUNT=$(jq ".jobs[$i].steps | length" /tmp/jobs.json)
+            
+            if [ "$STEP_COUNT" -gt 0 ]; then
+              echo "#### Steps:" >> /tmp/staging-status.md
+              echo "" >> /tmp/staging-status.md
+              echo "| Step | Status | Conclusion |" >> /tmp/staging-status.md
+              echo "|------|--------|------------|" >> /tmp/staging-status.md
+              
+              for j in $(seq 0 $(($STEP_COUNT - 1))); do
+                STEP_NAME=$(jq -r ".jobs[$i].steps[$j].name" /tmp/jobs.json)
+                STEP_STATUS=$(jq -r ".jobs[$i].steps[$j].status" /tmp/jobs.json)
+                STEP_CONCLUSION=$(jq -r ".jobs[$i].steps[$j].conclusion // \"N/A\"" /tmp/jobs.json)
+                echo "| $STEP_NAME | $STEP_STATUS | $STEP_CONCLUSION |" >> /tmp/staging-status.md
+              done
+              
+              echo "" >> /tmp/staging-status.md
+            fi
+            
+            echo "" >> /tmp/staging-status.md
+          done
+          
+          echo "---" >> /tmp/staging-status.md
+          echo "" >> /tmp/staging-status.md
+
+      - name: Collect build and deployment errors
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          REPO="${{ github.repository }}"
+          
+          echo "## Build and Deployment Errors" >> /tmp/staging-status.md
+          echo "" >> /tmp/staging-status.md
+          
+          # Find jobs that failed
+          FAILED_JOBS=$(jq -r '.jobs[] | select(.conclusion == "failure") | .id' /tmp/jobs.json)
+          
+          if [ -z "$FAILED_JOBS" ]; then
+            echo "✅ No build or deployment errors detected in this run." >> /tmp/staging-status.md
+            echo "" >> /tmp/staging-status.md
+          else
+            for JOB_ID in $FAILED_JOBS; do
+              JOB_NAME=$(jq -r ".jobs[] | select(.id == $JOB_ID) | .name" /tmp/jobs.json)
+              echo "### Failed Job: $JOB_NAME" >> /tmp/staging-status.md
+              echo "" >> /tmp/staging-status.md
+              
+              # Get job logs
+              echo "Fetching logs for job $JOB_ID..."
+              gh api "/repos/$REPO/actions/jobs/$JOB_ID/logs" > "/tmp/job_${JOB_ID}_logs.txt" 2>&1 || echo "Could not fetch logs for job $JOB_ID"
+              
+              if [ -f "/tmp/job_${JOB_ID}_logs.txt" ]; then
+                # Extract error messages (look for common error patterns)
+                ERROR_PATTERNS="error|Error|ERROR|failed|Failed|FAILED|exception|Exception"
+                
+                echo '<details>' >> /tmp/staging-status.md
+                echo '<summary>View Error Log Excerpt</summary>' >> /tmp/staging-status.md
+                echo '' >> /tmp/staging-status.md
+                echo '```' >> /tmp/staging-status.md
+                grep -iE "$ERROR_PATTERNS" "/tmp/job_${JOB_ID}_logs.txt" | head -50 >> /tmp/staging-status.md 2>/dev/null || echo "No specific error patterns found in logs" >> /tmp/staging-status.md
+                echo '```' >> /tmp/staging-status.md
+                echo '</details>' >> /tmp/staging-status.md
+                echo '' >> /tmp/staging-status.md
+              fi
+            done
+          fi
+          
+          echo "---" >> /tmp/staging-status.md
+          echo "" >> /tmp/staging-status.md
+
+      - name: Extract analyzer warnings
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID="${{ github.event.workflow_run.id }}"
+          REPO="${{ github.repository }}"
+          
+          echo "## Analyzer Warnings" >> /tmp/staging-status.md
+          echo "" >> /tmp/staging-status.md
+          
+          # Get all job IDs
+          ALL_JOBS=$(jq -r '.jobs[].id' /tmp/jobs.json)
+          
+          # Create a temporary file to collect all warnings
+          > /tmp/all_warnings.txt
+          
+          for JOB_ID in $ALL_JOBS; do
+            # Fetch logs if not already fetched
+            if [ ! -f "/tmp/job_${JOB_ID}_logs.txt" ]; then
+              echo "Fetching logs for job $JOB_ID..."
+              gh api "/repos/$REPO/actions/jobs/$JOB_ID/logs" > "/tmp/job_${JOB_ID}_logs.txt" 2>&1 || continue
+            fi
+            
+            if [ -f "/tmp/job_${JOB_ID}_logs.txt" ]; then
+              # Extract analyzer warnings (CS, CA codes)
+              grep -oE '(CS|CA)[0-9]{4}:.*' "/tmp/job_${JOB_ID}_logs.txt" >> /tmp/all_warnings.txt 2>/dev/null || true
+            fi
+          done
+          
+          if [ -s /tmp/all_warnings.txt ]; then
+            # Parse and aggregate warnings
+            # Create a temporary file for processing
+            > /tmp/warning_summary.txt
+            
+            # Extract warning codes and descriptions
+            while IFS= read -r line; do
+              # Extract warning code (CS#### or CA####)
+              CODE=$(echo "$line" | grep -oE '(CS|CA)[0-9]{4}' | head -1)
+              # Extract description (everything after the code and colon)
+              DESC=$(echo "$line" | sed -E 's/.*((CS|CA)[0-9]{4}): //g' | head -c 100)
+              
+              if [ -n "$CODE" ]; then
+                echo "$CODE|$DESC" >> /tmp/warning_summary.txt
+              fi
+            done < /tmp/all_warnings.txt
+            
+            # Count occurrences and create table
+            if [ -s /tmp/warning_summary.txt ]; then
+              echo "| Warning Code | Count | Description |" >> /tmp/staging-status.md
+              echo "|--------------|-------|-------------|" >> /tmp/staging-status.md
+              
+              # Sort, count unique warnings, and format as table
+              sort /tmp/warning_summary.txt | uniq -c | sort -rn | while read -r count entry; do
+                CODE=$(echo "$entry" | cut -d'|' -f1)
+                DESC=$(echo "$entry" | cut -d'|' -f2-)
+                # Trim and clean description
+                DESC=$(echo "$DESC" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | head -c 80)
+                echo "| $CODE | $count | $DESC |" >> /tmp/staging-status.md
+              done
+              
+              echo "" >> /tmp/staging-status.md
+            else
+              echo "✅ No analyzer warnings detected in this run." >> /tmp/staging-status.md
+              echo "" >> /tmp/staging-status.md
+            fi
+          else
+            echo "✅ No analyzer warnings detected in this run." >> /tmp/staging-status.md
+            echo "" >> /tmp/staging-status.md
+          fi
+          
+          echo "---" >> /tmp/staging-status.md
+          echo "" >> /tmp/staging-status.md
+          
+          # Add footer with generation timestamp
+          echo "" >> /tmp/staging-status.md
+          echo "*Last updated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')*" >> /tmp/staging-status.md
+
+      - name: Update status document in repository
+        run: |
+          # Copy the generated status to docs folder
+          mkdir -p docs
+          cp /tmp/staging-status.md docs/STAGING-STATUS.md
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Add and commit the file
+          git add docs/STAGING-STATUS.md
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update staging workflow status [skip ci]"
+            git push origin develop
+            echo "Status document updated successfully"
+          fi
