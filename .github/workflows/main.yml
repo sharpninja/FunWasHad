@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - develop
       - release/**
     tags:
       - 'v*.*.*'
@@ -134,8 +135,8 @@ jobs:
             echo "legal_web=false" >> $GITHUB_OUTPUT
           fi
 
-          # Check for Mobile app changes
-          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Mobile/|^src/FWH\.Mobile\.Data/|^src/FWH\.Common\.(Location|Chat|Imaging|Workflow)/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/main\.yml"; then
+          # Check for Mobile app changes (includes common libraries used by mobile/Android)
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Mobile/|^src/FWH\.Mobile\.Data/|^src/FWH\.Common\.[^/]+/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/main\.yml"; then
             echo "✅ Mobile app files changed"
             MOBILE_CHANGED="true"
             echo "mobile=true" >> $GITHUB_OUTPUT
@@ -196,15 +197,27 @@ jobs:
       location_api_image: ${{ steps.config.outputs.location_api_image }}
       marketing_api_image: ${{ steps.config.outputs.marketing_api_image }}
       legal_web_image: ${{ steps.config.outputs.legal_web_image }}
+      build_configuration: ${{ steps.config.outputs.build_configuration }}
     steps:
       - name: Set Configuration Values
         id: config
         run: |
+          # Determine build configuration based on branch/event type
+          # Staging for develop branch, Release for main branch and pull requests
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            BUILD_CONFIG="Staging"
+            echo "📦 Build configuration: Staging (develop branch)"
+          else
+            BUILD_CONFIG="Release"
+            echo "📦 Build configuration: Release (main branch or PR)"
+          fi
+          
           echo "dotnet_version=${{ env.DOTNET_VERSION }}" >> $GITHUB_OUTPUT
           echo "registry=${{ env.REGISTRY }}" >> $GITHUB_OUTPUT
           echo "location_api_image=${{ env.LOCATION_API_IMAGE }}" >> $GITHUB_OUTPUT
           echo "marketing_api_image=${{ env.MARKETING_API_IMAGE }}" >> $GITHUB_OUTPUT
           echo "legal_web_image=${{ env.LEGAL_WEB_IMAGE }}" >> $GITHUB_OUTPUT
+          echo "build_configuration=$BUILD_CONFIG" >> $GITHUB_OUTPUT
 
   build_and_test:
     name: Build and Test
@@ -213,7 +226,7 @@ jobs:
     uses: ./.github/workflows/staging-build-and-test.yml
     with:
       dotnet_version: ${{ needs.get_config.outputs.dotnet_version }}
-      build_configuration: Release
+      build_configuration: ${{ needs.get_config.outputs.build_configuration }}
     secrets: inherit
 
   docker_location_api_main:
@@ -230,7 +243,7 @@ jobs:
       registry: ${{ needs.get_config.outputs.registry }}
       dockerfile_path: ./src/FWH.Location.Api/Dockerfile.artifacts
       artifact_name: location-api
-      build_configuration: Release
+      build_configuration: ${{ needs.get_config.outputs.build_configuration }}
     secrets: inherit
 
   docker_marketing_api_main:
@@ -247,7 +260,7 @@ jobs:
       registry: ${{ needs.get_config.outputs.registry }}
       dockerfile_path: ./src/FWH.MarketingApi/Dockerfile.artifacts
       artifact_name: marketing-api
-      build_configuration: Release
+      build_configuration: ${{ needs.get_config.outputs.build_configuration }}
     secrets: inherit
 
   docker_legal_web_main:
@@ -264,7 +277,7 @@ jobs:
       registry: ${{ needs.get_config.outputs.registry }}
       dockerfile_path: ./src/FWH.Legal.Web/Dockerfile.artifacts
       artifact_name: legal-web
-      build_configuration: Release
+      build_configuration: ${{ needs.get_config.outputs.build_configuration }}
     secrets: inherit
 
   deploy_railway_main:
@@ -285,8 +298,8 @@ jobs:
       marketing_api_image: ${{ needs.get_config.outputs.marketing_api_image }}
       legal_web_image: ${{ needs.get_config.outputs.legal_web_image }}
     secrets:
-      railway_project_id: ${{ secrets.RAILWAY_PRODUCTION_PROJECT_ID }}
-      railway_token: ${{ secrets.RAILWAY_TOKEN }}
+      railway_project_id: ${{ github.ref == 'refs/heads/develop' && secrets.RAILWAY_STAGING_PROJECT_ID || secrets.RAILWAY_FUNWASHAD_PROJECT_ID }}
+      railway_token: ${{ github.ref == 'refs/heads/develop' && secrets.RAILWAY_STAGING_TOKEN || secrets.RAILWAY_FUNWASHAD_TOKEN }}
 
   build_mobile_android_main:
     name: Build Mobile Android
@@ -295,7 +308,7 @@ jobs:
     uses: ./.github/workflows/staging-build-mobile-android.yml
     with:
       dotnet_version: ${{ needs.get_config.outputs.dotnet_version }}
-      build_configuration: Release
+      build_configuration: ${{ needs.get_config.outputs.build_configuration }}
       artifact_name: android-apk
     secrets: inherit
 
