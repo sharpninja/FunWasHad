@@ -17,7 +17,7 @@
             BorderThickness="1"
             CornerRadius="8"
             Padding="12"
-            Background="#FAFAFA">
+            Background="{Binding BackgroundColor}">
         <Grid RowDefinitions="Auto,Auto,Auto,Auto">
 
             <!-- Row 0: Movement State & Tracking Status -->
@@ -42,7 +42,6 @@
                              Fill="{Binding TrackingStatusColor}"
                              VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding TrackingStatusText}"
-                               FontSize="12"
                                Foreground="#6C757D"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -51,22 +50,18 @@
             <!-- Row 1: Speed -->
             <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
                 <TextBlock Text="Speed:"
-                           FontSize="13"
                            FontWeight="Medium"
                            Foreground="#495057"/>
                 <TextBlock Text="{Binding SpeedText}"
-                           FontSize="13"
                            Foreground="#212529"/>
             </StackPanel>
 
             <!-- Row 2: Coordinates -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
                 <TextBlock Text="Location:"
-                           FontSize="13"
                            FontWeight="Medium"
                            Foreground="#495057"/>
                 <TextBlock Text="{Binding CoordinatesText}"
-                           FontSize="13"
                            FontFamily="Consolas"
                            Foreground="#212529"/>
             </StackPanel>
@@ -77,11 +72,9 @@
                         Spacing="6"
                         Margin="0,0,0,8">
                 <TextBlock Text="Address:"
-                           FontSize="13"
                            FontWeight="Medium"
                            Foreground="#495057"/>
                 <TextBlock Text="{Binding DisplayAddress}"
-                           FontSize="13"
                            Foreground="#212529"
                            TextWrapping="Wrap"
                            MaxWidth="600"/>

@@ -807,25 +807,52 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
             .ToList();
 
         // Need sufficient data points to make determination
-        var requiredSamples = Math.Max(3, (int)(StationaryThresholdDuration.TotalSeconds / PollingInterval.TotalSeconds));
-        if (recentMovementsInWindow.Count < requiredSamples)
+        // Use a reasonable minimum (3-5 samples) rather than requiring the full threshold duration
+        // This allows faster state detection while still requiring some history for stationary detection
+        // For full analysis, we want enough samples to cover a meaningful time window, but not the full 3 minutes
+        var minRequiredSamples = 3; // Minimum samples for any detection
+        var preferredSamples = Math.Min(10, (int)(TimeSpan.FromSeconds(10).TotalSeconds / PollingInterval.TotalSeconds)); // ~10 seconds of data
+        
+        // If we have very few samples, use speed-based early detection
+        if (recentMovementsInWindow.Count < minRequiredSamples)
         {
             // Not enough data yet, but check if currently moving with valid speed
-            if (currentSpeed.HasValue && currentDistance >= MinimumDistanceMeters)
+            // Use speed-based detection even with small distances for faster response
+            if (currentSpeed.HasValue && currentSpeed.Value > 0)
             {
                 var speedMph = GpsCalculator.MetersPerSecondToMph(currentSpeed.Value);
-                if (speedMph >= WalkingRidingSpeedThresholdMph)
+                // Use a small threshold to account for GPS noise (0.5 mph)
+                const double earlyDetectionStationaryThresholdMph = 0.5;
+                
+                if (speedMph < earlyDetectionStationaryThresholdMph)
+                {
+                    // Very slow or stationary
+                    if (currentDistance < StationaryDistanceThresholdMeters)
+                    {
+                        return MovementState.Stationary;
+                    }
+                }
+                else if (speedMph >= WalkingRidingSpeedThresholdMph)
                 {
                     return MovementState.Riding;
                 }
-                else if (speedMph > 0)
+                else
                 {
                     return MovementState.Walking;
                 }
             }
+            // If speed not available but we're moving a reasonable distance, check distance
+            else if (currentDistance >= StationaryDistanceThresholdMeters * 2)
+            {
+                // Moving but no speed data - use Moving state as fallback
+                return MovementState.Moving;
+            }
 
             return _currentMovementState;
         }
+        
+        // If we have some samples but not enough for full analysis, use simplified logic with speed
+        bool useFullAnalysis = recentMovementsInWindow.Count >= preferredSamples;
 
         // Calculate statistics
         var avgDistance = recentMovementsInWindow.Average(m => m.distance);
@@ -838,15 +865,56 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
             : null;
 
         _logger.LogDebug(
-            "Movement analysis: avg={AvgDist:F1}m, max={MaxDist:F1}m, avgSpeed={AvgSpeed:F2} m/s ({AvgSpeedMph:F1} mph), samples={Count}",
+            "Movement analysis: avg={AvgDist:F1}m, max={MaxDist:F1}m, avgSpeed={AvgSpeed:F2} m/s ({AvgSpeedMph:F1} mph), samples={Count}, fullAnalysis={FullAnalysis}",
             avgDistance,
             maxDistance,
             avgSpeed ?? 0,
             avgSpeed.HasValue ? GpsCalculator.MetersPerSecondToMph(avgSpeed.Value) : 0,
-            recentMovementsInWindow.Count);
+            recentMovementsInWindow.Count,
+            useFullAnalysis);
 
         // Determine state based on movement patterns and speed
+        // Use speed as primary indicator if available, fallback to distance patterns
+        const double stationaryThresholdMph = 0.5;
+        double? speedToCheck = currentSpeed ?? avgSpeed;
 
+        // If we have speed data, use it as primary indicator (faster and more accurate)
+        if (speedToCheck.HasValue)
+        {
+            var speedMph = GpsCalculator.MetersPerSecondToMph(speedToCheck.Value);
+            
+            if (speedMph < stationaryThresholdMph)
+            {
+                // Very slow - check if truly stationary based on distance patterns
+                if (useFullAnalysis)
+                {
+                    // With enough samples, use distance patterns to confirm stationary
+                    if (maxDistance < StationaryDistanceThresholdMeters && avgDistance < StationaryDistanceThresholdMeters / 2)
+                    {
+                        return MovementState.Stationary;
+                    }
+                    // Small movements but slow speed - might be GPS drift, maintain current state
+                }
+                else
+                {
+                    // With fewer samples, be more conservative - if distance is small, assume stationary
+                    if (currentDistance < StationaryDistanceThresholdMeters && maxDistance < StationaryDistanceThresholdMeters)
+                    {
+                        return MovementState.Stationary;
+                    }
+                }
+            }
+            else if (speedMph >= WalkingRidingSpeedThresholdMph)
+            {
+                return MovementState.Riding;
+            }
+            else
+            {
+                return MovementState.Walking;
+            }
+        }
+
+        // Speed not available - use distance patterns
         // Check for stationary state
         if (maxDistance < StationaryDistanceThresholdMeters && avgDistance < StationaryDistanceThresholdMeters / 2)
         {
@@ -854,27 +922,19 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
         }
 
         // Check for continuous motion (walking or riding)
-        if (currentDistance >= MinimumDistanceMeters || avgDistance >= StationaryDistanceThresholdMeters * 2 || maxDistance >= MinimumDistanceMeters)
+        // Use a lower threshold for detection - don't require MinimumDistanceMeters (50m) for state changes
+        if (currentDistance >= StationaryDistanceThresholdMeters || avgDistance >= StationaryDistanceThresholdMeters || maxDistance >= StationaryDistanceThresholdMeters)
         {
-            // Device is moving, now determine if walking or riding based on speed
-            double? speedToCheck = currentSpeed ?? avgSpeed;
-
-            if (speedToCheck.HasValue)
+            // Device is moving but no speed data - use Moving state as fallback
+            // With more samples, we could infer walking vs riding, but without speed it's uncertain
+            if (useFullAnalysis && (avgDistance >= StationaryDistanceThresholdMeters * 2 || maxDistance >= MinimumDistanceMeters))
             {
-                var speedMph = GpsCalculator.MetersPerSecondToMph(speedToCheck.Value);
-
-                if (speedMph >= WalkingRidingSpeedThresholdMph)
-                {
-                    return MovementState.Riding;
-                }
-                else if (speedMph > 0)
-                {
-                    return MovementState.Walking;
-                }
+                return MovementState.Moving;
             }
-
-            // Speed not available or invalid, use legacy Moving state
-            return MovementState.Moving;
+            else if (!useFullAnalysis && currentDistance >= StationaryDistanceThresholdMeters)
+            {
+                return MovementState.Moving;
+            }
         }
 
         // Maintain current state if unclear

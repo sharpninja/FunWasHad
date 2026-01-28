@@ -179,6 +179,22 @@ public partial class App : Application
         // Register activity tracking service
         services.AddSingleton<ActivityTrackingService>();
 
+        // Register location API heartbeat service
+        services.AddSingleton<LocationApiHeartbeatService>(sp =>
+        {
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            var options = Microsoft.Extensions.Options.Options.Create(new LocationApiClientOptions
+            {
+                BaseAddress = locationApiBaseAddress,
+                Timeout = TimeSpan.FromSeconds(30)
+            });
+            return new LocationApiHeartbeatService(
+                httpClientFactory,
+                options,
+                loggerFactory.CreateLogger<LocationApiHeartbeatService>());
+        });
+
         // Register activity tracking ViewModel
         services.AddSingleton<ActivityTrackingViewModel>();
 
@@ -186,7 +202,20 @@ public partial class App : Application
         services.AddSingleton<MovementStateLogger>();
 
         // Register movement state ViewModel
-        services.AddSingleton<MovementStateViewModel>();
+        services.AddSingleton<MovementStateViewModel>(sp =>
+        {
+            var locationTrackingService = sp.GetRequiredService<ILocationTrackingService>();
+            var locationService = sp.GetRequiredService<ILocationService>();
+            var locationSettings = sp.GetRequiredService<LocationSettings>();
+            var logger = sp.GetRequiredService<ILogger<MovementStateViewModel>>();
+            var heartbeatService = sp.GetRequiredService<LocationApiHeartbeatService>();
+            return new MovementStateViewModel(
+                locationTrackingService,
+                locationService,
+                locationSettings,
+                logger,
+                heartbeatService);
+        });
 
         // Register map ViewModel
         services.AddSingleton<MapViewModel>();
@@ -505,6 +534,10 @@ public partial class App : Application
             {
                 try
                 {
+                    // Start location API heartbeat service
+                    var heartbeatService = ServiceProvider.GetRequiredService<LocationApiHeartbeatService>();
+                    _ = heartbeatService.StartAsync(CancellationToken.None);
+
                     // Initialize database with timeout to prevent hanging
                     using var dbCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                     await EnsureDatabaseInitializedAsync().WaitAsync(dbCts.Token).ConfigureAwait(false);
@@ -539,6 +572,10 @@ public partial class App : Application
             {
                 try
                 {
+                    // Start location API heartbeat service
+                    var heartbeatService = ServiceProvider.GetRequiredService<LocationApiHeartbeatService>();
+                    _ = heartbeatService.StartAsync(CancellationToken.None);
+
                     // Initialize database first with timeout to prevent hanging
                     using var dbCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                     await EnsureDatabaseInitializedAsync().WaitAsync(dbCts.Token).ConfigureAwait(false);

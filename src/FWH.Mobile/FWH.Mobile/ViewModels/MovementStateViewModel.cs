@@ -17,9 +17,24 @@ public partial class MovementStateViewModel : ObservableObject
     private readonly ILocationService _locationService;
     private readonly LocationSettings _locationSettings;
     private readonly ILogger<MovementStateViewModel> _logger;
+    private readonly LocationApiHeartbeatService? _heartbeatService;
 
     [ObservableProperty]
     private string _movementStateText = "Stationary";
+
+    [ObservableProperty]
+    private bool _isLocationApiAvailable = true;
+
+    /// <summary>
+    /// Gets the background color for the movement state control.
+    /// Returns red with 15% opacity if API is unavailable, otherwise the default background.
+    /// </summary>
+    public string BackgroundColor => IsLocationApiAvailable ? "#FAFAFA" : "#26DC3545"; // Red with ~15% opacity (0x26 = ~15% of 0xFF)
+
+    partial void OnIsLocationApiAvailableChanged(bool value)
+    {
+        OnPropertyChanged(nameof(BackgroundColor));
+    }
 
     [ObservableProperty]
     private string _movementStateEmoji = "😊"; // Default emoji
@@ -98,17 +113,26 @@ public partial class MovementStateViewModel : ObservableObject
         ILocationTrackingService locationTrackingService,
         ILocationService locationService,
         LocationSettings locationSettings,
-        ILogger<MovementStateViewModel> logger)
+        ILogger<MovementStateViewModel> logger,
+        LocationApiHeartbeatService? heartbeatService = null)
     {
         _locationTrackingService = locationTrackingService ?? throw new ArgumentNullException(nameof(locationTrackingService));
         _locationService = locationService ?? throw new ArgumentNullException(nameof(locationService));
         _locationSettings = locationSettings ?? throw new ArgumentNullException(nameof(locationSettings));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _heartbeatService = heartbeatService;
 
         // Subscribe to events
         _locationTrackingService.MovementStateChanged += OnMovementStateChanged;
         _locationTrackingService.LocationUpdated += OnLocationUpdated;
         _locationTrackingService.NewLocationAddress += OnNewLocationAddress;
+
+        // Subscribe to heartbeat service if available
+        if (_heartbeatService != null)
+        {
+            _heartbeatService.AvailabilityChanged += OnApiAvailabilityChanged;
+            IsLocationApiAvailable = _heartbeatService.IsAvailable;
+        }
 
         // Initialize with current state
         UpdateMovementState(_locationTrackingService.CurrentMovementState);
@@ -116,6 +140,15 @@ public partial class MovementStateViewModel : ObservableObject
         UpdateTrackingStatus();
         UpdateCoordinates();
         UpdateAddress();
+    }
+
+    private void OnApiAvailabilityChanged(object? sender, bool isAvailable)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            IsLocationApiAvailable = isAvailable;
+            _logger.LogDebug("Location API availability changed: {IsAvailable}", isAvailable);
+        });
     }
 
     private void OnMovementStateChanged(object? sender, MovementStateChangedEventArgs e)

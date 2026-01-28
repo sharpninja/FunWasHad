@@ -38,7 +38,19 @@
                         BorderThickness="1"
                         CornerRadius="4"
                         Click="OnSnapToLocationClick">
-                    <TextBlock Text="📍" FontSize="20" />
+                    <!-- Target-style icon: solid disc with concentric ring (similar to Google Maps) -->
+                    <Grid Width="24" Height="24">
+                        <!-- Outer ring -->
+                        <Ellipse Stroke="#0078D7"
+                                 StrokeThickness="2"
+                                 Fill="Transparent" />
+                        <!-- Inner solid disc -->
+                        <Ellipse Width="10"
+                                 Height="10"
+                                 Fill="#0078D7"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center" />
+                    </Grid>
                 </Button>
             </Grid>
         </Border>
