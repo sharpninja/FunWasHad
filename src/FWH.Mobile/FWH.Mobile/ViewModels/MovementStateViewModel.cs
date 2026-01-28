@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FWH.Common.Location;
 using FWH.Mobile.Configuration;
@@ -120,38 +121,49 @@ public partial class MovementStateViewModel : ObservableObject
     private void OnMovementStateChanged(object? sender, MovementStateChangedEventArgs e)
     {
         _logger.LogDebug("Movement state changed from {Previous} to {Current}", e.PreviousState, e.CurrentState);
-        UpdateMovementState(e.CurrentState);
-        UpdateSpeed();
+        var state = e.CurrentState;
+        Dispatcher.UIThread.Post(() =>
+        {
+            UpdateMovementState(state);
+            UpdateSpeed();
+        });
     }
 
     private void OnLocationUpdated(object? sender, Common.Location.Models.GpsCoordinates e)
     {
         _logger.LogDebug("Location updated: ({Lat}, {Lon})", e.Latitude, e.Longitude);
-        Latitude = e.Latitude;
-        Longitude = e.Longitude;
-        UpdateCoordinates();
-        UpdateSpeed();
-        UpdateTrackingStatus();
+        var lat = e.Latitude;
+        var lon = e.Longitude;
+        Dispatcher.UIThread.Post(() =>
+        {
+            Latitude = lat;
+            Longitude = lon;
+            UpdateCoordinates();
+            UpdateSpeed();
+            UpdateTrackingStatus();
+        });
     }
 
     private void OnNewLocationAddress(object? sender, LocationAddressChangedEventArgs e)
     {
         _logger.LogInformation("Address changed to: {Address}", e.CurrentAddress);
-        
-        // Don't treat coordinates as an address - they're shown in the Location field
-        if (IsCoordinateString(e.CurrentAddress))
+        var address = e.CurrentAddress;
+        Dispatcher.UIThread.Post(() =>
         {
-            CurrentAddress = "--";
-            HasAddress = false;
-            _logger.LogDebug("Address is coordinates, treating as no address available");
-        }
-        else
-        {
-            CurrentAddress = e.CurrentAddress ?? "--";
-            HasAddress = !string.IsNullOrEmpty(e.CurrentAddress);
-        }
-        
-        OnPropertyChanged(nameof(DisplayAddress));
+            // Don't treat coordinates as an address - they're shown in the Location field
+            if (IsCoordinateString(address))
+            {
+                CurrentAddress = "--";
+                HasAddress = false;
+                _logger.LogDebug("Address is coordinates, treating as no address available");
+            }
+            else
+            {
+                CurrentAddress = address ?? "--";
+                HasAddress = !string.IsNullOrEmpty(address);
+            }
+            OnPropertyChanged(nameof(DisplayAddress));
+        });
     }
 
     private void UpdateAddress()
@@ -199,23 +211,23 @@ public partial class MovementStateViewModel : ObservableObject
                 maxDistanceMeters: 100, // Check within 100m for businesses
                 cancellationToken: default).ConfigureAwait(false);
 
-            if (business != null)
+            var name = business?.Name;
+            Dispatcher.UIThread.Post(() =>
             {
-                BusinessName = business.Name;
-                _logger.LogDebug("Found business at current location: {BusinessName}", business.Name);
+                BusinessName = name;
+                if (name != null)
+                    _logger.LogDebug("Found business at current location: {BusinessName}", name);
                 OnPropertyChanged(nameof(DisplayAddress));
-            }
-            else
-            {
-                BusinessName = null;
-                OnPropertyChanged(nameof(DisplayAddress));
-            }
+            });
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error checking for business at current location");
-            BusinessName = null;
-            OnPropertyChanged(nameof(DisplayAddress));
+            Dispatcher.UIThread.Post(() =>
+            {
+                BusinessName = null;
+                OnPropertyChanged(nameof(DisplayAddress));
+            });
         }
     }
 
