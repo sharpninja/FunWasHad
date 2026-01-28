@@ -19,9 +19,28 @@
                 BorderThickness="1"
                 CornerRadius="4"
                 Background="#FFFFFF">
-            <mapsui:MapControl x:Name="LocationMap"
-                               HorizontalAlignment="Stretch"
-                               VerticalAlignment="Stretch" />
+            <Grid>
+                <mapsui:MapControl x:Name="LocationMap"
+                                   HorizontalAlignment="Stretch"
+                                   VerticalAlignment="Stretch" />
+                
+                <!-- Snap to Location Button -->
+                <Button x:Name="SnapToLocationButton"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="12"
+                        Padding="12"
+                        MinWidth="48"
+                        MinHeight="48"
+                        ToolTip.Tip="Center map on current location"
+                        Background="White"
+                        BorderBrush="#E0E0E0"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Click="OnSnapToLocationClick">
+                    <TextBlock Text="📍" FontSize="20" />
+                </Button>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>

@@ -20,6 +20,7 @@ public partial class MapView : UserControl
     private MovementState _currentMovementState = FWH.Mobile.Services.MovementState.Stationary;
     private MemoryLayer? _deviceLocationLayer;
     private PointFeature? _deviceLocationFeature;
+    private bool _isFirstLocationUpdate = true;
 
     public MapView()
     {
@@ -179,7 +180,51 @@ public partial class MapView : UserControl
             locationMap.Map.Navigator.RotateTo(_mapViewModel.Rotation);
         }
 
-        // Center map on location, preserving current zoom level (don't reset zoom on updates)
+        // Only center map on first location update; subsequent updates just update the marker
+        if (_isFirstLocationUpdate)
+        {
+            _isFirstLocationUpdate = false;
+            // Center map on location, preserving current zoom level (don't reset zoom on updates)
+            var currentResolution = locationMap.Map.Navigator.Viewport.Resolution;
+            if (currentResolution > 0)
+            {
+                // Use current zoom level to preserve user's zoom setting
+                locationMap.Map.Navigator.CenterOnAndZoomTo(locationPoint, currentResolution);
+            }
+            else
+            {
+                // Fallback: set initial zoom if resolution not yet set
+                var resolutions = locationMap.Map.Navigator.Resolutions;
+                if (resolutions.Count > 15)
+                    locationMap.Map.Navigator.CenterOnAndZoomTo(locationPoint, resolutions[15]);
+            }
+        }
+        // For subsequent updates, just refresh to show updated marker position
+        locationMap.Refresh();
+    }
+
+    private void OnSnapToLocationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        // Manually center map on current location
+        CenterMapOnLocation();
+    }
+
+    private void CenterMapOnLocation()
+    {
+        var locationMap = this.FindControl<MapControl>("LocationMap");
+        if (locationMap?.Map == null || _mapViewModel?.MovementStateViewModel == null || 
+            !_mapViewModel.MovementStateViewModel.Latitude.HasValue || 
+            !_mapViewModel.MovementStateViewModel.Longitude.HasValue)
+            return;
+
+        var lat = _mapViewModel.MovementStateViewModel.Latitude.Value;
+        var lon = _mapViewModel.MovementStateViewModel.Longitude.Value;
+
+        // Convert WGS84 (lat/lon) to Web Mercator (used by maps)
+        var (x, y) = SphericalMercator.FromLonLat(lon, lat);
+        var locationPoint = new MPoint(x, y);
+
+        // Center map on location, preserving current zoom level
         var currentResolution = locationMap.Map.Navigator.Viewport.Resolution;
         if (currentResolution > 0)
         {
