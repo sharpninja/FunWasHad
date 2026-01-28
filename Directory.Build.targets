@@ -21,7 +21,7 @@
   <Target Name="EnforceTRQual005" AfterTargets="Build" Condition="'$(EnforceTRQual005)' != 'false'">
     <PropertyGroup>
       <_TrQual005Ps1>$(MSBuildThisFileDirectory)scripts\Enforce-TRQual005.ps1</_TrQual005Ps1>
-      <_TrQual005Cmd>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(_TrQual005Ps1)&quot; -RepoRoot &quot;$(MSBuildThisFileDirectory).TrimEnd('\').TrimEnd('/')&quot;</_TrQual005Cmd>
+      <_TrQual005Cmd>powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(_TrQual005Ps1)&quot; -RepoRoot &quot;$(MSBuildThisFileDirectory)&quot;</_TrQual005Cmd>
     </PropertyGroup>
     <Exec Command="$(_TrQual005Cmd)" IgnoreExitCode="true" StandardErrorImportance="high" StandardOutputImportance="normal">
       <Output TaskParameter="ExitCode" PropertyName="_TrQual005ExitCode" />
