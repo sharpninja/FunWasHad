@@ -22,6 +22,12 @@ public partial class WorkflowController : IWorkflowController
     [LoggerMessage(LogLevel.Debug, "Workflow {WorkflowId} already exists in definition store, reusing existing definition")]
     private static partial void LogWorkflowExists(ILogger logger, string workflowId);
 
+    [LoggerMessage(LogLevel.Debug, "Workflow {WorkflowId} already exists and is identical to requested import, skipping update")]
+    private static partial void LogWorkflowIdentical(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Information, "Workflow {WorkflowId} already exists but differs from requested import, updating definition")]
+    private static partial void LogWorkflowDifferent(ILogger logger, string workflowId);
+
     [LoggerMessage(LogLevel.Debug, "Parsing PlantUML for workflow {WorkflowId} (content length: {Length} chars)")]
     private static partial void LogParsingPlantUml(ILogger logger, string workflowId, int length);
 
@@ -113,24 +119,33 @@ public partial class WorkflowController : IWorkflowController
         var workflowId = id ?? Guid.NewGuid().ToString();
         LogImportingWorkflow(_logger, workflowId);
 
-        // Check if workflow definition already exists in memory store
-        var existingDefinition = _definitionStore.GetById(workflowId);
-        if (existingDefinition != null)
-        {
-            LogWorkflowExists(_logger, workflowId);
-
-            // Ensure instance is started
-            await StartInstanceAsync(workflowId).ConfigureAwait(false);
-            return existingDefinition;
-        }
-
-        // Parse PlantUML only if not already in store
+        // Parse PlantUML to get the definition for comparison
         LogParsingPlantUml(_logger, workflowId, plantUmlText.Length);
         var parser = new PlantUmlParser(plantUmlText);
         var definition = parser.Parse(id, name);
         LogParsingCompleted(_logger, workflowId, definition.Nodes.Count, definition.Transitions.Count);
 
-        // Store definition
+        // Check if workflow definition already exists in memory store
+        var existingDefinition = _definitionStore.GetById(workflowId);
+        if (existingDefinition != null)
+        {
+            // Compare the parsed definition with the existing one
+            // WorkflowDefinition is a record, so equality comparison checks all properties
+            if (AreWorkflowsEqual(existingDefinition, definition))
+            {
+                LogWorkflowIdentical(_logger, workflowId);
+                // Ensure instance is started
+                await StartInstanceAsync(workflowId).ConfigureAwait(false);
+                return existingDefinition;
+            }
+            else
+            {
+                LogWorkflowDifferent(_logger, workflowId);
+                // Update with new definition
+            }
+        }
+
+        // Store definition (new or updated)
         _definitionStore.Store(definition);
 
         // Initialize instance
@@ -429,6 +444,66 @@ public partial class WorkflowController : IWorkflowController
     private IWorkflowRepository? GetRepository()
     {
         return _serviceProvider.GetService<IWorkflowRepository>();
+    }
+
+    /// <summary>
+    /// Compares two workflow definitions to determine if they are identical.
+    /// Compares Id, Name, Nodes (all properties via record equality), Transitions (all properties), and StartPoints.
+    /// Uses order-independent comparison for collections.
+    /// </summary>
+    private static bool AreWorkflowsEqual(WorkflowDefinition existing, WorkflowDefinition incoming)
+    {
+        // Compare basic properties
+        if (existing.Id != incoming.Id || existing.Name != incoming.Name)
+            return false;
+
+        // Compare nodes (order-independent, using record equality for full comparison)
+        if (existing.Nodes.Count != incoming.Nodes.Count)
+            return false;
+
+        var existingNodes = existing.Nodes.OrderBy(n => n.Id).ToList();
+        var incomingNodes = incoming.Nodes.OrderBy(n => n.Id).ToList();
+        for (int i = 0; i < existingNodes.Count; i++)
+        {
+            // WorkflowNode is a record, so equality compares all properties (Id, Label, JsonMetadata, NoteMarkdown)
+            if (existingNodes[i] != incomingNodes[i])
+                return false;
+        }
+
+        // Compare transitions (order-independent, using record equality)
+        if (existing.Transitions.Count != incoming.Transitions.Count)
+            return false;
+
+        var existingTransitions = existing.Transitions
+            .OrderBy(t => t.Id)
+            .ThenBy(t => t.FromNodeId)
+            .ThenBy(t => t.ToNodeId)
+            .ToList();
+        var incomingTransitions = incoming.Transitions
+            .OrderBy(t => t.Id)
+            .ThenBy(t => t.FromNodeId)
+            .ThenBy(t => t.ToNodeId)
+            .ToList();
+        for (int i = 0; i < existingTransitions.Count; i++)
+        {
+            // Transition is a record, so equality compares all properties (Id, FromNodeId, ToNodeId, Condition)
+            if (existingTransitions[i] != incomingTransitions[i])
+                return false;
+        }
+
+        // Compare start points (order-independent)
+        var existingStartPoints = existing.StartPoints.OrderBy(s => s.NodeId).ToList();
+        var incomingStartPoints = incoming.StartPoints.OrderBy(s => s.NodeId).ToList();
+        if (existingStartPoints.Count != incomingStartPoints.Count)
+            return false;
+        for (int i = 0; i < existingStartPoints.Count; i++)
+        {
+            // StartPoint is a record, so equality compares all properties
+            if (existingStartPoints[i] != incomingStartPoints[i])
+                return false;
+        }
+
+        return true;
     }
 
     private async Task TryExecuteNodeActionAsync(WorkflowDefinition definition, string workflowId, WorkflowNode node)

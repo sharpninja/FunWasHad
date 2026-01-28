@@ -179,10 +179,20 @@ public partial class MapView : UserControl
             locationMap.Map.Navigator.RotateTo(_mapViewModel.Rotation);
         }
 
-        // Center map on location (Mapsui 5: use Navigator.CenterOnAndZoomTo)
-        var resolutions = locationMap.Map.Navigator.Resolutions;
-        if (resolutions.Count > 15)
-            locationMap.Map.Navigator.CenterOnAndZoomTo(locationPoint, resolutions[15]);
+        // Center map on location, preserving current zoom level (don't reset zoom on updates)
+        var currentResolution = locationMap.Map.Navigator.Viewport.Resolution;
+        if (currentResolution > 0)
+        {
+            // Use current zoom level to preserve user's zoom setting
+            locationMap.Map.Navigator.CenterOnAndZoomTo(locationPoint, currentResolution);
+        }
+        else
+        {
+            // Fallback: set initial zoom if resolution not yet set
+            var resolutions = locationMap.Map.Navigator.Resolutions;
+            if (resolutions.Count > 15)
+                locationMap.Map.Navigator.CenterOnAndZoomTo(locationPoint, resolutions[15]);
+        }
         locationMap.Refresh();
     }
 
