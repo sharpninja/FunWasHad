@@ -262,6 +262,7 @@ jobs:
       legal_web_image: ${{ needs.get_config.outputs.legal_web_image }}
     secrets:
       railway_project_id: ${{ secrets.RAILWAY_PRODUCTION_PROJECT_ID }}
+      railway_token: ${{ secrets.RAILWAY_TOKEN }}
 
   build_mobile_android_main:
     name: Build Mobile Android

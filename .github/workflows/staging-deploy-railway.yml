@@ -24,6 +24,8 @@ on:
     secrets:
       railway_project_id:
         required: true
+      railway_token:
+        required: true
 
 jobs:
   deploy_railway:
@@ -38,7 +40,7 @@ jobs:
       name: staging
       url: https://staging.up.railway.app
     env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_TOKEN: ${{ secrets.railway_token }}
 
     steps:
       - name: Checkout repository
