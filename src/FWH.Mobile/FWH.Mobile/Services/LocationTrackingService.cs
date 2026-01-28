@@ -979,14 +979,16 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
     {
         if (disposing)
         {
-            // Stop tracking if still active
+            // Stop tracking if still active. Do not block the calling thread (Dispose may run on main thread
+            // during activity lifecycle) — cancel so the loop exits; avoid Wait() to prevent ANR.
             if (IsTracking)
             {
                 try
                 {
-                    // Use synchronous wait with timeout to avoid blocking indefinitely
-                    var stopTask = Task.Run(async () => await StopTrackingAsync().ConfigureAwait(false));
-                    stopTask.Wait(TimeSpan.FromSeconds(5));
+                    _trackingCts?.Cancel();
+                    _trackingCts?.Dispose();
+                    _trackingCts = null;
+                    _trackingTask = null;
                 }
                 catch (Exception ex)
                 {

@@ -126,6 +126,45 @@
             }
         },
         {
+            "label": "android-anr-diagnose",
+            "command": "powershell",
+            "type": "process",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "${workspaceFolder}/scripts/Diagnose-AndroidANR.ps1",
+                "-CopyToClipboard"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false
+            }
+        },
+        {
+            "label": "android-anr-capture-bugreport",
+            "command": "powershell",
+            "type": "process",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "${workspaceFolder}/scripts/Diagnose-AndroidANR.ps1",
+                "-CaptureBugreport",
+                "-CopyToClipboard"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "focus": false
+            }
+        },
+        {
             "label": "doc-sync",
             "command": "dotnet",
             "type": "process",

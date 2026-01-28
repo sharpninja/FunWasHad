@@ -94,13 +94,14 @@ public class UrlToImageConverter : IValueConverter
                 return null;
             });
 
-            // Wait for result (blocks UI thread - not ideal but works)
-            var bitmap = task.Result;
-            if (bitmap != null)
+            // Wait with timeout to avoid ANR from indefinite block on slow network.
+            const int timeoutMs = 2000;
+            if (task.Wait(timeoutMs) && task.IsCompletedSuccessfully && task.Result != null)
             {
-                _imageCache[url] = bitmap;
+                _imageCache[url] = task.Result;
+                return task.Result;
             }
-            return bitmap;
+            return null;
         }
         catch
         {
@@ -131,7 +132,11 @@ public class UrlToImageConverter : IValueConverter
                 return null;
             });
 
-            return task.Result;
+            // Timeout to avoid ANR from indefinite block on slow network (Convert runs on UI thread).
+            const int timeoutMs = 2000;
+            if (task.Wait(timeoutMs) && task.IsCompletedSuccessfully && task.Result != null)
+                return task.Result;
+            return null;
         }
         catch
         {

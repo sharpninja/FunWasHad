@@ -12,8 +12,18 @@ public partial class ChatView : UserControl
 
         Loaded += (_, _) =>
         {
-            // Set DataContext for ChatViewModel
-            DataContext = App.ServiceProvider.GetRequiredService<ChatViewModel>();
+            // Resolve ChatViewModel off UI thread to avoid ANR (ChatService/workflow graph can be heavy).
+            _ = System.Threading.Tasks.Task.Run(() =>
+            {
+                var vm = App.ServiceProvider.GetRequiredService<ChatViewModel>();
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    if (IsLoaded)
+                    {
+                        DataContext = vm;
+                    }
+                });
+            });
         };
     }
 }

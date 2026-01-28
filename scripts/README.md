@@ -128,6 +128,41 @@ Creates a backup of the PostgreSQL database volume.
 
 ---
 
+### 📱 Diagnose-AndroidANR.ps1
+
+Attach to the running FunWasHad Android app via adb and collect ANR (Application Not Responding) diagnostics.
+
+**Prerequisites:** Android device or emulator connected; `adb` on PATH (Android SDK platform-tools).
+
+**Usage:**
+```powershell
+# Run diagnostics (default package app.funwashad)
+.\scripts\Diagnose-AndroidANR.ps1
+
+# Also try to pull /data/anr/traces.txt (may require root)
+.\scripts\Diagnose-AndroidANR.ps1 -PullTraces
+
+# Capture full bugreport (1–2 min), extract ANR excerpt for app.funwashad
+.\scripts\Diagnose-AndroidANR.ps1 -CaptureBugreport
+
+# Different package
+.\scripts\Diagnose-AndroidANR.ps1 -PackageId com.example.app
+```
+
+**What it does:**
+1. Lists devices and finds the app process (PID)
+2. Dumps recent logcat filtered for ANR, Input dispatching, and app tag
+3. Shows Dropbox ANR entries (if any)
+4. Shows input dispatching state and CPU top
+5. Optionally pulls ANR traces from `/data/anr` (root often required)
+6. With **`-CaptureBugreport`**: runs `adb bugreport`, saves zip to `android-anr-bugreports/`, extracts zip and writes ANR excerpt for the package to `android-anr-stack-excerpt.txt`
+
+**Output:** Logcat excerpt: `android-anr-logcat.txt`. With `-CaptureBugreport`: bugreport zip in `android-anr-bugreports/`, excerpt in `android-anr-stack-excerpt.txt`. Use **`-CopyToClipboard`** to copy the excerpt (or logcat) so you can paste into Cursor Composer. See [docs/mobile/anr-diagnosis-and-retest.md](../docs/mobile/anr-diagnosis-and-retest.md) for re-test steps.
+
+**VS Code:** Run task **android-anr-diagnose** or **android-anr-capture-bugreport** (both copy to clipboard for pasting in Composer).
+
+---
+
 ### 🔄 Restore-Database.ps1
 
 Restores a PostgreSQL database from a backup file.

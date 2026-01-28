@@ -58,6 +58,12 @@ dlldata.c
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
 
+# Android ANR diagnostics (scripts/Diagnose-AndroidANR.ps1)
+android-anr-logcat.txt
+android-anr-stack-excerpt.txt
+android-anr-traces/
+android-anr-bugreports/
+
 # .NET Core
 project.lock.json
 project.fragment.lock.json
