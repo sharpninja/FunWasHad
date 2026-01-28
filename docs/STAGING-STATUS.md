@@ -5,14 +5,14 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 ## Latest Run Information
 
-- **Run Number**: #115
-- **Run ID**: 21454686031
+- **Run Number**: #116
+- **Run ID**: 21455540335
 - **Status**: success
 - **Branch**: develop
-- **Commit**: [`f949500`](https://github.com/sharpninja/FunWasHad/commit/f949500e1c27716ab65cf22a33114cce4c9c3b43)
-- **Started**: 2026-01-28T20:40:57Z
-- **Completed**: 2026-01-28T20:41:14Z
-- **Run URL**: [View on GitHub](https://github.com/sharpninja/FunWasHad/actions/runs/21454686031)
+- **Commit**: [`e0c7fe8`](https://github.com/sharpninja/FunWasHad/commit/e0c7fe8e96c00f37d0e35475f5033cc6f497bc72)
+- **Started**: 2026-01-28T21:09:58Z
+- **Completed**: 2026-01-28T21:10:12Z
+- **Run URL**: [View on GitHub](https://github.com/sharpninja/FunWasHad/actions/runs/21455540335)
 
 ---
 
@@ -20,16 +20,16 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 | Job Name | Status | Duration | Conclusion |
 |----------|--------|----------|------------|
-| Detect Changes | completed | 7s | success |
-| Get Configuration | completed | 4s | success |
-| Build and Test | completed | 0s | skipped |
-| Build Marketing API Docker Image | completed | 0s | skipped |
-| Build Location API Docker Image | completed | 0s | skipped |
-| Build Legal Web Docker Image | completed | 0s | skipped |
-| Build Mobile Android | completed | 0s | skipped |
+| Detect Changes | completed | 4s | success |
+| Get Configuration | completed | 3s | success |
+| Build and Test | completed | -1s | skipped |
+| Build Location API Docker Image | completed | -1s | skipped |
 | Notify Deployment Status / Notify Deployment Status | completed | 3s | success |
-| Deploy to Railway | completed | -1s | skipped |
-| Create Android Release | completed | -1s | skipped |
+| Build Legal Web Docker Image | completed | -1s | skipped |
+| Build Marketing API Docker Image | completed | -1s | skipped |
+| Build Mobile Android | completed | -1s | skipped |
+| Deploy to Railway | completed | 0s | skipped |
+| Create Android Release | completed | 0s | skipped |
 
 ---
 
@@ -39,7 +39,7 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61792321869`](https://github.com/sharpninja/FunWasHad/actions/runs/21454686031/job/61792321869)
+- **Job ID**: [`61795304575`](https://github.com/sharpninja/FunWasHad/actions/runs/21455540335/job/61795304575)
 
 #### Steps:
 
@@ -57,7 +57,7 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61792321889`](https://github.com/sharpninja/FunWasHad/actions/runs/21454686031/job/61792321889)
+- **Job ID**: [`61795304578`](https://github.com/sharpninja/FunWasHad/actions/runs/21455540335/job/61795304578)
 
 #### Steps:
 
@@ -72,42 +72,21 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61792337689`](https://github.com/sharpninja/FunWasHad/actions/runs/21454686031/job/61792337689)
-
-
-### Build Marketing API Docker Image
-
-- **Status**: completed
-- **Conclusion**: skipped
-- **Job ID**: [`61792337722`](https://github.com/sharpninja/FunWasHad/actions/runs/21454686031/job/61792337722)
+- **Job ID**: [`61795316118`](https://github.com/sharpninja/FunWasHad/actions/runs/21455540335/job/61795316118)
 
 
 ### Build Location API Docker Image
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61792337742`](https://github.com/sharpninja/FunWasHad/actions/runs/21454686031/job/61792337742)
-
-
-### Build Legal Web Docker Image
-
-- **Status**: completed
-- **Conclusion**: skipped
-- **Job ID**: [`61792337768`](https://github.com/sharpninja/FunWasHad/actions/runs/21454686031/job/61792337768)
-
-
-### Build Mobile Android
-
-- **Status**: completed
-- **Conclusion**: skipped
-- **Job ID**: [`61792337791`](https://github.com/sharpninja/FunWasHad/actions/runs/21454686031/job/61792337791)
+- **Job ID**: [`61795316547`](https://github.com/sharpninja/FunWasHad/actions/runs/21455540335/job/61795316547)
 
 
 ### Notify Deployment Status / Notify Deployment Status
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61792338009`](https://github.com/sharpninja/FunWasHad/actions/runs/21454686031/job/61792338009)
+- **Job ID**: [`61795316550`](https://github.com/sharpninja/FunWasHad/actions/runs/21455540335/job/61795316550)
 
 #### Steps:
 
@@ -121,18 +100,39 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 | Complete job | completed | success |
 
 
+### Build Legal Web Docker Image
+
+- **Status**: completed
+- **Conclusion**: skipped
+- **Job ID**: [`61795316555`](https://github.com/sharpninja/FunWasHad/actions/runs/21455540335/job/61795316555)
+
+
+### Build Marketing API Docker Image
+
+- **Status**: completed
+- **Conclusion**: skipped
+- **Job ID**: [`61795316562`](https://github.com/sharpninja/FunWasHad/actions/runs/21455540335/job/61795316562)
+
+
+### Build Mobile Android
+
+- **Status**: completed
+- **Conclusion**: skipped
+- **Job ID**: [`61795316570`](https://github.com/sharpninja/FunWasHad/actions/runs/21455540335/job/61795316570)
+
+
 ### Deploy to Railway
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61792338027`](https://github.com/sharpninja/FunWasHad/actions/runs/21454686031/job/61792338027)
+- **Job ID**: [`61795316643`](https://github.com/sharpninja/FunWasHad/actions/runs/21455540335/job/61795316643)
 
 
 ### Create Android Release
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61792338096`](https://github.com/sharpninja/FunWasHad/actions/runs/21454686031/job/61792338096)
+- **Job ID**: [`61795316783`](https://github.com/sharpninja/FunWasHad/actions/runs/21455540335/job/61795316783)
 
 
 ---
@@ -150,4 +150,4 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 ---
 
 
-*Last updated: 2026-01-28 20:41:25 UTC*
+*Last updated: 2026-01-28 21:10:23 UTC*
