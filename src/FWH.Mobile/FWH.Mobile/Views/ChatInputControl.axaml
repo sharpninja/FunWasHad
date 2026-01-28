@@ -29,6 +29,7 @@
                      AcceptsReturn="True"
                      TextWrapping="Wrap"
                      Text="{Binding Text, Mode=TwoWay}"
+                     FontSize="16"
                      HorizontalAlignment="Stretch"
                      VerticalAlignment="Stretch"/>
             <Button Grid.Column="1"

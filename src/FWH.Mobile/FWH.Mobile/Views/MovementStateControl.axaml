@@ -9,7 +9,7 @@
              x:DataType="vm:MovementStateViewModel">
              <UserControl.Styles>
                 <Style Selector="TextBlock">
-                    <Setter Property="FontSize" Value="32" />
+                    <Setter Property="FontSize" Value="16" />
                 </Style>
              </UserControl.Styles>
 

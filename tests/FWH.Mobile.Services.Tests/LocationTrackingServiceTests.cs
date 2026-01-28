@@ -411,9 +411,11 @@ public class LocationTrackingServiceTests : IDisposable
     [Fact]
     public async Task LocationTracking_ShouldStoreMovementState()
     {
-        // Arrange
+        // Arrange: use short dispatch interval so the tracking loop runs enough times
+        // in 500ms to see stationary -> walking transition and persist a non-Stationary state
         _service.MinimumDistanceMeters = 10.0;
         _service.PollingInterval = TimeSpan.FromMilliseconds(50);
+        _service.DispatchInterval = TimeSpan.FromMilliseconds(50);
         _service.WalkingRidingSpeedThresholdMph = 5.0;
 
         // Simulate stationary -> walking transition

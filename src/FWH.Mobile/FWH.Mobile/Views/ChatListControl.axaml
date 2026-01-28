@@ -60,7 +60,7 @@
                     <TextBlock Text="{Binding Text}"
                                TextWrapping="Wrap"
                                Foreground="White"
-                               FontSize="15"/>
+                               FontSize="16"/>
                 </Border>
             </DataTemplate>
 
@@ -76,7 +76,7 @@
                     <StackPanel Spacing="4">
                         <TextBlock Text="Captured Image Preview"
                                    FontWeight="Bold"
-                                   FontSize="14"
+                                   FontSize="16"
                                    Foreground="White"
                                    IsVisible="{Binding Image, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                         <Image Source="{Binding Image, Converter={StaticResource ByteArrayToImage}}"
@@ -84,7 +84,7 @@
                                MaxHeight="300"
                                IsVisible="{Binding Image, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                         <TextBlock Text="📷 Waiting for photo..."
-                                   FontSize="14"
+                                   FontSize="16"
                                    Foreground="White"
                                    HorizontalAlignment="Center"
                                    IsVisible="{Binding Image, Converter={x:Static ObjectConverters.IsNull}}"/>
@@ -101,6 +101,7 @@
                     <!-- Optional prompt/title -->
                     <TextBlock Text="{Binding Prompt}"
                                FontWeight="SemiBold"
+                               FontSize="16"
                                Foreground="#FF333333"
                                TextWrapping="Wrap"
                                IsVisible="{Binding Prompt, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
@@ -113,6 +114,7 @@
                             BoxShadow="0 2 8 0 #44000000">
                         <TextBlock Text="{Binding SelectedChoice.ChoiceText}"
                                    Foreground="White"
+                                   FontSize="16"
                                    FontWeight="Medium"/>
                     </Border>
 
