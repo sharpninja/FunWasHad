@@ -7,6 +7,27 @@ using Microsoft.Extensions.Options;
 namespace FWH.Mobile.Services;
 
 /// <summary>
+/// Represents the availability state of the Location API.
+/// </summary>
+public enum ApiAvailabilityState
+{
+    /// <summary>
+    /// API is available and responding normally (200 OK).
+    /// </summary>
+    Available,
+
+    /// <summary>
+    /// API returned an error status code (404 or 5xx).
+    /// </summary>
+    Error,
+
+    /// <summary>
+    /// API is unreachable (timeout, network error, no HTTP response).
+    /// </summary>
+    Unreachable
+}
+
+/// <summary>
 /// Background service that periodically checks if the Location API is available.
 /// </summary>
 public sealed class LocationApiHeartbeatService : BackgroundService
@@ -17,35 +38,40 @@ public sealed class LocationApiHeartbeatService : BackgroundService
     private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(60); // Check every 60 seconds
     private readonly TimeSpan _requestTimeout = TimeSpan.FromSeconds(5); // 5 second timeout for health check
 
-    public event EventHandler<bool>? AvailabilityChanged;
+    public event EventHandler<ApiAvailabilityState>? AvailabilityChanged;
 
-    private bool _isAvailable = true; // Assume available initially
+    private ApiAvailabilityState _availabilityState = ApiAvailabilityState.Available; // Assume available initially
     private readonly object _lock = new();
 
-    public bool IsAvailable
+    public ApiAvailabilityState AvailabilityState
     {
         get
         {
             lock (_lock)
             {
-                return _isAvailable;
+                return _availabilityState;
             }
         }
         private set
         {
-            bool changed;
+            ApiAvailabilityState changed;
             lock (_lock)
             {
-                changed = _isAvailable != value;
-                _isAvailable = value;
+                changed = _availabilityState;
+                _availabilityState = value;
             }
 
-            if (changed)
+            if (changed != value)
             {
                 AvailabilityChanged?.Invoke(this, value);
             }
         }
     }
+
+    /// <summary>
+    /// Gets whether the API is available (for backward compatibility).
+    /// </summary>
+    public bool IsAvailable => AvailabilityState == ApiAvailabilityState.Available;
 
     public LocationApiHeartbeatService(
         IHttpClientFactory httpClientFactory,
@@ -111,28 +137,40 @@ public sealed class LocationApiHeartbeatService : BackgroundService
 
             using var response = await _httpClient.GetAsync("health", cts.Token).ConfigureAwait(false);
 
-            var isAvailable = response.StatusCode == HttpStatusCode.OK;
-            IsAvailable = isAvailable;
-
-            if (!isAvailable)
+            if (response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Location API health check returned status {StatusCode}", response.StatusCode);
+                AvailabilityState = ApiAvailabilityState.Available;
+            }
+            else
+            {
+                // Check if it's a 404 or 5xx error
+                var statusCode = (int)response.StatusCode;
+                if (statusCode == 404 || statusCode >= 500)
+                {
+                    _logger.LogWarning("Location API health check returned error status {StatusCode}", response.StatusCode);
+                    AvailabilityState = ApiAvailabilityState.Error;
+                }
+                else
+                {
+                    // Other 4xx errors (like 401, 403) - treat as available since server is reachable
+                    AvailabilityState = ApiAvailabilityState.Available;
+                }
             }
         }
         catch (TaskCanceledException)
         {
             _logger.LogDebug("Location API health check timed out after {Timeout} seconds", _requestTimeout.TotalSeconds);
-            IsAvailable = false;
+            AvailabilityState = ApiAvailabilityState.Unreachable;
         }
         catch (HttpRequestException ex)
         {
             _logger.LogDebug(ex, "Location API health check failed: {Message}", ex.Message);
-            IsAvailable = false;
+            AvailabilityState = ApiAvailabilityState.Unreachable;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Unexpected error during Location API health check");
-            IsAvailable = false;
+            AvailabilityState = ApiAvailabilityState.Unreachable;
         }
     }
 

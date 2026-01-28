@@ -23,15 +23,23 @@ public partial class MovementStateViewModel : ObservableObject
     private string _movementStateText = "Stationary";
 
     [ObservableProperty]
-    private bool _isLocationApiAvailable = true;
+    private ApiAvailabilityState _apiAvailabilityState = ApiAvailabilityState.Available;
 
     /// <summary>
-    /// Gets the background color for the movement state control.
-    /// Returns red with 15% opacity if API is unavailable, otherwise the default background.
+    /// Gets the background color for the movement state control based on API availability state.
+    /// - Available: Default background (#FAFAFA)
+    /// - Unreachable (no HTTP response): Red with 50% opacity (#80DC3545)
+    /// - Error (404 or 5xx): Orange with 20% opacity (#33FFA500)
     /// </summary>
-    public string BackgroundColor => IsLocationApiAvailable ? "#FAFAFA" : "#26DC3545"; // Red with ~15% opacity (0x26 = ~15% of 0xFF)
+    public string BackgroundColor => ApiAvailabilityState switch
+    {
+        ApiAvailabilityState.Available => "#FAFAFA", // Default background
+        ApiAvailabilityState.Unreachable => "#80DC3545", // Red with 50% opacity (0x80 = 128 = 50% of 255)
+        ApiAvailabilityState.Error => "#33FFA500", // Orange with 20% opacity (0x33 = 51 = 20% of 255)
+        _ => "#FAFAFA"
+    };
 
-    partial void OnIsLocationApiAvailableChanged(bool value)
+    partial void OnApiAvailabilityStateChanged(ApiAvailabilityState value)
     {
         OnPropertyChanged(nameof(BackgroundColor));
     }
@@ -131,7 +139,7 @@ public partial class MovementStateViewModel : ObservableObject
         if (_heartbeatService != null)
         {
             _heartbeatService.AvailabilityChanged += OnApiAvailabilityChanged;
-            IsLocationApiAvailable = _heartbeatService.IsAvailable;
+            ApiAvailabilityState = _heartbeatService.AvailabilityState;
         }
 
         // Initialize with current state
@@ -142,12 +150,12 @@ public partial class MovementStateViewModel : ObservableObject
         UpdateAddress();
     }
 
-    private void OnApiAvailabilityChanged(object? sender, bool isAvailable)
+    private void OnApiAvailabilityChanged(object? sender, ApiAvailabilityState state)
     {
         Dispatcher.UIThread.Post(() =>
         {
-            IsLocationApiAvailable = isAvailable;
-            _logger.LogDebug("Location API availability changed: {IsAvailable}", isAvailable);
+            ApiAvailabilityState = state;
+            _logger.LogDebug("Location API availability changed: {State}", state);
         });
     }
 

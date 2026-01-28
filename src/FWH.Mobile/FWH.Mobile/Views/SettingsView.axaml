@@ -2,7 +2,34 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:FWH.Mobile.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="FWH.Mobile.Views.SettingsView">
-    <TextBlock Text="Settings" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18" />
+             x:Class="FWH.Mobile.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+    <ScrollViewer>
+        <StackPanel Margin="20" Spacing="20">
+            <TextBlock Text="Settings" FontSize="24" FontWeight="Bold" Margin="0,0,0,10" />
+
+            <!-- Tracking Data Section -->
+            <Border BorderBrush="#E0E0E0"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Tracking Data" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Text="Clear all location history and stationary places stored locally on this device."
+                               TextWrapping="Wrap"
+                               Foreground="#666666" />
+                    <Button Content="Clear All Tracking Data"
+                            Command="{Binding ShowClearDataConfirmationCommand}"
+                            IsEnabled="{Binding !IsClearingData}"
+                            HorizontalAlignment="Left"
+                            MinWidth="200" />
+                    <TextBlock Text="Clearing data..."
+                               Foreground="#666666"
+                               IsVisible="{Binding IsClearingData}" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>
