@@ -13,6 +13,7 @@
 - [🚀 Quick Start Guide](../scripts/README.md)
 - [✅ Latest Completion Summary](summaries/Technical_Requirements_Completion_Summary.md)
 - [📝 Latest Code Review](reviews/Code-Review-Report-2025-01-09.md)
+- [🔄 Staging Workflow Status](STAGING-STATUS.md) - **Auto-updated after each staging run** ([How to find it?](../WHERE-IS-THE-REPORT.md))
 - [📚 Generate Documentation](references/DocFX-Quick-Start.md) - DocFX documentation generation
 - [📖 Documentation Guidelines](DOCUMENTATION-GUIDELINES.md) - **Where to place new documentation**
 
@@ -47,6 +48,7 @@ docs/
 |----------|-------------|
 | [Technical-Requirements.md](Technical-Requirements.md) | Complete technical requirements (100% implemented) |
 | [Functional-Requirements.md](Functional-Requirements.md) | Functional requirements specification |
+| [STAGING-STATUS.md](STAGING-STATUS.md) | **Auto-updated** status of staging workflow runs on develop branch |
 
 ---
 
