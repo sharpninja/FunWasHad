@@ -88,7 +88,12 @@ if (-not $nupkgs) {
 
 foreach ($nupkg in $nupkgs) {
     Write-Host "Publishing $($nupkg.Name) to GitHub Packages ..."
-    dotnet nuget push $nupkg.FullName --source $feedUrl --api-key $Token --skip-duplicate
+    dotnet nuget push `
+        $nupkg.FullName `
+        --source $feedUrl `
+        --api-key $Token `
+        --skip-duplicate
+
     if ($LASTEXITCODE -ne 0) {
         throw "Publish failed for $($nupkg.Name)"
     }
