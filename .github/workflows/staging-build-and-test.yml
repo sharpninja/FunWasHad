@@ -19,6 +19,8 @@ jobs:
     permissions:
       contents: read
       packages: read
+    env:
+      NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -30,6 +32,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ inputs.dotnet_version }}
+          source-url: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cache .NET environment
         uses: ./.github/actions/cache-dotnet
@@ -37,9 +42,10 @@ jobs:
           dotnet-version: ${{ inputs.dotnet_version }}
           build-outputs-key-suffix: -${{ github.sha }}
 
+      # If restore fails with "Your request could not be authenticated by the GitHub Packages service",
+      # ensure the NSubstitute package (or other private packages) in your GitHub Packages has granted
+      # this repository access: GitHub → Your profile → Packages → [package] → Package settings → Manage Actions access.
       - name: Add GitHub Packages NuGet source
-        env:
-          NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ciConfig = Join-Path $env:RUNNER_TEMP 'NuGet.CI.Config'
           Copy-Item NuGet.config $ciConfig
