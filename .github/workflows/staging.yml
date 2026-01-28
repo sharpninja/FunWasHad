@@ -57,13 +57,30 @@ jobs:
             exit 0
           fi
 
+          # Determine HEAD commit for this run
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           else
-            # For push events, compare with previous commit
-            BASE_SHA="${{ github.event.before }}"
             HEAD_SHA="${{ github.sha }}"
+          fi
+
+          # Default base is the previous commit for push events (traditional behavior)
+          BASE_SHA="${{ github.event.before }}"
+
+          # Prefer the head SHA from the last successful run of this workflow on the same branch
+          # so change detection is based on the last green pipeline, not just the previous commit.
+          echo "🔎 Looking up last successful staging.yml run for branch ${{ github.ref_name }}..."
+          LAST_SUCCESS_SHA=$(curl -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/staging.yml/runs?branch=${{ github.ref_name }}&status=success&per_page=1" \
+            | jq -r '.workflow_runs[0].head_sha // empty')
+
+          if [ -n "$LAST_SUCCESS_SHA" ]; then
+            echo "✅ Using last successful run head_sha as BASE_SHA: $LAST_SUCCESS_SHA"
+            BASE_SHA="$LAST_SUCCESS_SHA"
+          else
+            echo "⚠️ No previous successful run found; falling back to previous commit: $BASE_SHA"
           fi
 
           # If BASE_SHA is empty or same as HEAD_SHA, check all files
