@@ -38,6 +38,7 @@ jobs:
       legal_web_changed: ${{ steps.changes.outputs.legal_web }}
       mobile_changed: ${{ steps.changes.outputs.mobile }}
       any_changes: ${{ steps.changes.outputs.location_api || steps.changes.outputs.marketing_api || steps.changes.outputs.legal_web || steps.changes.outputs.mobile }}
+      force_build_all: ${{ steps.changes.outputs.force_build_all }}
 
     steps:
       - name: Checkout repository
@@ -50,6 +51,7 @@ jobs:
         run: |
           # Read pipeline variables: if force-build-all is true, run all actions
           FORCE_BUILD=$(jq -r '.["force-build-all"] // false' .github/pipeline-variables.json 2>/dev/null || echo "false")
+          echo "force_build_all=$FORCE_BUILD" >> $GITHUB_OUTPUT
           if [ "$FORCE_BUILD" = "true" ]; then
             echo "🔧 force-build-all is true in .github/pipeline-variables.json; running all actions"
             echo "location_api=true" >> $GITHUB_OUTPUT
@@ -324,3 +326,58 @@ jobs:
       deploy_railway_result: ${{ needs.deploy_railway_main.result }}
       release_android_result: ${{ needs.release_android_main.result }}
     secrets: inherit
+
+  reset_force_build:
+    name: Reset force-build-all Flag
+    needs: [detect_changes, build_and_test, docker_location_api_main, docker_marketing_api_main, docker_legal_web_main, deploy_railway_main, build_mobile_android_main, release_android_main, notify_deployment]
+    if: |
+      always() &&
+      needs.detect_changes.outputs.force_build_all == 'true' &&
+      (needs.build_and_test.result == 'success' || needs.build_and_test.result == 'skipped') &&
+      (needs.docker_location_api_main.result == 'success' || needs.docker_location_api_main.result == 'skipped') &&
+      (needs.docker_marketing_api_main.result == 'success' || needs.docker_marketing_api_main.result == 'skipped') &&
+      (needs.docker_legal_web_main.result == 'success' || needs.docker_legal_web_main.result == 'skipped') &&
+      (needs.deploy_railway_main.result == 'success' || needs.deploy_railway_main.result == 'skipped') &&
+      (needs.build_mobile_android_main.result == 'success' || needs.build_mobile_android_main.result == 'skipped') &&
+      (needs.release_android_main.result == 'success' || needs.release_android_main.result == 'skipped') &&
+      (needs.notify_deployment.result == 'success' || needs.notify_deployment.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Reset force-build-all to false
+        run: |
+          echo "🔄 Resetting force-build-all to false after successful workflow run"
+          
+          # Update the JSON file
+          jq '. + {"force-build-all": false}' .github/pipeline-variables.json > .github/pipeline-variables.json.tmp
+          mv .github/pipeline-variables.json.tmp .github/pipeline-variables.json
+          
+          # Verify the change
+          CURRENT_VALUE=$(jq -r '.["force-build-all"]' .github/pipeline-variables.json)
+          if [ "$CURRENT_VALUE" != "false" ]; then
+            echo "❌ Failed to reset force-build-all"
+            exit 1
+          fi
+          
+          echo "✅ force-build-all reset to false"
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --quiet .github/pipeline-variables.json; then
+            echo "⚠️  No changes to commit (force-build-all was already false)"
+          else
+            git add .github/pipeline-variables.json
+            git commit -m "chore: reset force-build-all to false after successful workflow run"
+            git push
+            echo "✅ Committed and pushed reset of force-build-all flag"
+          fi
