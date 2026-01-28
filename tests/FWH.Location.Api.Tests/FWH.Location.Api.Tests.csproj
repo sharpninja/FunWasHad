@@ -10,7 +10,7 @@
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
-    <PackageReference Include="NSubstitute" />
+    <ProjectReference Include="..\..\lib\NSubstitute\NSubstitute.csproj" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\FWH.Location.Api\FWH.Location.Api.csproj" />

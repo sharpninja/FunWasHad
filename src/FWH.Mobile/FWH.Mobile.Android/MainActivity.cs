@@ -74,8 +74,8 @@ public partial class MainActivity : AvaloniaMainActivity<App>
         // Register Font Awesome icon provider.
         IconProvider.Current
             .Register<FontAwesomeIconProvider>();
-        Console.WriteLine("FWH: Icon provider = Font Awesome.");
-        
+        Log.Info("FWH", "Icon provider = Font Awesome.");
+
         return base.CustomizeAppBuilder(builder)
             .WithInterFont();
     }

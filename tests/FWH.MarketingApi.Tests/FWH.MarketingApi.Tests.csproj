@@ -17,8 +17,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Testcontainers.PostgreSql" />
-    <PackageReference Include="NSubstitute" />
-    <!-- Required for NSubstitute compatibility with .NET 9 -->
+    <ProjectReference Include="..\..\lib\NSubstitute\NSubstitute.csproj" />
     <PackageReference Include="System.Security.Permissions" />
   </ItemGroup>
   <ItemGroup>

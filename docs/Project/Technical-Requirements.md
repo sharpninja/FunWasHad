@@ -665,6 +665,12 @@ The system SHALL meet performance requirements:
 - Minimal CPU overhead
 - Battery-efficient design
 
+### TR-QUAL-005: Logging channel (ILogger only)
+
+Application code SHALL NOT use `Console.WriteLine` or other direct console output for logging. All logging SHALL use `ILogger` (or equivalent structured logging abstraction) so that output can be routed, filtered, and persisted consistently.
+
+**Status:** ✅ Implemented (policy)
+
 ---
 
 ## 11. User Experience Requirements
@@ -1258,6 +1264,9 @@ The FWH.Prompts PowerShell module, CLI-related scripts, FWH.Documentation.Sync, 
 This section tracks all changes made to the Technical Requirements document.
 
 ### Version 2.4 (2026-01-27)
+
+**Added:**
+- TR-QUAL-005: Logging channel (ILogger only) — never use Console.WriteLine; always use ILogger.
 
 **Changed:**
 - TR-COMP-003 (Location API): Added reverse geocoding via `GET /api/locations/address`; document nearby, closest, address, confirmed endpoints; ILocationService (Overpass) for address/business.

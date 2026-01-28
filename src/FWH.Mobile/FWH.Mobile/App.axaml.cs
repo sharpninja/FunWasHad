@@ -474,8 +474,7 @@ public partial class App : Application
         logger?.LogInformation("OnFrameworkInitializationCompleted: Information log test");
         logger?.LogWarning("OnFrameworkInitializationCompleted: Warning log test");
         System.Diagnostics.Debug.WriteLine("OnFrameworkInitializationCompleted: Debug.WriteLine test");
-        Console.WriteLine("OnFrameworkInitializationCompleted: Console.WriteLine test");
-        
+
         // Font Awesome icons are registered in MainActivity.CustomizeAppBuilder for Android / Program.cs for Desktop.
         // Toolbar uses Projektanker i:Icon with fa-* values only.
         logger?.LogInformation("Toolbar icons: Font Awesome (Projektanker.Icons).");

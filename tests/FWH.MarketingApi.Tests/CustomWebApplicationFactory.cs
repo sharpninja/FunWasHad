@@ -248,7 +248,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"PostgreSQL test container unavailable, falling back to SQLite: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"PostgreSQL test container unavailable, falling back to SQLite: {ex.Message}");
             return false;
         }
     }

@@ -166,6 +166,10 @@ csharp_style_expression_bodied_accessors = true:silent
 csharp_style_expression_bodied_lambdas = true:silent
 csharp_style_expression_bodied_local_functions = false:silent
 
+# TR-QUAL-005: Never use Console.WriteLine/Write/Read; always use ILogger.
+# Enforced by build target EnforceTRQual005 (see scripts/Enforce-TRQual005.ps1).
+# Excluded: tools/PlantUmlRender (CLI; stdout/stderr is the interface), AndroidLogcatLoggerProvider.cs (ILogger sink).
+
 # Code analysis (CA) rules: AnalysisLevel=9.0-all in Directory.Build.props.
 # Override specific dotnet_diagnostics.CAxxxx.severity = none|silent|suggestion|warning|error here if needed.
 dotnet_diagnostics.CA1707.severity = none
