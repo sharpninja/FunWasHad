@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FWH.Mobile.Configuration;
@@ -47,8 +48,8 @@ public partial class ActivityTrackingViewModel : ObservableObject
 
     private void OnMovementStateChanged(object? sender, MovementStateChangedEventArgs e)
     {
-        // Update display on state change
-        UpdateDisplay();
+        // Event is raised from location tracking loop (background thread); property updates must run on UI thread.
+        Dispatcher.UIThread.Post(() => UpdateDisplay());
     }
 
     private void UpdateDisplay()

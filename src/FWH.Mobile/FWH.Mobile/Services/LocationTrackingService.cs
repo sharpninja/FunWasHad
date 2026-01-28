@@ -68,6 +68,9 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
 
         MinimumDistanceMeters = 50.0;
         PollingInterval = _locationSettings.GetPollingInterval();
+        // Dispatch interval (UI/event cadence) is configurable via the same setting;
+        // default is once per second when PollingIntervalMode is "normal".
+        DispatchInterval = _locationSettings.GetPollingInterval();
         StationaryThresholdDuration = TimeSpan.FromMinutes(3);
         StationaryDistanceThresholdMeters = 10.0;
         WalkingRidingSpeedThresholdMph = 5.0;
@@ -95,6 +98,13 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
     public string? CurrentAddress => _lastKnownAddress;
     public double MinimumDistanceMeters { get; set; }
     public TimeSpan PollingInterval { get; set; }
+    /// <summary>
+    /// How often to dispatch location and movement state updates to listeners.
+    /// This is separate from provider sampling and distance thresholds so the UI
+    /// can update smoothly (e.g., once per second) while storage still honors
+    /// <see cref="MinimumDistanceMeters"/>.
+    /// </summary>
+    public TimeSpan DispatchInterval { get; set; } = TimeSpan.FromSeconds(1);
     public TimeSpan StationaryThresholdDuration { get; set; }
     public double StationaryDistanceThresholdMeters { get; set; }
     public double WalkingRidingSpeedThresholdMph { get; set; }
@@ -267,10 +277,11 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 if (currentLocation == null || !currentLocation.IsValid())
                 {
                     _logger.LogWarning("Failed to get valid GPS coordinates");
-                    await Task.Delay(PollingInterval, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(DispatchInterval, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
 
+                var previousKnownLocation = _lastKnownLocation;
                 _lastKnownLocation = currentLocation;
                 var currentTime = currentLocation.Timestamp;
 
@@ -279,23 +290,24 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 var deviceSpeed = currentLocation.SpeedMetersPerSecond;
                 double? speed = deviceSpeed is > 0 ? deviceSpeed : null;
 
-                // Calculate distance from last known location
-                double? distanceMoved = null;
+                // Calculate step distance from previous known location (per-sample),
+                // separate from distance used for persistence thresholds.
+                double? stepDistance = null;
 
-                if (_lastReportedLocation != null && _lastLocationTime.HasValue)
+                if (previousKnownLocation != null && _lastLocationTime.HasValue)
                 {
-                    distanceMoved = GpsCalculator.CalculateDistance(
-                        _lastReportedLocation.Latitude,
-                        _lastReportedLocation.Longitude,
+                    stepDistance = GpsCalculator.CalculateDistance(
+                        previousKnownLocation.Latitude,
+                        previousKnownLocation.Longitude,
                         currentLocation.Latitude,
                         currentLocation.Longitude);
 
-                    // If device didn't provide usable speed, calculate it from distance/time
+                    // If device didn't provide usable speed, calculate it from step distance/time
                     if (!speed.HasValue)
                     {
                         speed = GpsCalculator.CalculateSpeed(
-                            _lastReportedLocation.Latitude,
-                            _lastReportedLocation.Longitude,
+                            previousKnownLocation.Latitude,
+                            previousKnownLocation.Longitude,
                             _lastLocationTime.Value,
                             currentLocation.Latitude,
                             currentLocation.Longitude,
@@ -315,11 +327,11 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                             deviceSpeed is > 0 ? "[device]" : "[calculated]");
                     }
 
-                    // Track recent movements for state detection
-                    TrackMovement(currentTime, distanceMoved.Value, speed);
+                    // Track recent movements for state detection using step distance
+                    TrackMovement(currentTime, stepDistance.Value, speed);
 
-                    // Detect and update movement state
-                    UpdateMovementState(distanceMoved.Value, speed);
+                    // Detect and update movement state from step distance
+                    UpdateMovementState(stepDistance.Value, speed);
                 }
                 else
                 {
@@ -333,18 +345,32 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                     _currentMovementState = stateFromSpeed;
                     _lastStateChangeTime = DateTimeOffset.UtcNow;
                     _logger.LogInformation("Movement state set on first fix: {State}", stateFromSpeed);
-                    MovementStateChanged?.Invoke(this, new MovementStateChangedEventArgs(
-                        MovementState.Stationary,
-                        stateFromSpeed,
-                        DateTimeOffset.UtcNow,
-                        null,
-                        TimeSpan.Zero,
-                        currentLocation.SpeedMetersPerSecond));
+                    try
+                    {
+                        MovementStateChanged?.Invoke(this, new MovementStateChangedEventArgs(
+                            MovementState.Stationary,
+                            stateFromSpeed,
+                            DateTimeOffset.UtcNow,
+                            null,
+                            TimeSpan.Zero,
+                            currentLocation.SpeedMetersPerSecond));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "MovementStateChanged handler threw: {Type} - {Message}", ex.GetType().Name, ex.Message);
+                    }
                 }
 
                 // Always notify UI of current location so coordinates display updates in real time.
                 // Persistence to DB (SendLocationUpdateAsync) is still gated by minimum distance.
-                LocationUpdated?.Invoke(this, currentLocation);
+                try
+                {
+                    LocationUpdated?.Invoke(this, currentLocation);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "LocationUpdated handler threw: {Type} - {Message}", ex.GetType().Name, ex.Message);
+                }
 
                 // Check if we should persist update to local DB
                 if (ShouldSendLocationUpdate(currentLocation))
@@ -354,7 +380,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 }
 
                 // Wait for next polling interval
-                await Task.Delay(PollingInterval, cancellationToken).ConfigureAwait(false);
+                await Task.Delay(DispatchInterval, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -374,7 +400,7 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 // Wait before retrying
                 try
                 {
-                    await Task.Delay(PollingInterval, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(DispatchInterval, cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -383,13 +409,16 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in location tracking loop");
+                _logger.LogError(ex,
+                    "Error in location tracking loop: {Type} - {Message}. Will retry after delay.",
+                    ex.GetType().Name,
+                    ex.Message);
                 LocationUpdateFailed?.Invoke(this, ex);
 
                 // Wait before retrying
                 try
                 {
-                    await Task.Delay(PollingInterval, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(DispatchInterval, cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -453,7 +482,14 @@ public class LocationTrackingService : ILocationTrackingService, IDisposable
                 durationInPreviousState,
                 _currentSpeedMetersPerSecond);
 
-            MovementStateChanged?.Invoke(this, eventArgs);
+            try
+            {
+                MovementStateChanged?.Invoke(this, eventArgs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "MovementStateChanged handler threw: {Type} - {Message}", ex.GetType().Name, ex.Message);
+            }
         }
         else if (_currentMovementState == MovementState.Stationary && _stationaryCountdownCts != null)
         {

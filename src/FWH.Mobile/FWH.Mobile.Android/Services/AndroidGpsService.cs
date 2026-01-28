@@ -18,7 +18,10 @@ public partial class AndroidGpsService : Java.Lang.Object, IGpsService, ILocatio
     private readonly LocationManager? _locationManager;
     private readonly Handler _mainHandler;
     private readonly ILogger<AndroidGpsService>? _logger;
+    private readonly object _syncRoot = new();
     private TaskCompletionSource<GpsCoordinates?>? _locationTcs;
+    private GpsCoordinates? _latestLocation;
+    private bool _isListening;
     private const int LocationTimeoutSeconds = 30;
 
     public AndroidGpsService(ILogger<AndroidGpsService>? logger = null)
@@ -61,6 +64,65 @@ public partial class AndroidGpsService : Java.Lang.Object, IGpsService, ILocatio
             {
                 return false;
             }
+        }
+    }
+
+    private Task EnsureListeningAsync(string provider, IDictionary<string, object?> diagnostics, CancellationToken cancellationToken)
+    {
+        if (_locationManager == null)
+        {
+            return Task.CompletedTask;
+        }
+
+        lock (_syncRoot)
+        {
+            if (_isListening)
+            {
+                return Task.CompletedTask;
+            }
+        }
+
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _mainHandler.Post(() =>
+        {
+            try
+            {
+                // Use a persistent listener with no minimum time/distance; higher layers decide how often to dispatch.
+                _locationManager.RequestLocationUpdates(
+                    provider,
+                    minTimeMs: 0,
+                    minDistanceM: 0,
+                    listener: this);
+
+                lock (_syncRoot)
+                {
+                    _isListening = true;
+                }
+
+                tcs.SetResult(true);
+            }
+            catch (SecurityException ex)
+            {
+                diagnostics["ListenerError"] = ex.Message;
+                tcs.SetException(ex);
+            }
+            catch (global::Java.Lang.IllegalArgumentException ex)
+            {
+                diagnostics["ListenerError"] = ex.Message;
+                tcs.SetException(ex);
+            }
+        });
+
+        using (cancellationToken.Register(() =>
+               {
+                   if (!tcs.Task.IsCompleted)
+                   {
+                       tcs.TrySetCanceled(cancellationToken);
+                   }
+               }))
+        {
+            return tcs.Task;
         }
     }
 
@@ -111,7 +173,10 @@ public partial class AndroidGpsService : Java.Lang.Object, IGpsService, ILocatio
             {
                 try
                 {
-                    _locationManager.RemoveUpdates(this);
+                    if (_isListening)
+                    {
+                        _locationManager.RemoveUpdates(this);
+                    }
                 }
                 catch (SecurityException ex)
                 {
@@ -195,8 +260,39 @@ public partial class AndroidGpsService : Java.Lang.Object, IGpsService, ILocatio
                     diagnostics);
             }
 
-            _locationTcs = new TaskCompletionSource<GpsCoordinates?>();
+            var provider = isGpsEnabled
+                ? LocationManager.GpsProvider
+                : LocationManager.NetworkProvider;
 
+            diagnostics["SelectedProvider"] = provider;
+            diagnostics["TimeoutSeconds"] = LocationTimeoutSeconds;
+
+            // Ensure we have a persistent listener running so that we can serve
+            // requests from the latest in-memory fix instead of repeatedly
+            // subscribing/unsubscribing from Android's LocationManager.
+            await EnsureListeningAsync(provider, diagnostics, cancellationToken).ConfigureAwait(false);
+
+            // First, prefer a recent location from the persistent listener.
+            GpsCoordinates? listenerLocation;
+            lock (_syncRoot)
+            {
+                listenerLocation = _latestLocation;
+            }
+
+            diagnostics["ListenerLocationAvailable"] = listenerLocation != null;
+            if (listenerLocation != null)
+            {
+                diagnostics["ListenerLocationAgeMinutes"] =
+                    (DateTimeOffset.UtcNow - listenerLocation.Timestamp).TotalMinutes;
+                diagnostics["ListenerLocationRecent"] = IsLocationRecent(listenerLocation);
+            }
+
+            if (listenerLocation != null && IsLocationRecent(listenerLocation))
+            {
+                return listenerLocation;
+            }
+
+            // Fallback to last known location from system providers.
             var lastKnownLocation = GetLastKnownLocation();
             diagnostics["LastKnownLocationAvailable"] = lastKnownLocation != null;
             if (lastKnownLocation != null)
@@ -210,36 +306,8 @@ public partial class AndroidGpsService : Java.Lang.Object, IGpsService, ILocatio
                 return lastKnownLocation;
             }
 
-            var provider = isGpsEnabled
-                ? LocationManager.GpsProvider
-                : LocationManager.NetworkProvider;
-
-            diagnostics["SelectedProvider"] = provider;
-            diagnostics["TimeoutSeconds"] = LocationTimeoutSeconds;
-
-            var requestLocationTcs = new TaskCompletionSource<bool>();
-            _mainHandler.Post(() =>
-            {
-                try
-                {
-                    _locationManager.RequestLocationUpdates(
-                        provider,
-                        minTimeMs: 0,
-                        minDistanceM: 0,
-                        listener: this);
-                    requestLocationTcs.SetResult(true);
-                }
-                catch (SecurityException secEx)
-                {
-                    requestLocationTcs.SetException(secEx);
-                }
-                catch (global::Java.Lang.IllegalArgumentException argEx)
-                {
-                    requestLocationTcs.SetException(argEx);
-                }
-            });
-
-            await requestLocationTcs.Task.ConfigureAwait(false);
+            // No recent location yet; wait for the next fix from the listener.
+            _locationTcs = new TaskCompletionSource<GpsCoordinates?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(LocationTimeoutSeconds));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
@@ -249,34 +317,21 @@ public partial class AndroidGpsService : Java.Lang.Object, IGpsService, ILocatio
                 if (_locationTcs != null && !_locationTcs.Task.IsCompleted)
                 {
                     diagnostics["TimedOut"] = true;
-                    diagnostics["FallbackToLastKnown"] = lastKnownLocation != null;
-                    _locationTcs.TrySetResult(lastKnownLocation);
+
+                    GpsCoordinates? fallback;
+                    lock (_syncRoot)
+                    {
+                        // Prefer any listener location we may have received while waiting;
+                        // otherwise fall back to earlier last-known value (which may be null).
+                        fallback = _latestLocation ?? lastKnownLocation;
+                    }
+
+                    diagnostics["FallbackToLastKnown"] = fallback != null;
+                    _locationTcs.TrySetResult(fallback);
                 }
             });
 
             var result = await _locationTcs.Task.ConfigureAwait(false);
-
-            var removeUpdatesTcs = new TaskCompletionSource<bool>();
-            _mainHandler.Post(() =>
-            {
-                try
-                {
-                    _locationManager.RemoveUpdates(this);
-                    removeUpdatesTcs.SetResult(true);
-                }
-                catch (SecurityException cleanupEx)
-                {
-                    diagnostics["CleanupError"] = cleanupEx.Message;
-                    removeUpdatesTcs.SetException(cleanupEx);
-                }
-                catch (global::Java.Lang.IllegalArgumentException cleanupEx)
-                {
-                    diagnostics["CleanupError"] = cleanupEx.Message;
-                    removeUpdatesTcs.SetException(cleanupEx);
-                }
-            });
-
-            await removeUpdatesTcs.Task.ConfigureAwait(false);
 
             if (result == null)
             {
@@ -376,19 +431,24 @@ public partial class AndroidGpsService : Java.Lang.Object, IGpsService, ILocatio
     public void OnLocationChanged(Location location)
     {
         ArgumentNullException.ThrowIfNull(location);
+        var coordinates = new GpsCoordinates(
+            location.Latitude,
+            location.Longitude,
+            location.Accuracy)
+        {
+            AltitudeMeters = location.HasAltitude ? location.Altitude : null,
+            // Android often reports HasSpeed true but Speed 0; treat 0 as unavailable so caller can use calculated speed
+            SpeedMetersPerSecond = location.HasSpeed && location.Speed > 0 ? location.Speed : null,
+            Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(location.Time)
+        };
+
+        lock (_syncRoot)
+        {
+            _latestLocation = coordinates;
+        }
+
         if (_locationTcs != null && !_locationTcs.Task.IsCompleted)
         {
-            var coordinates = new GpsCoordinates(
-                location.Latitude,
-                location.Longitude,
-                location.Accuracy)
-            {
-                AltitudeMeters = location.HasAltitude ? location.Altitude : null,
-                // Android often reports HasSpeed true but Speed 0; treat 0 as unavailable so caller can use calculated speed
-                SpeedMetersPerSecond = location.HasSpeed && location.Speed > 0 ? location.Speed : null,
-                Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(location.Time)
-            };
-
             _locationTcs.TrySetResult(coordinates);
         }
     }

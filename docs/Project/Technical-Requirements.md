@@ -362,6 +362,160 @@ The system SHALL provide comprehensive logging for movement detection:
 - Detailed transition messages
 - Real-time monitoring
 
+### TR-MOBILE-001: Local Device Location Tracking
+
+The mobile client SHALL store device GPS location history **locally on the device only** and use it to drive movement/activity features:
+
+- **Purpose**: Track user movement patterns for activity analysis and contextual workflows.
+- **Privacy**: Location data is never sent to any backend API; it remains in the on-device SQLite database.
+- **Retention**: Location history retention MUST be configurable (default: 30 days).
+- **Schema**: The `DeviceLocationHistory` table SHALL include latitude, longitude, accuracy, movement state, timestamp, and reverse-geocoded address.
+- **Stationary Places**: When the user remains stationary beyond a configured threshold, the system SHALL store a `StationaryPlaceEntity` with address and optional business information.
+
+**Status:** ✅ Implemented
+
+- `NotesDbContext.DeviceLocationHistory` and `StationaryPlaces` DbSets
+- `LocationTrackingService` with local-only device location persistence
+- `MovementStateViewModel`, `MapView`, and `ActivityTrackingViewModel` consuming tracking events
+- Reverse geocoding + business lookup via `ILocationService`
+- Theme updates via `IThemeService` (business or city themes)
+
+#### TR-MOBILE-001 Activity Diagram – Movement Tracking Flow
+
+The following PlantUML activity diagram defines the end-to-end movement tracking, storage, and UI integration flow for TR-MOBILE-001:
+
+```plantuml
+@startuml TR-MOBILE-001-MovementTracking
+title TR-MOBILE-001 – Movement Tracking and Storage
+
+start
+
+:'App' startup;
+:Initialize database (NotesDbContext);
+:Initialize workflow and theme services;
+
+partition "App" {
+  :Resolve ILocationTrackingService;
+  :StartTrackingAsync();
+}
+
+partition "LocationTrackingService" {
+  :Create tracking CancellationTokenSource;
+  :Start TrackLocationLoopAsync (background task);
+}
+
+partition "AndroidGpsService" {
+  if ("Location providers enabled?" ) then (yes)
+    :Ensure persistent GPS listener registered;
+  else (no)
+    :Log warning and throw LocationServicesException;
+    -> [error] Back to LocationTrackingService;
+  endif
+}
+
+repeat
+  partition "LocationTrackingService" {
+    :Call GetCurrentLocationAsync(cancellationToken);
+  }
+
+  partition "AndroidGpsService" {
+    if ("Recent in-memory fix available?" ) then (yes)
+      :Return latest GpsCoordinates from listener;
+    else (no)
+      :Check last-known location from system providers;
+      if ("Recent last-known location?" ) then (yes)
+        :Return last-known GpsCoordinates;
+      else (no)
+        :Wait (<= LocationTimeoutSeconds) for next listener fix;
+        if ("Fix received before timeout?" ) then (yes)
+          :Return new GpsCoordinates;
+        else (no)
+          :Return null or stale fallback;
+        endif
+      endif
+    endif
+  }
+
+  partition "LocationTrackingService" {
+    if ("Got valid GpsCoordinates?" ) then (yes)
+      :Update LastKnownLocation;
+      :Compute distance from _lastReportedLocation;
+      :Compute speed (device speed or calculated);
+      :Update CurrentSpeed and MovementState (Stationary/Walking/Riding/Moving);
+
+      :Raise LocationUpdated event;
+      :Raise MovementStateChanged event (if state changed);
+
+      if ("Distance >= MinimumDistanceMeters?" ) then (yes)
+        :Persist DeviceLocationEntity to DeviceLocationHistory (SQLite);
+        :Update _lastReportedLocation and timestamps;
+      else (no)
+        :Skip persistence (UI still updated);
+      endif
+
+      if ("MovementState == Stationary?" ) then (yes)
+        :Start / reset stationary countdown;
+      else (no)
+        :Cancel stationary countdown (if running);
+      endif
+    else (no)
+      :Log warning: no valid GPS coordinates;
+    endif
+  }
+
+  partition "Stationary Countdown" {
+    if ("Countdown elapsed while still Stationary?" ) then (yes)
+      :Invoke CheckForAddressChangeAsync(last stationary location);
+    else (no)
+      :Countdown cancelled or restarted;
+    endif
+  }
+
+  partition "LocationService / Reverse Geocode" {
+    :Resolve human-readable address (GetAddressAsync);
+    :Resolve closest business (GetClosestBusinessAsync);
+    if ("Address changed?" ) then (yes)
+      :Update CurrentAddress;
+      :Raise NewLocationAddress event;
+      :Save StationaryPlaceEntity;
+    endif
+  }
+
+  partition "ThemeService" {
+    if ("Business with Id found?" ) then (yes)
+      :ApplyBusinessThemeAsync(businessId);
+    else (no)
+      :Try ApplyCityThemeAsync(city/state/country);
+    endif
+  }
+
+  partition "ActivityTrackingService" {
+    :Handle MovementStateChanged;
+    if ("Transition into Walking or Riding?" ) then (yes)
+      :Start / transition activity;
+      :Show notification (walking/riding started);
+    endif
+    if ("Transition to Stationary from Walking/Riding?" ) then (yes)
+      :End activity;
+      :Show summary notification (duration, distance, speeds);
+    endif
+  }
+
+  partition "UI (MovementStateViewModel, MapView, ActivityTrackingViewModel)" {
+    :Update movement state text, emoji, colors;
+    :Update speed text (mph/kmh);
+    :Update coordinates and address display;
+    :Update map marker emoji and center on location;
+  }
+
+  :Wait DispatchInterval (e.g., 1s);
+repeat while (Tracking not cancelled?) is (yes)
+
+stop
+
+@enduml
+```
+
 ---
 
 ## 6. API Requirements

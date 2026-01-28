@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Threading;
 using FWH.Mobile.Services;
 using FWH.Mobile.ViewModels;
 using Mapsui;
@@ -72,13 +73,19 @@ public partial class MapView : UserControl
 
     private void OnLocationUpdated(object? sender, Common.Location.Models.GpsCoordinates e)
     {
-        UpdateMapLocation();
+        // Event is raised from location tracking loop (background thread); map updates must run on UI thread.
+        Dispatcher.UIThread.Post(() => UpdateMapLocation());
     }
 
     private void OnMovementStateChanged(object? sender, MovementStateChangedEventArgs e)
     {
-        _currentMovementState = e.CurrentState;
-        UpdateMapLocation();
+        var state = e.CurrentState;
+        // Event is raised from location tracking loop (background thread); map updates must run on UI thread.
+        Dispatcher.UIThread.Post(() =>
+        {
+            _currentMovementState = state;
+            UpdateMapLocation();
+        });
     }
 
     private void InitializeMap()
