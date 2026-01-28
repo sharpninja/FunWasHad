@@ -16,8 +16,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-# Normalize repo root (MSBuild may pass path with trailing backslash)
+# Normalize repo root (MSBuild may pass path with trailing backslash, surrounding quotes, or extra chars)
+if (-not $RepoRoot) { $RepoRoot = '' }
+$RepoRoot = $RepoRoot.Trim() -replace '"', ''
 $RepoRoot = $RepoRoot.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+if (-not $RepoRoot) { $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path }
 $excludeDirs = @(
     (Join-Path (Join-Path $RepoRoot 'tools') 'PlantUmlRender'),
     (Join-Path (Join-Path $RepoRoot 'lib') 'NSubstitute.6.0.0')
