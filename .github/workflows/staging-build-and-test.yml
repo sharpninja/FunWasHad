@@ -42,19 +42,8 @@ jobs:
           NUGET_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ciConfig = Join-Path $env:RUNNER_TEMP 'NuGet.CI.Config'
-          # Create a fresh config to avoid "name already added" when repo NuGet.config already defines github-sharpninja
-          @"
-          <?xml version="1.0" encoding="utf-8"?>
-          <configuration>
-            <packageSources>
-              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
-            </packageSources>
-            <config>
-              <add key="http-request-timeout" value="600000" />
-              <add key="maxHttpRequestsPerSource" value="16" />
-            </config>
-          </configuration>
-          "@ | Set-Content $ciConfig -Encoding utf8
+          Copy-Item NuGet.config $ciConfig
+          dotnet nuget remove source github-sharpninja --configfile $ciConfig 2>$null
           dotnet nuget add source https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --name github-sharpninja --username ${{ github.repository_owner }} --password "${{ secrets.GITHUB_TOKEN }}" --store-password-in-clear-text --configfile $ciConfig
           echo "NUGET_CONFIG_FILE=$ciConfig" >> $env:GITHUB_ENV
 
