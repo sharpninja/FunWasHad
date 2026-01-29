@@ -103,19 +103,16 @@ public static class ServiceDefaultsExtensions
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
-        // Adding health checks endpoints to applications in non-development environments has security implications.
-        // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
-        if (app.Environment.IsDevelopment())
-        {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks("/health");
+        // Map /health in all environments so Docker, load balancers, and the mobile app heartbeat can probe it.
+        // The default "self" check is minimal and does not expose sensitive data.
+        app.MapHealthChecks("/health");
 
-            // Only health checks tagged with the "live" tag must pass for app to be considered alive
-            app.MapHealthChecks("/alive", new HealthCheckOptions
-            {
-                Predicate = r => r.Tags.Contains("live")
-            });
-        }
+        // Map /alive (liveness) in all environments so orchestrators can distinguish readiness vs liveness.
+        // Only checks tagged with "live" run here; add DB/dependency checks without "live" to keep /alive minimal.
+        app.MapHealthChecks("/alive", new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("live")
+        });
 
         return app;
     }

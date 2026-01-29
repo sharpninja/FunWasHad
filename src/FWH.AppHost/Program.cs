@@ -11,23 +11,23 @@ var marketingDb = postgres.AddDatabase("marketing");
 
 // Add Legal website (MarkdownServer: EULA, Privacy, Contact)
 var legalWeb = builder.AddProject<Projects.FWH_Legal_Web>("legalweb")
-    .WithHttpEndpoint(port: 5050, name: "http")
+    .WithHttpEndpoint(port: 5050, name: "legalweb-http")
     .WithExternalHttpEndpoints();
 
 // Add Location API with PostgreSQL dependency
 // Configure with fixed HTTP port 4748 for Android emulator access
 var locationApi = builder.AddProject<Projects.FWH_Location_Api>("locationapi")
     .WithReference(locationDb)
-    .WithHttpEndpoint(port: 4748, name: "asp-http")
-    .WithHttpsEndpoint(port: 4747, name: "asp-https")
+    .WithHttpEndpoint(port: 4748, name: "location-http")
+    .WithHttpsEndpoint(port: 4747, name: "location-https")
     .WithExternalHttpEndpoints();
 
 // Add Marketing API with PostgreSQL dependency
 // Configure with fixed HTTP port 4750 for Android emulator access
 var marketingApi = builder.AddProject<Projects.FWH_MarketingApi>("marketingapi")
     .WithReference(marketingDb)
-    .WithHttpEndpoint(port: 4750, name: "asp-http")
-    .WithHttpsEndpoint(port: 4749, name: "asp-https")
+    .WithHttpEndpoint(port: 4750, name: "marketing-http")
+    .WithHttpsEndpoint(port: 4749, name: "marketing-https")
     .WithExternalHttpEndpoints();
 
 // Legal website: http://localhost:5050 (EULA, Privacy Policy, Corporate Contact)
