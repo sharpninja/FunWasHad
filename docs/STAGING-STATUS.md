@@ -5,14 +5,14 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 ## Latest Run Information
 
-- **Run Number**: #138
-- **Run ID**: 21494320530
-- **Status**: failure
+- **Run Number**: #139
+- **Run ID**: 21495087304
+- **Status**: success
 - **Branch**: develop
-- **Commit**: [`dc44c8e`](https://github.com/sharpninja/FunWasHad/commit/dc44c8e62f8030c73dcf5a58a698ec2b6c075db9)
-- **Started**: 2026-01-29T20:52:48Z
-- **Completed**: 2026-01-29T21:08:40Z
-- **Run URL**: [View on GitHub](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530)
+- **Commit**: [`d2e1404`](https://github.com/sharpninja/FunWasHad/commit/d2e1404378f387c5e20c7879308a17198c90b170)
+- **Started**: 2026-01-29T21:19:11Z
+- **Completed**: 2026-01-29T21:32:14Z
+- **Run URL**: [View on GitHub](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304)
 
 ---
 
@@ -20,17 +20,17 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 | Job Name | Status | Duration | Conclusion |
 |----------|--------|----------|------------|
-| Detect Changes | completed | 5s | success |
+| Detect Changes | completed | 10s | success |
 | Get Configuration | completed | 3s | success |
-| Build and Test / Build and Test | completed | 284s | success |
-| Build Mobile Android / Build Mobile Android | completed | 632s | success |
-| Build Legal Web Docker Image / Build legal-web Docker Image | completed | 23s | success |
-| Build Location API Docker Image / Build location-api Docker Image | completed | 29s | success |
-| Build Marketing API Docker Image / Build marketing-api Docker Image | completed | 33s | success |
-| Deploy to Railway / Deploy to Railway Staging | completed | 75s | success |
-| Create Android Release / Create Android Release Candidate | completed | 8s | success |
+| Build and Test / Build and Test | completed | 317s | success |
+| Build Legal Web Docker Image / Build legal-web Docker Image | completed | 22s | success |
+| Build Location API Docker Image / Build location-api Docker Image | completed | 30s | success |
+| Build Mobile Android / Build Mobile Android | completed | 420s | success |
+| Build Marketing API Docker Image / Build marketing-api Docker Image | completed | 21s | success |
+| Deploy to Railway / Deploy to Railway Staging | completed | 77s | success |
+| Create Android Release / Create Android Release Candidate | completed | 18s | success |
 | Notify Deployment Status / Notify Deployment Status | completed | 2s | success |
-| Reset force-build-all Flag | completed | 6s | failure |
+| Reset force-build-all Flag | completed | -1s | skipped |
 
 ---
 
@@ -40,7 +40,7 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61924965132`](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530/job/61924965132)
+- **Job ID**: [`61927700450`](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304/job/61927700450)
 
 #### Steps:
 
@@ -58,7 +58,7 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61924965167`](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530/job/61924965167)
+- **Job ID**: [`61927700481`](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304/job/61927700481)
 
 #### Steps:
 
@@ -73,7 +73,7 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61924976335`](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530/job/61924976335)
+- **Job ID**: [`61927721030`](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304/job/61927721030)
 
 #### Steps:
 
@@ -101,11 +101,59 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 | Complete job | completed | success |
 
 
+### Build Legal Web Docker Image / Build legal-web Docker Image
+
+- **Status**: completed
+- **Conclusion**: success
+- **Job ID**: [`61928254402`](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304/job/61928254402)
+
+#### Steps:
+
+| Step | Status | Conclusion |
+|------|--------|------------|
+| Set up job | completed | success |
+| Checkout repository | completed | success |
+| Download legal-web artifacts | completed | success |
+| Set up Docker Buildx | completed | success |
+| Log in to GitHub Container Registry | completed | success |
+| Extract metadata for Docker | completed | success |
+| Build and push Docker image | completed | success |
+| Post Build and push Docker image | completed | success |
+| Post Log in to GitHub Container Registry | completed | success |
+| Post Set up Docker Buildx | completed | success |
+| Post Checkout repository | completed | success |
+| Complete job | completed | success |
+
+
+### Build Location API Docker Image / Build location-api Docker Image
+
+- **Status**: completed
+- **Conclusion**: success
+- **Job ID**: [`61928254408`](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304/job/61928254408)
+
+#### Steps:
+
+| Step | Status | Conclusion |
+|------|--------|------------|
+| Set up job | completed | success |
+| Checkout repository | completed | success |
+| Download location-api artifacts | completed | success |
+| Set up Docker Buildx | completed | success |
+| Log in to GitHub Container Registry | completed | success |
+| Extract metadata for Docker | completed | success |
+| Build and push Docker image | completed | success |
+| Post Build and push Docker image | completed | success |
+| Post Log in to GitHub Container Registry | completed | success |
+| Post Set up Docker Buildx | completed | success |
+| Post Checkout repository | completed | success |
+| Complete job | completed | success |
+
+
 ### Build Mobile Android / Build Mobile Android
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61925467301`](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530/job/61925467301)
+- **Job ID**: [`61928254411`](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304/job/61928254411)
 
 #### Steps:
 
@@ -131,59 +179,11 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 | Complete job | completed | success |
 
 
-### Build Legal Web Docker Image / Build legal-web Docker Image
-
-- **Status**: completed
-- **Conclusion**: success
-- **Job ID**: [`61925467311`](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530/job/61925467311)
-
-#### Steps:
-
-| Step | Status | Conclusion |
-|------|--------|------------|
-| Set up job | completed | success |
-| Checkout repository | completed | success |
-| Download legal-web artifacts | completed | success |
-| Set up Docker Buildx | completed | success |
-| Log in to GitHub Container Registry | completed | success |
-| Extract metadata for Docker | completed | success |
-| Build and push Docker image | completed | success |
-| Post Build and push Docker image | completed | success |
-| Post Log in to GitHub Container Registry | completed | success |
-| Post Set up Docker Buildx | completed | success |
-| Post Checkout repository | completed | success |
-| Complete job | completed | success |
-
-
-### Build Location API Docker Image / Build location-api Docker Image
-
-- **Status**: completed
-- **Conclusion**: success
-- **Job ID**: [`61925467336`](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530/job/61925467336)
-
-#### Steps:
-
-| Step | Status | Conclusion |
-|------|--------|------------|
-| Set up job | completed | success |
-| Checkout repository | completed | success |
-| Download location-api artifacts | completed | success |
-| Set up Docker Buildx | completed | success |
-| Log in to GitHub Container Registry | completed | success |
-| Extract metadata for Docker | completed | success |
-| Build and push Docker image | completed | success |
-| Post Build and push Docker image | completed | success |
-| Post Log in to GitHub Container Registry | completed | success |
-| Post Set up Docker Buildx | completed | success |
-| Post Checkout repository | completed | success |
-| Complete job | completed | success |
-
-
 ### Build Marketing API Docker Image / Build marketing-api Docker Image
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61925467443`](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530/job/61925467443)
+- **Job ID**: [`61928254412`](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304/job/61928254412)
 
 #### Steps:
 
@@ -207,7 +207,7 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61925528975`](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530/job/61925528975)
+- **Job ID**: [`61928310283`](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304/job/61928310283)
 
 #### Steps:
 
@@ -232,7 +232,7 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61926574805`](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530/job/61926574805)
+- **Job ID**: [`61928945748`](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304/job/61928945748)
 
 #### Steps:
 
@@ -252,7 +252,7 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61926592126`](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530/job/61926592126)
+- **Job ID**: [`61928979070`](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304/job/61928979070)
 
 #### Steps:
 
@@ -269,36 +269,15 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 ### Reset force-build-all Flag
 
 - **Status**: completed
-- **Conclusion**: failure
-- **Job ID**: [`61926599886`](https://github.com/sharpninja/FunWasHad/actions/runs/21494320530/job/61926599886)
-
-#### Steps:
-
-| Step | Status | Conclusion |
-|------|--------|------------|
-| Set up job | completed | success |
-| Checkout repository | completed | success |
-| Reset force-build-all to false | completed | success |
-| Commit and push changes | completed | failure |
-| Post Checkout repository | completed | success |
-| Complete job | completed | success |
+- **Conclusion**: skipped
+- **Job ID**: [`61928986989`](https://github.com/sharpninja/FunWasHad/actions/runs/21495087304/job/61928986989)
 
 
 ---
 
 ## Build and Deployment Errors
 
-### Failed Job: Reset force-build-all Flag
-
-<details>
-<summary>View Error Log Excerpt</summary>
-
-```
-2026-01-29T21:08:36.8286119Z [36;1m  echo "❌ Failed to reset force-build-all"[0m
-2026-01-29T21:08:37.4127101Z error: failed to push some refs to 'https://github.com/sharpninja/FunWasHad'
-2026-01-29T21:08:37.4168892Z ##[error]Process completed with exit code 1.
-```
-</details>
+✅ No build or deployment errors detected in this run.
 
 ---
 
@@ -308,22 +287,22 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 |--------------|-------|-------------|
 | CA1848 | 1222 | For improved performance, use the LoggerMessage delegates instead of calling 'Lo |
 | CA1031 | 334 | Modify 'HandleAsync' to catch a more specific allowed exception type, or rethrow |
-| CA1056 | 72 | Change the type of property 'NewsItemDto.ImageUrl' from 'string' to 'System.Uri' |
+| CA1056 | 72 | Change the type of property 'UploadFeedbackAttachmentResponse.StorageUrl' from ' |
 | CA2007 | 50 | Consider calling ConfigureAwait on the awaited task (https://learn.microsoft.com |
-| CA1002 | 48 | Change 'List<MenuItemDto>' in 'GetBusinessMenuResponse.MenuItems' to use 'Collec |
+| CA1002 | 48 | Change 'List<CouponDto>' in 'GetBusinessCouponsResponse.Coupons' to use 'Collect |
 | CA1305 | 38 | The behavior of 'int.ToString()' could vary based on the current user's locale s |
-| CS8604 | 36 | Possible null reference argument for parameter 'actionName' in 'void WorkflowAct |
+| CS8604 | 36 | Possible null reference argument for parameter 'nodeId' in 'void WorkflowControl |
 | CA1812 | 36 | 'UploadFeedbackAttachmentHandler.AttachmentCreatedDto' is an internal class that |
 | CA1003 | 36 | Change the event 'ChoiceSelected' to replace the type 'System.EventHandler<FWH.C |
 | CA1860 | 34 | Prefer comparing 'Count' to 0 rather than using 'Any()', both for clarity and fo |
 | CA1849 | 30 | 'WebApplication.Run(string?)' synchronously blocks. Await 'WebApplication.RunAsy |
 | CA1852 | 28 | Type 'AttachmentCreatedDto' can be sealed because it has no subtypes in its cont |
 | CA1819 | 28 | Properties should not return arrays (https://learn.microsoft.com/dotnet/fundamen |
-| CA1708 | 28 | Names of 'Members' and 'FWH.Common.Chat.ViewModels.ImagePayload.Image, FWH.Commo |
+| CA1708 | 28 | Names of 'Members' and 'FWH.Common.Chat.ViewModels.ChoicePayload.Prompt, FWH.Com |
 | CA1051 | 28 | Do not declare visible instance fields (https://learn.microsoft.com/dotnet/funda |
 | CA1826 | 24 | Do not use Enumerable methods on indexable collections. Instead use the collecti |
 | CA1308 | 22 | In method 'ParseArgs', replace the call to 'ToLowerInvariant' with 'ToUpperInvar |
-| CA2227 | 20 | Change 'Nodes' to be read-only by removing the property setter (https://learn.mi |
+| CA2227 | 20 | Change 'Transitions' to be read-only by removing the property setter (https://le |
 | CA2000 | 20 | Call System.IDisposable.Dispose on object created by 'new SKSvg()' before all re |
 | CA1822 | 20 | Member 'ResolveChoiceValue' does not access instance data and can be marked as s |
 | CA1054 | 18 | Change the type of parameter 'storageUrl' of method 'IBlobStorageService.DeleteA |
@@ -354,4 +333,4 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 ---
 
 
-*Last updated: 2026-01-29 21:09:09 UTC*
+*Last updated: 2026-01-29 21:32:42 UTC*
