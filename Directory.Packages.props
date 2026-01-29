@@ -65,7 +65,7 @@
     <PackageVersion Include="Microsoft.DocAsCode.Build" Version="2.78.0" />
     <PackageVersion Include="Microsoft.DocAsCode.Dotnet" Version="2.78.0" />
     <!-- Security fix: Override KubernetesClient to fix NU1902 (CVE-2025-9708). Use 18.0.5+ to satisfy Aspire.Hosting.AppHost and CVE fix. -->
-    <PackageVersion Include="KubernetesClient" Version="18.0.5" />
+    <PackageVersion Include="KubernetesClient" Version="18.0.13" />
     <!-- Mapsui for native map control in Avalonia -->
     <PackageVersion Include="Mapsui.Avalonia" Version="5.0.0" />
     <!-- Font Awesome Icons for Avalonia UI (replacing MaterialIcons) -->
