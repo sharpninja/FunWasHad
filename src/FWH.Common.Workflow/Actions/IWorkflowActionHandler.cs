@@ -1,7 +1,3 @@
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace FWH.Common.Workflow.Actions;
 
 /// <summary>
@@ -12,5 +8,5 @@ public interface IWorkflowActionHandler
 {
     string Name { get; }
 
-    Task<IDictionary<string,string>?> HandleAsync(ActionHandlerContext context, IDictionary<string,string> parameters, CancellationToken cancellationToken = default);
+    Task<IDictionary<string, string>?> HandleAsync(ActionHandlerContext context, IDictionary<string, string> parameters, CancellationToken cancellationToken = default);
 }

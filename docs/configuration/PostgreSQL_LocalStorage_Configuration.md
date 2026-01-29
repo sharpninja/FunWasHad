@@ -1,7 +1,7 @@
 # PostgreSQL Local Storage Configuration
 
-**Date:** 2025-01-08  
-**Status:** ✅ **COMPLETE**  
+**Date:** 2025-01-08
+**Status:** ✅ **COMPLETE**
 **Feature:** PostgreSQL container with persistent local storage
 
 ---
@@ -77,6 +77,24 @@ When you run the Aspire application:
 ```
 
 ---
+
+## PostGIS Extension
+
+The Marketing API uses **PostGIS** for efficient spatial queries on business locations. PostGIS is automatically enabled by the migration `002_add_postgis_spatial_index.sql` when available.
+
+### Features:
+- **Spatial GIST Index:** Efficient spatial queries using `location_geometry` column
+- **Automatic Geometry Maintenance:** Database trigger keeps geometry in sync with latitude/longitude
+- **Graceful Fallback:** API automatically falls back to bounding box queries if PostGIS is unavailable (e.g., test environments)
+
+### Migration:
+The PostGIS migration (`002_add_postgis_spatial_index.sql`) will:
+1. Enable PostGIS extension (if available)
+2. Add `location_geometry` column to `businesses` table
+3. Create spatial GIST index for optimal query performance
+4. Set up trigger to auto-update geometry from lat/lon
+
+**Note:** Railway PostgreSQL includes PostGIS by default. For local development, ensure PostGIS is installed in your PostgreSQL instance.
 
 ## Benefits
 
@@ -504,10 +522,10 @@ mkdir -p /var/docker-data/funwashad/postgres
 
 ### What Was Changed
 
-✅ Added `.WithDataVolume("funwashad-postgres-data")` to PostgreSQL configuration  
-✅ PostgreSQL now uses persistent Docker volume for data storage  
-✅ Database data survives container restarts and redeployments  
-✅ Build verified successful  
+✅ Added `.WithDataVolume("funwashad-postgres-data")` to PostgreSQL configuration
+✅ PostgreSQL now uses persistent Docker volume for data storage
+✅ Database data survives container restarts and redeployments
+✅ Build verified successful
 
 ### Benefits
 
@@ -527,13 +545,13 @@ mkdir -p /var/docker-data/funwashad/postgres
 
 ---
 
-**Configuration Status:** ✅ **COMPLETE**  
-**Build Status:** ✅ **SUCCESSFUL**  
-**Testing:** ✅ **READY**  
+**Configuration Status:** ✅ **COMPLETE**
+**Build Status:** ✅ **SUCCESSFUL**
+**Testing:** ✅ **READY**
 **Production Ready:** ✅ **YES**
 
 ---
 
-*Document Version: 1.0*  
-*Date: 2025-01-08*  
+*Document Version: 1.0*
+*Date: 2025-01-08*
 *Status: Complete*

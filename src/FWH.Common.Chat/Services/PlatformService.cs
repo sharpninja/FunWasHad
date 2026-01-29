@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using System.Runtime.InteropServices;
 
 namespace FWH.Common.Chat.Services;
@@ -17,13 +15,13 @@ public class PlatformService : IPlatformService
     }
 
     public PlatformType Platform => _platform;
-    
+
     public bool IsAndroid => _platform == PlatformType.Android;
-    
+
     public bool IsIOS => _platform == PlatformType.iOS;
-    
+
     public bool IsDesktop => _platform == PlatformType.Desktop;
-    
+
     public bool IsBrowser => _platform == PlatformType.Browser;
 
     public string GetDatabasePath(string databaseName)
@@ -40,10 +38,10 @@ public class PlatformService : IPlatformService
                 var contextType = Type.GetType("Android.App.Application, Mono.Android");
                 var contextProperty = contextType?.GetProperty("Context");
                 var context = contextProperty?.GetValue(null);
-                
+
                 var getExternalFilesDirMethod = context?.GetType().GetMethod("GetExternalFilesDir", new[] { typeof(string) });
                 var filesDir = getExternalFilesDirMethod?.Invoke(context, new object?[] { null });
-                
+
                 var absolutePathProperty = filesDir?.GetType().GetProperty("AbsolutePath");
                 basePath = absolutePathProperty?.GetValue(filesDir) as string ?? "/data/data/com.CompanyName.FWH.Mobile/files";
             }
@@ -96,8 +94,8 @@ public class PlatformService : IPlatformService
         }
 
         // Check for iOS/tvOS/watchOS/macCatalyst
-        if (OperatingSystem.IsIOS() || 
-            OperatingSystem.IsTvOS() || 
+        if (OperatingSystem.IsIOS() ||
+            OperatingSystem.IsTvOS() ||
             OperatingSystem.IsWatchOS() ||
             OperatingSystem.IsMacCatalyst())
         {
@@ -105,8 +103,8 @@ public class PlatformService : IPlatformService
         }
 
         // Check for desktop platforms
-        if (OperatingSystem.IsWindows() || 
-            OperatingSystem.IsLinux() || 
+        if (OperatingSystem.IsWindows() ||
+            OperatingSystem.IsLinux() ||
             OperatingSystem.IsMacOS())
         {
             return PlatformType.Desktop;

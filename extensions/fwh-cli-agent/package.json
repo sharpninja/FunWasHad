@@ -1,0 +1,107 @@
+{
+  "name": "fwh-cli-agent",
+  "displayName": "FWH CLI Agent",
+  "description": "Monitors CLI.md, parses prompts from ## Prompts, and runs them in a new Cursor agent (Composer or agent CLI).",
+  "version": "0.1.0",
+  "publisher": "FunWasHad",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:**/cli-agent.json",
+    "workspaceContains:**/CLI.md"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "FWH CLI Agent",
+      "properties": {
+        "fwhCliAgent.cliMdPath": {
+          "type": "string",
+          "default": "CLI.md",
+          "description": "Path to CLI.md relative to workspace root. Used when cli-agent.json CliAgent.CliMdPath is not set."
+        },
+        "fwhCliAgent.promptsMdPath": {
+          "type": "string",
+          "default": "scripts/modules/FWH.Prompts/prompts.md",
+          "description": "Path to prompts.md (FWH.Prompts) relative to workspace root. Used when cli-agent.json CliAgent.PromptsMdPath is not set. MVP-SUPPORT-005."
+        },
+        "fwhCliAgent.executeMode": {
+          "type": "string",
+          "enum": [
+            "composer",
+            "agent-cli"
+          ],
+          "default": "composer",
+          "description": "How to run the prompt: 'composer' opens Cursor Composer and copies the prompt to clipboard; 'agent-cli' runs `agent -p \"...\"` in a new terminal."
+        },
+        "fwhCliAgent.composerCommand": {
+          "type": "string",
+          "default": "composer.new",
+          "description": "Command ID to open Cursor Composer when executeMode is 'composer'. Cursor may use 'composer.new' or 'aichat.new'."
+        },
+        "fwhCliAgent.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, write verbose debug lines to the Cursor CLI output channel. CR-EXT-1.4.3."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "fwhCliAgent.runPrompt",
+        "title": "FWH CLI Agent: Run prompt from CLI.md"
+      },
+      {
+        "command": "fwhCliAgent.processCliFile",
+        "title": "FWH CLI Agent: Process CLI.md now"
+      },
+      {
+        "command": "fwhCliAgent.showOutput",
+        "title": "FWH CLI Agent: Show Cursor CLI output"
+      },
+      {
+        "command": "fwhCliAgent.openPromptForm",
+        "title": "FWH CLI Agent: Open prompt form"
+      },
+      {
+        "command": "fwhCliAgent.refreshPromptsList",
+        "title": "FWH CLI Agent: Refresh prompts list"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "fwhCliAgent.promptsList",
+          "name": "Prompts"
+        }
+      ]
+    },
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "fwhCliAgent.openPromptForm",
+          "when": "view == fwhCliAgent.promptsList"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "mocha -r ts-node/register --extensions ts 'src/**/*.test.ts'"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "mocha": "^10.0.0",
+    "ts-node": "^10.0.0",
+    "typescript": "~5.6.0"
+  }
+}

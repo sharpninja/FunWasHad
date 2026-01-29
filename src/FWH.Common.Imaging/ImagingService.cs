@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using SkiaSharp;
 using Svg.Skia;
 
@@ -9,11 +7,15 @@ public class ImagingService : IImagingService
 {
     public SKBitmap RenderSvgOverlay(SKBitmap baseBitmap, string svg, float x = 0, float y = 0, ImagingOptions? options = null)
     {
+        ArgumentNullException.ThrowIfNull(baseBitmap);
+        if (string.IsNullOrWhiteSpace(svg)) throw new ArgumentException("SVG must not be empty", nameof(svg));
         return RenderSvgOverlay(baseBitmap, svg, baseBitmap.Width, baseBitmap.Height, x, y, options);
     }
 
     public Stream RenderSvgOverlayToPngStream(SKBitmap baseBitmap, string svg, float x = 0, float y = 0, ImagingOptions? options = null)
     {
+        ArgumentNullException.ThrowIfNull(baseBitmap);
+        if (string.IsNullOrWhiteSpace(svg)) throw new ArgumentException("SVG must not be empty", nameof(svg));
         return RenderSvgOverlayToPngStream(baseBitmap, svg, baseBitmap.Width, baseBitmap.Height, x, y, options);
     }
 
@@ -127,13 +129,13 @@ public class ImagingService : IImagingService
             if (options.Padding > 0)
             {
                 // Draw base bitmap only within padded area
-                var paddedRect = new SKRect(options.Padding, options.Padding, 
+                var paddedRect = new SKRect(options.Padding, options.Padding,
                     outputWidth - options.Padding, outputHeight - options.Padding);
-                
+
                 canvas.Save();
                 canvas.ClipRect(paddedRect);
                 canvas.Translate(options.Padding, options.Padding);
-                
+
                 // Scale to fit the padded area if needed
                 if (baseBitmap.Width != paddedOutputWidth || baseBitmap.Height != paddedOutputHeight)
                 {
@@ -142,7 +144,7 @@ public class ImagingService : IImagingService
                     var scale = Math.Min(scaleX, scaleY);
                     canvas.Scale(scale, scale);
                 }
-                
+
                 canvas.DrawBitmap(baseBitmap, 0, 0);
                 canvas.Restore();
             }
@@ -177,7 +179,7 @@ public class ImagingService : IImagingService
             // Round to nearest pixel to avoid anti-aliasing artifacts at fractional positions
             var roundedOffsetX = (float)Math.Round(offsetX);
             var roundedOffsetY = (float)Math.Round(offsetY);
-            
+
             canvas.Save();
             canvas.Translate(roundedOffsetX, roundedOffsetY);
 

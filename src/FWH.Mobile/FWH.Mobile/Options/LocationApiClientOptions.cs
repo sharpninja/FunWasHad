@@ -1,5 +1,3 @@
-using System;
-
 namespace FWH.Mobile.Options;
 
 /// <summary>

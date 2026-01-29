@@ -102,6 +102,29 @@ services:
       - fwh-network
     restart: unless-stopped
 
+  # Legal website (MarkdownServer: EULA, Privacy Policy, Corporate Contact)
+  legal-web:
+    build:
+      context: .
+      dockerfile: src/FWH.Legal.Web/Dockerfile
+      args:
+        BUILD_CONFIGURATION: Release
+    container_name: fwh-legal-web
+    ports:
+      - "5050:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - fwh-network
+    restart: unless-stopped
+
 volumes:
   postgres-location-data:
     name: fwh-postgres-location-data

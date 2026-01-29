@@ -1,0 +1,26 @@
+# Runtime-only Dockerfile for Legal Web (MarkdownServer)
+# Uses pre-built artifacts from GitHub Actions build job
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+
+RUN addgroup --system --gid 1001 appuser \
+    && adduser --system --uid 1001 --ingroup appuser appuser
+
+WORKDIR /app
+
+# Copy pre-built artifacts (downloaded to ./artifacts/legal-web by CI)
+COPY artifacts/legal-web/ .
+
+RUN chown -R appuser:appuser /app
+
+USER appuser
+
+EXPOSE 8080
+
+ENV ASPNETCORE_URLS=http://+:8080 \
+    ASPNETCORE_ENVIRONMENT=Production \
+    DOTNET_RUNNING_IN_CONTAINER=true
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD curl --fail http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["dotnet", "FWH.Legal.Web.dll"]

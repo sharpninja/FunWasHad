@@ -13,6 +13,7 @@ public partial class AddDeviceLocationHistory : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        ArgumentNullException.ThrowIfNull(migrationBuilder);
         migrationBuilder.CreateTable(
             name: "DeviceLocationHistory",
             columns: table => new
@@ -55,6 +56,7 @@ public partial class AddDeviceLocationHistory : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        ArgumentNullException.ThrowIfNull(migrationBuilder);
         migrationBuilder.DropTable(
             name: "DeviceLocationHistory");
     }

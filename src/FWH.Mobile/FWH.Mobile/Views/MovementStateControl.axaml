@@ -3,40 +3,45 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:FWH.Mobile.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="150"
+             xmlns:mapsui="using:Mapsui.UI.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="400"
              x:Class="FWH.Mobile.Views.MovementStateControl"
              x:DataType="vm:MovementStateViewModel">
-    
-    <Border BorderBrush="#E0E0E0" 
-            BorderThickness="1" 
-            CornerRadius="8" 
+             <UserControl.Styles>
+                <Style Selector="TextBlock">
+                    <Setter Property="FontSize" Value="16" />
+                </Style>
+             </UserControl.Styles>
+
+    <Border BorderBrush="#E0E0E0"
+            BorderThickness="1"
+            CornerRadius="8"
             Padding="12"
-            Background="#FAFAFA">
+            Background="{Binding BackgroundColor}">
         <Grid RowDefinitions="Auto,Auto,Auto,Auto">
-            
+
             <!-- Row 0: Movement State & Tracking Status -->
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
                 <!-- Movement State -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
-                    <!-- Status Indicator Circle -->
-                    <Ellipse Width="16" Height="16" 
-                             Fill="{Binding MovementStateColor}" 
-                             VerticalAlignment="Center"/>
-                    
+                    <!-- Movement State Emoji Icon -->
+                    <TextBlock Text="{Binding MovementStateEmoji}"
+                               FontSize="20"
+                               VerticalAlignment="Center"/>
+
                     <!-- Movement State Text -->
-                    <TextBlock Text="{Binding MovementStateText}" 
-                               FontSize="16" 
+                    <TextBlock Text="{Binding MovementStateText}"
+                               FontSize="16"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Tracking Status -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                    <Ellipse Width="10" Height="10" 
-                             Fill="{Binding TrackingStatusColor}" 
+                    <Ellipse Width="10" Height="10"
+                             Fill="{Binding TrackingStatusColor}"
                              VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding TrackingStatusText}" 
-                               FontSize="12" 
+                    <TextBlock Text="{Binding TrackingStatusText}"
                                Foreground="#6C757D"
                                VerticalAlignment="Center"/>
                 </StackPanel>
@@ -44,43 +49,48 @@
 
             <!-- Row 1: Speed -->
             <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
-                <TextBlock Text="Speed:" 
-                           FontSize="13" 
+                <TextBlock Text="Speed:"
                            FontWeight="Medium"
                            Foreground="#495057"/>
-                <TextBlock Text="{Binding SpeedText}" 
-                           FontSize="13" 
+                <TextBlock Text="{Binding SpeedText}"
                            Foreground="#212529"/>
             </StackPanel>
 
             <!-- Row 2: Coordinates -->
             <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" Margin="0,0,0,6">
-                <TextBlock Text="Location:" 
-                           FontSize="13" 
+                <TextBlock Text="Location:"
                            FontWeight="Medium"
                            Foreground="#495057"/>
-                <TextBlock Text="{Binding CoordinatesText}" 
-                           FontSize="13" 
+                <TextBlock Text="{Binding CoordinatesText}"
                            FontFamily="Consolas"
                            Foreground="#212529"/>
             </StackPanel>
 
             <!-- Row 3: Address -->
-            <StackPanel Grid.Row="3" 
-                        Orientation="Horizontal" 
+            <StackPanel Grid.Row="3"
+                        Orientation="Horizontal"
                         Spacing="6"
-                        IsVisible="{Binding HasAddress}">
-                <TextBlock Text="Address:" 
-                           FontSize="13" 
+                        Margin="0,0,0,8">
+                <TextBlock Text="Address:"
                            FontWeight="Medium"
                            Foreground="#495057"/>
-                <TextBlock Text="{Binding CurrentAddress}" 
-                           FontSize="13" 
+                <TextBlock Text="{Binding DisplayAddress}"
                            Foreground="#212529"
                            TextWrapping="Wrap"
                            MaxWidth="600"/>
             </StackPanel>
+
+            <!-- Row 4: Map
+            <Border Grid.Row="4"
+                    BorderBrush="#E0E0E0"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Background="#FFFFFF">
+                <mapsui:MapControl x:Name="LocationMap"
+                                   Height="200"
+                                   HorizontalAlignment="Stretch"
+                                   VerticalAlignment="Stretch" />
+            </Border> -->
         </Grid>
     </Border>
 </UserControl>
-

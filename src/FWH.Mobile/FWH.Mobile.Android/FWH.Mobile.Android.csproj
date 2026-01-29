@@ -4,7 +4,7 @@
     <TargetFramework>net9.0-android</TargetFramework>
     <SupportedOSPlatformVersion>21</SupportedOSPlatformVersion>
     <Nullable>enable</Nullable>
-    <ApplicationId>com.CompanyName.FWH.Mobile</ApplicationId>
+    <ApplicationId>app.funwashad</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
@@ -48,12 +48,18 @@
     <AndroidResource Include="Icon.png">
       <Link>Resources\drawable\Icon.png</Link>
     </AndroidResource>
+    <AndroidResource Include="Resources\xml\file_paths.xml" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Include workflow.puml as Android Asset for runtime access -->
     <AndroidAsset Include="..\..\..\workflow.puml">
       <Link>Assets\workflow.puml</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </AndroidAsset>
+    <!-- Include new-location.puml as Android Asset for location workflow service -->
+    <AndroidAsset Include="..\..\..\new-location.puml">
+      <Link>Assets\new-location.puml</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </AndroidAsset>
   </ItemGroup>
@@ -75,12 +81,12 @@
       <Link>appsettings.Development.json</Link>
     </AndroidAsset>
   </ItemGroup>
-  
+
   <!-- Fallback to original file if processed doesn't exist -->
   <ItemGroup Condition="('$(Configuration)' == 'Debug' or '$(Configuration)' == 'Staging') and !Exists('obj\appsettings.Development.processed.json')">
     <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />
   </ItemGroup>
-  
+
   <!-- In Release, always use original (with placeholder/default) -->
   <ItemGroup Condition="'$(Configuration)' != 'Debug' and '$(Configuration)' != 'Staging'">
     <AndroidAsset Include="..\FWH.Mobile\appsettings.Development.json" Link="appsettings.Development.json" />

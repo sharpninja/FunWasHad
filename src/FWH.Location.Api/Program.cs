@@ -1,9 +1,7 @@
-using FWH.Common.Location;
+using FWH.Common.Chat.Services;
 using FWH.Common.Location.Configuration;
 using FWH.Common.Location.Extensions;
 using FWH.Location.Api.Data;
-using FWH.Common.Chat.Services;
-using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,13 +25,16 @@ if (builder.Environment.IsDevelopment())
 // Add Aspire service defaults (telemetry, health checks, resilience)
 builder.AddServiceDefaults();
 
-// Add PostgreSQL with Aspire
-builder.AddNpgsqlDbContext<LocationDbContext>("funwashad");
+// Add PostgreSQL with Aspire (skip in Test environment to allow test factory override)
+if (!builder.Environment.IsEnvironment("Test"))
+{
+    builder.AddNpgsqlDbContext<LocationDbContext>("funwashad");
+}
 
 builder.Services.AddControllers();
 
-// Add Swagger/OpenAPI for Debug builds only
-#if DEBUG
+// Add Swagger/OpenAPI for Debug and Staging builds
+#if DEBUG || STAGING
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -41,7 +42,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "FunWasHad Location API",
         Version = "v1",
-        Description = "REST API for location tracking and business discovery. Implements TR-API-005: Location API Endpoints."
+        Description = "REST API for business discovery and location confirmations. Implements TR-API-005: Location API Endpoints."
     });
 
     // Include XML comments in Swagger documentation
@@ -71,14 +72,17 @@ builder.Services.AddLocationServicesWithInMemoryConfig(options =>
 
 var app = builder.Build();
 
-// Apply database migrations on startup
-await ApplyDatabaseMigrationsAsync(app);
+// Apply database migrations on startup (skip in Test environment)
+if (!app.Environment.IsEnvironment("Test"))
+{
+    await ApplyDatabaseMigrationsAsync(app).ConfigureAwait(false);
+}
 
 // Map Aspire default endpoints (health checks, metrics)
 app.MapDefaultEndpoints();
 
-// Enable Swagger UI for Debug builds only
-#if DEBUG
+// Enable Swagger UI for Debug and Staging builds
+#if DEBUG || STAGING
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
@@ -87,6 +91,14 @@ app.UseSwaggerUI(options =>
     options.DisplayRequestDuration();
 });
 #endif
+
+// Add API key authentication middleware
+// Note: In Development/Staging, authentication is optional (can be disabled via config)
+var requireAuth = app.Configuration.GetValue<bool>("ApiSecurity:RequireAuthentication", defaultValue: true);
+if (requireAuth)
+{
+    app.UseMiddleware<FWH.Location.Api.Middleware.ApiKeyAuthenticationMiddleware>();
+}
 
 // HTTPS redirection disabled for Android development
 // Android emulator connects via HTTP (http://10.0.2.2:4748)
@@ -102,7 +114,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
 
     try
     {
-        logger.LogInformation("Checking for database migrations...");
+        logger.LogDebug("Checking for database migrations...");
 
         // Get connection string from configuration
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
@@ -134,7 +146,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
         }
 
         // Validate connection string format
-        if (connectionString.StartsWith("${{") || connectionString.Contains("{{"))
+        if (connectionString.StartsWith("${{", StringComparison.Ordinal) || connectionString.Contains("{{", StringComparison.Ordinal))
         {
             logger.LogError("Connection string appears to be an unresolved Railway template: {Value}",
                 connectionString.Substring(0, Math.Min(100, connectionString.Length)));
@@ -150,7 +162,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
             : connectionString;
         var isUriFormat = connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
                           connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase);
-        logger.LogInformation("Connection string found (length: {Length} characters, format: {Format})",
+        logger.LogDebug("Connection string found (length: {Length} characters, format: {Format})",
             connectionString.Length,
             isUriFormat ? "URI" : "Connection String");
 
@@ -165,7 +177,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
         var migrationLogger = scope.ServiceProvider.GetRequiredService<ILogger<DatabaseMigrationService>>();
         var migrationService = new DatabaseMigrationService(connectionString, migrationLogger);
 
-        await migrationService.ApplyMigrationsAsync();
+        await migrationService.ApplyMigrationsAsync().ConfigureAwait(false);
 
         logger.LogInformation("Database migrations completed successfully");
     }

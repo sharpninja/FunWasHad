@@ -1,8 +1,8 @@
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FWH.Mobile.Configuration;
 using FWH.Mobile.Services;
-using System;
-using System.Threading.Tasks;
 
 namespace FWH.Mobile.ViewModels;
 
@@ -13,9 +13,10 @@ public partial class ActivityTrackingViewModel : ObservableObject
 {
     private readonly ActivityTrackingService _activityTrackingService;
     private readonly ILocationTrackingService _locationTrackingService;
+    private readonly LocationSettings _locationSettings;
 
     [ObservableProperty]
-    private string _currentState = "Unknown";
+    private string _currentState = "Stationary";
 
     [ObservableProperty]
     private string _currentSpeed = "0.0 mph";
@@ -28,10 +29,12 @@ public partial class ActivityTrackingViewModel : ObservableObject
 
     public ActivityTrackingViewModel(
         ActivityTrackingService activityTrackingService,
-        ILocationTrackingService locationTrackingService)
+        ILocationTrackingService locationTrackingService,
+        LocationSettings locationSettings)
     {
         _activityTrackingService = activityTrackingService ?? throw new ArgumentNullException(nameof(activityTrackingService));
         _locationTrackingService = locationTrackingService ?? throw new ArgumentNullException(nameof(locationTrackingService));
+        _locationSettings = locationSettings ?? throw new ArgumentNullException(nameof(locationSettings));
 
         // Subscribe to state changes
         _locationTrackingService.MovementStateChanged += OnMovementStateChanged;
@@ -45,18 +48,28 @@ public partial class ActivityTrackingViewModel : ObservableObject
 
     private void OnMovementStateChanged(object? sender, MovementStateChangedEventArgs e)
     {
-        // Update display on state change
-        UpdateDisplay();
+        // Event is raised from location tracking loop (background thread); property updates must run on UI thread.
+        Dispatcher.UIThread.Post(() => UpdateDisplay());
     }
 
     private void UpdateDisplay()
     {
         CurrentState = _locationTrackingService.CurrentMovementState.ToString();
-        
-        var speed = _locationTrackingService.CurrentSpeedMph;
-        CurrentSpeed = speed.HasValue ? $"{speed:F1} mph" : "0.0 mph";
 
-        ActivitySummary = _activityTrackingService.GetActivitySummary();
+        // Display speed based on configured unit preference
+        if (_locationSettings.UseKmh)
+        {
+            var speed = _locationTrackingService.CurrentSpeedKmh;
+            CurrentSpeed = speed.HasValue ? $"{speed:F1} km/h" : "0.0 km/h";
+        }
+        else
+        {
+            // Default to mph
+            var speed = _locationTrackingService.CurrentSpeedMph;
+            CurrentSpeed = speed.HasValue ? $"{speed:F1} mph" : "0.0 mph";
+        }
+
+        ActivitySummary = _activityTrackingService.ActivitySummary;
         IsTracking = _activityTrackingService.IsTrackingActivity;
     }
 

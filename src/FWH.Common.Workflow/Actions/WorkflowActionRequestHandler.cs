@@ -1,12 +1,27 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using FWH.Common.Workflow.Instance;
 using FWH.Orchestrix.Contracts.Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Common.Workflow.Actions;
 
-public sealed class WorkflowActionRequestHandler : IMediatorHandler<WorkflowActionRequest, WorkflowActionResponse>
+public sealed partial class WorkflowActionRequestHandler : IMediatorHandler<WorkflowActionRequest, WorkflowActionResponse>
 {
+    [LoggerMessage(LogLevel.Warning, "No handler registered for action {ActionName}")]
+    private static partial void LogNoHandlerRegistered(ILogger logger, string actionName);
+
+    [LoggerMessage(LogLevel.Warning, "Handler factory returned null for action {ActionName}")]
+    private static partial void LogHandlerFactoryReturnedNull(ILogger logger, string actionName);
+
+    [LoggerMessage(LogLevel.Information, "Action {ActionName} handled by handler in {ElapsedMs}ms")]
+    private static partial void LogActionHandled(ILogger logger, string actionName, long elapsedMs);
+
+    [LoggerMessage(LogLevel.Information, "Action {ActionName} execution cancelled")]
+    private static partial void LogActionCancelled(ILogger logger, string actionName);
+
+    [LoggerMessage(LogLevel.Error, "Action handler for {ActionName} threw an exception")]
+    private static partial void LogActionHandlerThrew(ILogger logger, Exception ex, string actionName);
+
     private readonly IServiceProvider _serviceProvider;
     private readonly IWorkflowActionHandlerRegistry _registry;
     private readonly ILogger<WorkflowActionRequestHandler> _logger;
@@ -36,7 +51,7 @@ public sealed class WorkflowActionRequestHandler : IMediatorHandler<WorkflowActi
 
         if (!_registry.TryGetFactory(request.ActionName, out var factory) || factory is null)
         {
-            _logger.LogWarning("No handler registered for action {ActionName}", request.ActionName);
+            LogNoHandlerRegistered(_logger, request.ActionName);
             return new WorkflowActionResponse { Success = false, ErrorMessage = $"No handler for {request.ActionName}" };
         }
 
@@ -56,7 +71,7 @@ public sealed class WorkflowActionRequestHandler : IMediatorHandler<WorkflowActi
                 var handler = factory(scope.ServiceProvider);
                 if (handler is null)
                 {
-                    _logger.LogWarning("Handler factory returned null for action {ActionName}", request.ActionName);
+                    LogHandlerFactoryReturnedNull(_logger, request.ActionName);
                     return new WorkflowActionResponse { Success = false, ErrorMessage = $"Handler factory returned null for {request.ActionName}" };
                 }
 
@@ -75,7 +90,7 @@ public sealed class WorkflowActionRequestHandler : IMediatorHandler<WorkflowActi
                 var handler = factory(_serviceProvider);
                 if (handler is null)
                 {
-                    _logger.LogWarning("Handler factory returned null for action {ActionName}", request.ActionName);
+                    LogHandlerFactoryReturnedNull(_logger, request.ActionName);
                     return new WorkflowActionResponse { Success = false, ErrorMessage = $"Handler factory returned null for {request.ActionName}" };
                 }
 
@@ -92,7 +107,7 @@ public sealed class WorkflowActionRequestHandler : IMediatorHandler<WorkflowActi
             if (sw != null)
             {
                 sw.Stop();
-                _logger.LogInformation("Action {ActionName} handled by handler in {ElapsedMs}ms", request.ActionName, sw.ElapsedMilliseconds);
+                LogActionHandled(_logger, request.ActionName, sw.ElapsedMilliseconds);
             }
 
             return new WorkflowActionResponse
@@ -103,12 +118,12 @@ public sealed class WorkflowActionRequestHandler : IMediatorHandler<WorkflowActi
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("Action {ActionName} execution cancelled", request.ActionName);
+            LogActionCancelled(_logger, request.ActionName);
             return new WorkflowActionResponse { Success = false, ErrorMessage = "Action execution was cancelled" };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Action handler for {ActionName} threw an exception", request.ActionName);
+            LogActionHandlerThrew(_logger, ex, request.ActionName);
             // Return success=true even on exception - allows workflow to continue (matches direct handler path behavior)
             return new WorkflowActionResponse { Success = true, VariableUpdates = null };
         }

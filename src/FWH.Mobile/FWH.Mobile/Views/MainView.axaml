@@ -2,22 +2,102 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:mobile="using:FWH.Mobile"
+             xmlns:vm="using:FWH.Mobile.ViewModels"
              xmlns:views="using:FWH.Mobile.Views"
-             xmlns:vm="clr-namespace:FWH.Common.Chat.ViewModels;assembly=FWH.Common.Chat"
+             xmlns:i="https://github.com/projektanker/icons.avalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="FWH.Mobile.Views.MainView"
-             x:DataType="vm:ChatViewModel">
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-        to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <vm:ChatViewModel />
-    </Design.DataContext>
+             x:DataType="vm:MainViewModel">
+    <Grid x:Name="MainGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-    <DockPanel>
-        <views:LogViewerControl DockPanel.Dock="Bottom" Height="200" Name="LogViewer" />
-        <mobile:ChatInputControl DockPanel.Dock="Bottom" />
-        <views:MovementStateControl DockPanel.Dock="Top" Margin="8" Name="MovementState" />
-        <mobile:ChatListControl />
-    </DockPanel>
+        <!-- Content Area -->
+        <ContentControl Grid.Row="0"
+                        Content="{Binding CurrentView}" />
+
+        <!-- Log View (shown in lower half when not in RELEASE) -->
+        <views:LogView Grid.Row="1"
+                       x:Name="LogViewControl"
+                       IsVisible="{Binding ShowLogViewAlways}" />
+
+        <!-- Toolbar -->
+        <Border Grid.Row="2"
+                BorderBrush="#E0E0E0"
+                BorderThickness="0,1,0,0"
+                Background="#F8F9FA">
+            <StackPanel Orientation="Horizontal"
+                       Spacing="8"
+                       HorizontalAlignment="Center">
+                <Button Command="{Binding NavigateToChatCommand}"
+                        Padding="16,8"
+                        MinWidth="60"
+                        MinHeight="60"
+                        ToolTip.Tip="Chat"
+                        x:Name="ChatButton"
+                        Background="White">
+                    <i:Icon Value="fa-comments"
+                            FontSize="24"
+                            Foreground="#0078D4"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                </Button>
+                <Button Command="{Binding NavigateToMapCommand}"
+                        Padding="16,8"
+                        MinWidth="60"
+                        MinHeight="60"
+                        ToolTip.Tip="Map"
+                        x:Name="MapButton"
+                        Background="White">
+                    <i:Icon Value="fa-map"
+                            FontSize="24"
+                            Foreground="#0078D4"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                </Button>
+                <Button Command="{Binding NavigateToSettingsCommand}"
+                        Padding="16,8"
+                        MinWidth="60"
+                        MinHeight="60"
+                        ToolTip.Tip="Settings"
+                        x:Name="SettingsButton"
+                        Background="White">
+                    <i:Icon Value="fa-gear"
+                            FontSize="24"
+                            Foreground="#0078D4"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                </Button>
+                <Button Command="{Binding NavigateToLogCommand}"
+                        Padding="16,8"
+                        MinWidth="60"
+                        MinHeight="60"
+                        ToolTip.Tip="Log"
+                        x:Name="LogButton"
+                        Background="White">
+                    <i:Icon Value="fa-file-lines"
+                            FontSize="24"
+                            Foreground="#0078D4"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                </Button>
+                <Button Command="{Binding NavigateToPlacesCommand}"
+                        Padding="16,8"
+                        MinWidth="60"
+                        MinHeight="60"
+                        ToolTip.Tip="Places"
+                        x:Name="PlacesButton"
+                        Background="White">
+                    <i:Icon Value="fa-location-dot"
+                            FontSize="24"
+                            Foreground="#0078D4"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
 </UserControl>

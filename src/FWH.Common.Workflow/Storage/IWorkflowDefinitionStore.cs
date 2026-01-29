@@ -16,7 +16,7 @@ public interface IWorkflowDefinitionStore
     /// <summary>
     /// Retrieve a workflow definition by ID.
     /// </summary>
-    WorkflowDefinition? Get(string workflowId);
+    WorkflowDefinition? GetById(string workflowId);
 
     /// <summary>
     /// Check if a workflow definition exists.

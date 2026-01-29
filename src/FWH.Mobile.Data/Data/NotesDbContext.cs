@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
-using FWH.Mobile.Data.Models;
 using FWH.Mobile.Data.Entities;
+using FWH.Mobile.Data.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace FWH.Mobile.Data.Data;
 
@@ -21,10 +21,26 @@ public class NotesDbContext : DbContext
     /// </summary>
     public DbSet<DeviceLocationEntity> DeviceLocationHistory { get; set; } = null!;
 
+    /// <summary>
+    /// Places where the user became stationary - stores business information when available
+    /// </summary>
+    public DbSet<StationaryPlaceEntity> StationaryPlaces { get; set; } = null!;
+
+    /// <summary>
+    /// Cached city marketing information
+    /// </summary>
+    public DbSet<CityMarketingInfoEntity> CityMarketingInfo { get; set; } = null!;
+
+    /// <summary>
+    /// Stored images and logos
+    /// </summary>
+    public DbSet<ImageEntity> Images { get; set; } = null!;
+
     public NotesDbContext(DbContextOptions<NotesDbContext> options) : base(options) { }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ArgumentNullException.ThrowIfNull(modelBuilder);
         modelBuilder.Entity<Note>(b =>
         {
             b.HasKey(n => n.Id);
@@ -84,11 +100,38 @@ public class NotesDbContext : DbContext
             b.Property(l => l.Timestamp).IsRequired();
             b.Property(l => l.CreatedAt).IsRequired();
             b.Property(l => l.Address).HasMaxLength(500);
-            
+
             // Indexes for efficient querying
             b.HasIndex(l => l.DeviceId);
             b.HasIndex(l => l.Timestamp);
             b.HasIndex(l => new { l.DeviceId, l.Timestamp });
+        });
+
+        modelBuilder.Entity<StationaryPlaceEntity>(b =>
+        {
+            b.HasKey(p => p.Id);
+            b.Property(p => p.DeviceId).IsRequired().HasMaxLength(100);
+            b.Property(p => p.Latitude).IsRequired();
+            b.Property(p => p.Longitude).IsRequired();
+            b.Property(p => p.StationaryAt).IsRequired();
+            b.Property(p => p.CreatedAt).IsRequired();
+            b.Property(p => p.BusinessName).HasMaxLength(200);
+            b.Property(p => p.Address).HasMaxLength(500);
+            b.Property(p => p.Category).HasMaxLength(100);
+            b.Property(p => p.IsFavorite).IsRequired().HasDefaultValue(false);
+            b.Property(p => p.LogoUrl).HasMaxLength(500);
+            b.Property(p => p.PrimaryColor).HasMaxLength(20);
+            b.Property(p => p.SecondaryColor).HasMaxLength(20);
+            b.Property(p => p.AccentColor).HasMaxLength(20);
+            b.Property(p => p.BackgroundColor).HasMaxLength(20);
+            b.Property(p => p.TextColor).HasMaxLength(20);
+            b.Property(p => p.BackgroundImageUrl).HasMaxLength(500);
+
+            // Indexes for efficient querying (reverse chronological)
+            b.HasIndex(p => p.DeviceId);
+            b.HasIndex(p => p.StationaryAt).IsDescending();
+            b.HasIndex(p => new { p.DeviceId, p.StationaryAt }).IsDescending();
+            b.HasIndex(p => new { p.DeviceId, p.IsFavorite });
         });
     }
 }

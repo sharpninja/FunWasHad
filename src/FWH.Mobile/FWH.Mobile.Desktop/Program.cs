@@ -1,6 +1,6 @@
-﻿using System;
-
 using Avalonia;
+using Projektanker.Icons.Avalonia;
+using Projektanker.Icons.Avalonia.FontAwesome;
 
 namespace FWH.Mobile.Desktop;
 internal sealed class Program
@@ -14,8 +14,14 @@ internal sealed class Program
 
     // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
-        => AppBuilder.Configure<App>()
+    {
+        // Register Font Awesome icon provider
+        IconProvider.Current
+            .Register<FontAwesomeIconProvider>();
+        
+        return AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace();
+    }
 }

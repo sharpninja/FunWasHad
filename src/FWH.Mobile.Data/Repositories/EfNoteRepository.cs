@@ -1,6 +1,6 @@
-using Microsoft.EntityFrameworkCore;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace FWH.Mobile.Data.Repositories;
 
@@ -10,39 +10,92 @@ public class EfNoteRepository : INoteRepository
 
     public EfNoteRepository(NotesDbContext context)
     {
+        ArgumentNullException.ThrowIfNull(context);
         _context = context;
     }
 
     public async Task<Note> CreateAsync(Note note, CancellationToken cancellationToken = default)
     {
-        var entry = await _context.Notes.AddAsync(note, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
-        return entry.Entity;
+        if (note == null)
+            throw new ArgumentNullException(nameof(note));
+
+        try
+        {
+            var entry = await _context.Notes.AddAsync(note, cancellationToken).ConfigureAwait(false);
+            await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return entry.Entity;
+        }
+        catch (DbUpdateException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
     }
 
     public async Task<Note?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
     {
-        return await _context.Notes.FindAsync(new object[] { id }, cancellationToken);
+        try
+        {
+            return await _context.Notes.FindAsync(new object[] { id }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
     }
 
     public async Task<IEnumerable<Note>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _context.Notes.OrderByDescending(n => n.CreatedAt).ToListAsync(cancellationToken);
+        try
+        {
+            return await _context.Notes.OrderByDescending(n => n.CreatedAt).ToListAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
     }
 
     public async Task<bool> UpdateAsync(Note note, CancellationToken cancellationToken = default)
     {
-        _context.Notes.Update(note);
-        var affected = await _context.SaveChangesAsync(cancellationToken);
-        return affected > 0;
+        ArgumentNullException.ThrowIfNull(note);
+
+        try
+        {
+            _context.Notes.Update(note);
+            var affected = await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return affected > 0;
+        }
+        catch (DbUpdateException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
     }
 
     public async Task<bool> DeleteAsync(long id, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.Notes.FindAsync(new object[] { id }, cancellationToken);
-        if (entity == null) return false;
-        _context.Notes.Remove(entity);
-        var affected = await _context.SaveChangesAsync(cancellationToken);
-        return affected > 0;
+        try
+        {
+            var entity = await _context.Notes.FindAsync(new object[] { id }, cancellationToken).ConfigureAwait(false);
+            if (entity == null) return false;
+            _context.Notes.Remove(entity);
+            var affected = await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return affected > 0;
+        }
+        catch (DbUpdateException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
     }
 }

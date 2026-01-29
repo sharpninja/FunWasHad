@@ -1,41 +1,35 @@
-using System;
-using System.Linq;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-
+using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
+using FWH.Common.Chat;
+using FWH.Common.Chat.Extensions;
+using FWH.Common.Chat.Services;
+using FWH.Common.Chat.ViewModels;
+using FWH.Common.Imaging.Extensions;
+using FWH.Common.Location;
+using FWH.Common.Location.Extensions;
+using FWH.Common.Workflow;
+using FWH.Common.Workflow.Extensions;
+using FWH.Mobile.Configuration;
+using FWH.Mobile.Data.Extensions;
+using FWH.Mobile.Options;
+using FWH.Mobile.Services;
+using FWH.Mobile.ViewModels;
+using FWH.Mobile.Views;
+using FWH.Orchestrix.Mediator.Remote.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-
-using FWH.Mobile.Configuration;
-using FWH.Mobile.ViewModels;
-using FWH.Mobile.Views;
-using FWH.Common.Chat.Services;
-using FWH.Common.Chat.ViewModels;
-using FWH.Common.Workflow;
-using FWH.Common.Workflow.Extensions;
-using FWH.Common.Chat;
-using FWH.Common.Chat.Extensions;
-using FWH.Common.Location;
-using FWH.Common.Location.Extensions;
-using FWH.Mobile.Data.Extensions;
-using FWH.Common.Imaging.Extensions;
-using FWH.Mobile.Options;
-using FWH.Mobile.Services;
-using FWH.Orchestrix.Mediator.Remote.Extensions;
 
 namespace FWH.Mobile;
 
 public partial class App : Application
 {
-    private static bool _isDatabaseInitialized = false;
+    private static bool _isDatabaseInitialized;
     private static readonly SemaphoreSlim _initializationLock = new SemaphoreSlim(1, 1);
 
     static App()
@@ -52,6 +46,10 @@ public partial class App : Application
         var apiSettings = configuration.GetSection("ApiSettings").Get<ApiSettings>() ?? new ApiSettings();
         services.AddSingleton(apiSettings);
 
+        // Register location settings
+        var locationSettings = configuration.GetSection("LocationSettings").Get<LocationSettings>() ?? new LocationSettings();
+        services.AddSingleton(locationSettings);
+
         // Register log store and configure logging to use Avalonia logger
         var logStore = new FWH.Mobile.Logging.AvaloniaLogStore(maxEntries: 1000);
         services.AddSingleton(logStore);
@@ -59,6 +57,27 @@ public partial class App : Application
         services.AddLogging(builder =>
         {
             builder.AddConfiguration(configuration.GetSection("Logging"));
+            
+            // On Android, use only our logcat provider (filters third-party icon-related noise).
+            // On other platforms, use console so output goes to terminal.
+            if (!OperatingSystem.IsAndroid())
+            {
+                builder.AddConsole(options =>
+                {
+                    options.LogToStandardErrorThreshold = LogLevel.Trace;
+                    options.FormatterName = "simple";
+                });
+            }
+            
+            if (OperatingSystem.IsAndroid())
+            {
+                builder.SetMinimumLevel(LogLevel.Trace);
+                builder.AddFilter("FWH.Mobile", LogLevel.Trace);
+                builder.AddFilter("FWH.Common", LogLevel.Trace);
+                builder.AddFilter("FWH.Orchestrix", LogLevel.Trace);
+                builder.AddProvider(new FWH.Mobile.Logging.AndroidLogcatLoggerProvider());
+            }
+            
             builder.AddProvider(new FWH.Mobile.Logging.AvaloniaLoggerProvider(logStore));
         });
 
@@ -109,9 +128,18 @@ public partial class App : Application
         else
         {
             // Use configured URLs from appsettings (supports both full URLs for staging and IP/port for development)
-            locationApiBaseAddress = apiSettings.GetLocationApiBaseUrl();
-            marketingApiBaseAddress = apiSettings.GetMarketingApiBaseUrl();
+            locationApiBaseAddress = apiSettings.GetResolvedLocationApiBaseUrl().AbsoluteUri;
+            marketingApiBaseAddress = apiSettings.GetResolvedMarketingApiBaseUrl().AbsoluteUri;
         }
+
+        // Register API authentication service
+        var apiKey = configuration["ApiSecurity:ApiKey"] ?? "dev-api-key-change-in-production";
+        var apiSecret = configuration["ApiSecurity:ApiSecret"] ?? "dev-api-secret-change-in-production";
+        services.AddSingleton<FWH.Mobile.Services.IApiAuthenticationService>(sp =>
+        {
+            var logger = sp.GetService<ILogger<FWH.Mobile.Services.ApiAuthenticationService>>();
+            return new FWH.Mobile.Services.ApiAuthenticationService(apiKey, apiSecret, logger);
+        });
 
         services.AddApiHttpClients(options =>
         {
@@ -136,6 +164,12 @@ public partial class App : Application
                 loggerFactory.CreateLogger<LocationApiClient>());
         });
 
+        // Register image service
+        services.AddSingleton<IImageService, ImageService>();
+
+        // Register theme service
+        services.AddSingleton<IThemeService, ThemeService>();
+
         // Register location tracking service
         services.AddSingleton<ILocationTrackingService, LocationTrackingService>();
 
@@ -145,6 +179,22 @@ public partial class App : Application
         // Register activity tracking service
         services.AddSingleton<ActivityTrackingService>();
 
+        // Register location API heartbeat service
+        services.AddSingleton<LocationApiHeartbeatService>(sp =>
+        {
+            var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+            var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+            var options = Microsoft.Extensions.Options.Options.Create(new LocationApiClientOptions
+            {
+                BaseAddress = locationApiBaseAddress,
+                Timeout = TimeSpan.FromSeconds(30)
+            });
+            return new LocationApiHeartbeatService(
+                httpClientFactory,
+                options,
+                loggerFactory.CreateLogger<LocationApiHeartbeatService>());
+        });
+
         // Register activity tracking ViewModel
         services.AddSingleton<ActivityTrackingViewModel>();
 
@@ -152,7 +202,26 @@ public partial class App : Application
         services.AddSingleton<MovementStateLogger>();
 
         // Register movement state ViewModel
-        services.AddSingleton<MovementStateViewModel>();
+        services.AddSingleton<MovementStateViewModel>(sp =>
+        {
+            var locationTrackingService = sp.GetRequiredService<ILocationTrackingService>();
+            var locationService = sp.GetRequiredService<ILocationService>();
+            var locationSettings = sp.GetRequiredService<LocationSettings>();
+            var logger = sp.GetRequiredService<ILogger<MovementStateViewModel>>();
+            var heartbeatService = sp.GetRequiredService<LocationApiHeartbeatService>();
+            return new MovementStateViewModel(
+                locationTrackingService,
+                locationService,
+                locationSettings,
+                logger,
+                heartbeatService);
+        });
+
+        // Register map ViewModel
+        services.AddSingleton<MapViewModel>();
+
+        // Register main ViewModel for navigation
+        services.AddSingleton<MainViewModel>();
 
         // Register imaging services
         services.AddImagingServices();
@@ -170,13 +239,30 @@ public partial class App : Application
         TryRegisterPlatformCameraServices(services);
 
         // Register camera capture ViewModel
-        services.AddSingleton<CameraCaptureViewModel>();
+        services.AddSingleton<CameraCaptureViewModel>(sp =>
+        {
+            var cameraService = sp.GetRequiredService<ICameraService>();
+            var logger = sp.GetService<ILogger<CameraCaptureViewModel>>();
+            var imageService = sp.GetService<IImageService>();
+            return new CameraCaptureViewModel(cameraService, logger, imageService);
+        });
 
         // Register log viewer ViewModel
         services.AddSingleton<LogViewerViewModel>();
 
-        ServiceProvider = services.BuildServiceProvider();
-        ServiceProvider.InitializeWorkflowActionHandlers();
+        try
+        {
+            ServiceProvider = services.BuildServiceProvider();
+            ServiceProvider.InitializeWorkflowActionHandlers();
+        }
+        catch (Exception ex)
+        {
+            // Log to Android log if possible, but don't crash
+            System.Diagnostics.Debug.WriteLine($"CRITICAL: Failed to build service provider: {ex}");
+            System.Diagnostics.Debug.WriteLine($"Exception details: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+            throw; // Re-throw to prevent app from starting in broken state
+        }
 
         // Database initialization deferred to OnFrameworkInitializationCompleted
         // to avoid blocking the UI thread during app startup
@@ -252,13 +338,15 @@ public partial class App : Application
 
             if (stream != null)
             {
-                System.Diagnostics.Debug.WriteLine($"Loaded Android asset: {fileName}");
+                var logger = ServiceProvider?.GetService<ILogger<App>>();
+                logger?.LogDebug("Loaded Android asset: {FileName}", fileName);
                 return stream;
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load Android asset '{fileName}': {ex.Message}");
+            var logger = ServiceProvider?.GetService<ILogger<App>>();
+            logger?.LogWarning(ex, "Failed to load Android asset '{FileName}'", fileName);
         }
 
         return null;
@@ -367,7 +455,7 @@ public partial class App : Application
         if (_isDatabaseInitialized)
             return;
 
-        await _initializationLock.WaitAsync();
+        await _initializationLock.WaitAsync().ConfigureAwait(false);
         try
         {
             if (_isDatabaseInitialized)
@@ -379,10 +467,10 @@ public partial class App : Application
 
             // Log database connection info for debugging
             var connectionInfo = migrationService.GetConnectionInfo();
-            logger.LogInformation("Initializing database at: {ConnectionInfo}", connectionInfo);
+            logger.LogDebug("Initializing database at: {ConnectionInfo}", connectionInfo);
 
             // Ensure database exists and apply any pending migrations
-            await migrationService.EnsureDatabaseAsync();
+            await migrationService.EnsureDatabaseAsync().ConfigureAwait(false);
 
             logger.LogInformation("Database initialization completed successfully");
 
@@ -406,25 +494,32 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
     }
 
-    public override async void OnFrameworkInitializationCompleted()
+    public override void OnFrameworkInitializationCompleted()
     {
-        // Initialize database asynchronously before setting up the UI
-        await EnsureDatabaseInitializedAsync();
+        // Test logging to verify it's working
+        var logger = ServiceProvider?.GetService<ILogger<App>>();
+        logger?.LogTrace("OnFrameworkInitializationCompleted: Trace log test");
+        logger?.LogDebug("OnFrameworkInitializationCompleted: Debug log test");
+        logger?.LogInformation("OnFrameworkInitializationCompleted: Information log test");
+        logger?.LogWarning("OnFrameworkInitializationCompleted: Warning log test");
+        System.Diagnostics.Debug.WriteLine("OnFrameworkInitializationCompleted: Debug.WriteLine test");
 
+        // Font Awesome icons are registered in MainActivity.CustomizeAppBuilder for Android / Program.cs for Desktop.
+        // Toolbar uses Projektanker i:Icon with fa-* values only.
+        logger?.LogInformation("Toolbar icons: Font Awesome (Projektanker.Icons).");
+        
+        // Create UI immediately to prevent ANR - don't await anything before showing UI
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit.
             DisableAvaloniaDataAnnotationValidation();
 
-            // Initialize workflow from workflow.puml
-            await InitializeWorkflowAsync();
-
-            var chatViewModel = ServiceProvider.GetRequiredService<ChatViewModel>();
+            var mainViewModel = ServiceProvider.GetRequiredService<MainViewModel>();
             var logViewerViewModel = ServiceProvider.GetRequiredService<LogViewerViewModel>();
 
             var mainWindow = new MainWindow
             {
-                DataContext = chatViewModel,
+                DataContext = mainViewModel,
                 Tag = logViewerViewModel, // Pass log viewer ViewModel via Tag
                 Width = 800,
                 Height = 600,
@@ -434,24 +529,75 @@ public partial class App : Application
             desktop.MainWindow = mainWindow;
             mainWindow.Show();
 
-            // Start location tracking on desktop
-            await StartLocationTrackingAsync();
+            // Initialize everything in background to avoid blocking UI
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // Start location API heartbeat service
+                    var heartbeatService = ServiceProvider.GetRequiredService<LocationApiHeartbeatService>();
+                    _ = heartbeatService.StartAsync(CancellationToken.None);
 
+                    // Initialize database with timeout to prevent hanging
+                    using var dbCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await EnsureDatabaseInitializedAsync().WaitAsync(dbCts.Token).ConfigureAwait(false);
+
+                    // Initialize workflow with timeout
+                    using var workflowCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    await InitializeWorkflowAsync().WaitAsync(workflowCts.Token).ConfigureAwait(false);
+
+                    // Start location tracking (already has internal timeouts)
+                    await StartLocationTrackingAsync().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    var logger = ServiceProvider?.GetService<ILogger<App>>();
+                    logger?.LogWarning("Background initialization timed out");
+                }
+                catch (Exception ex)
+                {
+                    var logger = ServiceProvider?.GetService<ILogger<App>>();
+                    logger?.LogError(ex, "Background initialization error");
+                }
+            });
         }
         else if (ApplicationLifetime is ISingleViewApplicationLifetime singleViewPlatform)
         {
-            // Initialize workflow from workflow.puml
-            await InitializeWorkflowAsync();
+            // Create MainView immediately on UI thread - don't await anything
+            singleViewPlatform.MainView = new MainView();
 
-            var chatViewModel = ServiceProvider.GetRequiredService<ChatViewModel>();
-
-            singleViewPlatform.MainView = new MainView
+            // Initialize everything in background to avoid ANR
+            // Use Task.Run to ensure it's on a background thread
+            _ = Task.Run(async () =>
             {
-                DataContext = chatViewModel
-            };
+                try
+                {
+                    // Start location API heartbeat service
+                    var heartbeatService = ServiceProvider.GetRequiredService<LocationApiHeartbeatService>();
+                    _ = heartbeatService.StartAsync(CancellationToken.None);
 
-            // Start location tracking on mobile
-            await StartLocationTrackingAsync();
+                    // Initialize database first with timeout to prevent hanging
+                    using var dbCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    await EnsureDatabaseInitializedAsync().WaitAsync(dbCts.Token).ConfigureAwait(false);
+
+                    // Then initialize workflow with timeout
+                    using var workflowCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    await InitializeWorkflowAsync().WaitAsync(workflowCts.Token).ConfigureAwait(false);
+
+                    // Finally start location tracking (already has internal timeouts)
+                    await StartLocationTrackingAsync().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    var logger = ServiceProvider?.GetService<ILogger<App>>();
+                    logger?.LogWarning("Background initialization timed out - app will continue");
+                }
+                catch (Exception ex)
+                {
+                    var logger = ServiceProvider?.GetService<ILogger<App>>();
+                    logger?.LogError(ex, "Background initialization error");
+                }
+            });
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -464,26 +610,28 @@ public partial class App : Application
             var trackingService = ServiceProvider.GetRequiredService<ILocationTrackingService>();
 
             // Start tracking with default settings (50m threshold, 30s interval)
-            await trackingService.StartTrackingAsync();
+            await trackingService.StartTrackingAsync().ConfigureAwait(false);
 
-            System.Diagnostics.Debug.WriteLine("Location tracking started successfully");
+            var logger = ServiceProvider.GetRequiredService<ILogger<App>>();
+            logger.LogInformation("Location tracking started successfully");
 
             // Start activity tracking service
             var activityTracking = ServiceProvider.GetRequiredService<ActivityTrackingService>();
             activityTracking.StartMonitoring();
 
-            System.Diagnostics.Debug.WriteLine("Activity tracking started successfully");
+            logger.LogInformation("Activity tracking started successfully");
 
             // Start movement state logger for demonstration
             var stateLogger = ServiceProvider.GetRequiredService<MovementStateLogger>();
             stateLogger.StartLogging();
 
-            System.Diagnostics.Debug.WriteLine("Movement state logging started successfully");
+            logger.LogInformation("Movement state logging started successfully");
         }
         catch (Exception ex)
         {
             // Don't fail app startup if location tracking fails
-            System.Diagnostics.Debug.WriteLine($"Failed to start location tracking: {ex.Message}");
+            var logger = ServiceProvider?.GetService<ILogger<App>>();
+            logger?.LogError(ex, "Failed to start location tracking");
         }
     }
 
@@ -491,14 +639,14 @@ public partial class App : Application
     {
         // Always start chat to ensure initial messages are shown even if workflow file is missing
         var chatService = ServiceProvider.GetRequiredService<ChatService>();
-        await chatService.StartAsync();
+        await chatService.StartAsync().ConfigureAwait(false);
 
         string? pumlContent = null;
 
         try
         {
             // Try to load workflow.puml from platform-specific location
-            pumlContent = await LoadWorkflowFileAsync();
+            pumlContent = await LoadWorkflowFileAsync().ConfigureAwait(false);
 
             if (string.IsNullOrEmpty(pumlContent))
             {
@@ -511,10 +659,10 @@ public partial class App : Application
             var workflow = await workflowService.ImportWorkflowAsync(
                 pumlContent,
                 "fun-was-had-main",
-                "Fun Was Had");
+                "Fun Was Had").ConfigureAwait(false);
 
             // Render the first activity node from the workflow
-            await chatService.RenderWorkflowStateAsync(workflow.Id);
+            await chatService.RenderWorkflowStateAsync(workflow.Id).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -548,13 +696,14 @@ public partial class App : Application
                     using (stream)
                     using (var reader = new StreamReader(stream))
                     {
-                        return await reader.ReadToEndAsync();
+                        return await reader.ReadToEndAsync().ConfigureAwait(false);
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to load workflow.puml from Android assets: {ex.Message}");
+                var logger = ServiceProvider?.GetService<ILogger<App>>();
+                logger?.LogWarning(ex, "Failed to load workflow.puml from Android assets");
             }
         }
 
@@ -573,12 +722,13 @@ public partial class App : Application
 
             if (File.Exists(pumlPath))
             {
-                return await File.ReadAllTextAsync(pumlPath);
+                return await File.ReadAllTextAsync(pumlPath).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to load workflow.puml from file system: {ex.Message}");
+            var logger = ServiceProvider?.GetService<ILogger<App>>();
+            logger?.LogWarning(ex, "Failed to load workflow.puml from file system");
         }
 
         return null;

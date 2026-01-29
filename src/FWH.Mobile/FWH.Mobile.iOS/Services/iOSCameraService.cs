@@ -1,18 +1,20 @@
-using Foundation;
 using FWH.Common.Chat.Services;
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using UIKit;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Mobile.iOS.Services;
 
 /// <summary>
 /// iOS implementation of camera service using UIImagePickerController
 /// </summary>
-public class iOSCameraService : ICameraService
+internal class iOSCameraService : ICameraService
 {
+    private readonly ILogger<iOSCameraService>? _logger;
     private TaskCompletionSource<byte[]?>? _photoTcs;
+
+    public iOSCameraService(ILogger<iOSCameraService>? logger = null)
+    {
+        _logger = logger;
+    }
 
     public bool IsCameraAvailable => UIImagePickerController.IsSourceTypeAvailable(UIImagePickerControllerSourceType.Camera);
 
@@ -68,7 +70,7 @@ public class iOSCameraService : ICameraService
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error processing camera result: {ex}");
+                _logger?.LogError(ex, "Error processing camera result");
                 _photoTcs?.TrySetResult(null);
             }
             finally

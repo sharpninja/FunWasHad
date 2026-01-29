@@ -1,4 +1,3 @@
-using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -8,8 +7,23 @@ namespace FWH.Common.Workflow.Actions;
 /// On-demand registrar that wires handlers registered in DI into the registry.
 /// This registrar supports handler factories to resolve handlers with scoped services.
 /// </summary>
-public class WorkflowActionHandlerRegistrar
+public partial class WorkflowActionHandlerRegistrar
 {
+    [LoggerMessage(LogLevel.Information, "Discovered {Count} singleton handlers during registration")]
+    private static partial void LogDiscoveredSingletons(ILogger logger, int count);
+
+    [LoggerMessage(LogLevel.Information, "Registered singleton handler '{HandlerName}' into registry")]
+    private static partial void LogRegisteredSingleton(ILogger logger, string handlerName);
+
+    [LoggerMessage(LogLevel.Information, "Discovered {Count} handler factories during registration")]
+    private static partial void LogDiscoveredFactories(ILogger logger, int count);
+
+    [LoggerMessage(LogLevel.Information, "Registered factory handler '{HandlerName}' into registry")]
+    private static partial void LogRegisteredFactoryHandler(ILogger logger, string handlerName);
+
+    [LoggerMessage(LogLevel.Warning, "Factory sampling failed for a handler factory; skipping registration")]
+    private static partial void LogFactorySamplingFailed(ILogger logger, Exception ex);
+
     private readonly IWorkflowActionHandlerRegistry _registry;
     private readonly IServiceProvider _sp;
     private readonly ILogger<WorkflowActionHandlerRegistrar>? _logger;
@@ -22,18 +36,18 @@ public class WorkflowActionHandlerRegistrar
 
         // Discover any IWorkflowActionHandler singletons and register factories for them
         var handlers = sp.GetServices<IWorkflowActionHandler>().ToList();
-        _logger?.LogInformation("Discovered {Count} singleton handlers during registration", handlers.Count);
-        
+        if (_logger != null) LogDiscoveredSingletons(_logger, handlers.Count);
+
         foreach (var h in handlers)
         {
             _registry.Register(h.Name, _ => h);
-            _logger?.LogInformation("Registered singleton handler '{HandlerName}' into registry", h.Name);
+            if (_logger != null) LogRegisteredSingleton(_logger, h.Name);
         }
 
         // Discover any Func<IServiceProvider,IWorkflowActionHandler> factories registered in DI and register them
         var factories = sp.GetServices<Func<IServiceProvider, IWorkflowActionHandler>>().ToList();
-        _logger?.LogInformation("Discovered {Count} handler factories during registration", factories.Count);
-        
+        if (_logger != null) LogDiscoveredFactories(_logger, factories.Count);
+
         foreach (var f in factories)
         {
             try
@@ -43,11 +57,11 @@ public class WorkflowActionHandlerRegistrar
                 var sample = f(scope.ServiceProvider);
                 // Register the factory so executor can create handler instances from a scope during execution
                 _registry.Register(sample.Name, f);
-                _logger?.LogInformation("Registered factory handler '{HandlerName}' into registry", sample.Name);
+                if (_logger != null) LogRegisteredFactoryHandler(_logger, sample.Name);
             }
             catch (Exception ex)
             {
-                _logger?.LogWarning(ex, "Factory sampling failed for a handler factory; skipping registration");
+                if (_logger != null) LogFactorySamplingFailed(_logger, ex);
             }
         }
     }

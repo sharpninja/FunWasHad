@@ -45,6 +45,9 @@ WORKDIR /app
 # Copy published files
 COPY --from=publish /app/publish .
 
+# Create uploads directory for blob storage
+RUN mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads
+
 # Change ownership to non-root user
 RUN chown -R appuser:appuser /app
 

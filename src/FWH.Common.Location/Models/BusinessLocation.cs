@@ -6,6 +6,11 @@ namespace FWH.Common.Location.Models;
 public record BusinessLocation
 {
     /// <summary>
+    /// Optional business ID (e.g. from Marketing DB or OSM). When null, theme application is skipped.
+    /// </summary>
+    public long? Id { get; init; }
+
+    /// <summary>
     /// The name of the business or POI.
     /// </summary>
     public required string Name { get; init; }

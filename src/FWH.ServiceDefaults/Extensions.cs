@@ -13,10 +13,11 @@ namespace Microsoft.Extensions.Hosting;
 // Adds common .NET Aspire services: service discovery, resilience, health checks, and OpenTelemetry.
 // This project should be referenced by each service project in your solution.
 // To learn more about using this project, see https://aka.ms/dotnet/aspire/service-defaults
-public static class Extensions
+public static class ServiceDefaultsExtensions
 {
     public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
     {
+        ArgumentNullException.ThrowIfNull(builder);
         builder.ConfigureOpenTelemetry();
 
         builder.AddDefaultHealthChecks();
@@ -43,6 +44,7 @@ public static class Extensions
 
     public static IHostApplicationBuilder ConfigureOpenTelemetry(this IHostApplicationBuilder builder)
     {
+        ArgumentNullException.ThrowIfNull(builder);
         builder.Logging.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
@@ -90,6 +92,7 @@ public static class Extensions
 
     public static IHostApplicationBuilder AddDefaultHealthChecks(this IHostApplicationBuilder builder)
     {
+        ArgumentNullException.ThrowIfNull(builder);
         builder.Services.AddHealthChecks()
             // Add a default liveness check to ensure app is responsive
             .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
@@ -99,19 +102,17 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        // Adding health checks endpoints to applications in non-development environments has security implications.
-        // See https://aka.ms/dotnet/aspire/healthchecks for details before enabling these endpoints in non-development environments.
-        if (app.Environment.IsDevelopment())
-        {
-            // All health checks must pass for app to be considered ready to accept traffic after starting
-            app.MapHealthChecks("/health");
+        ArgumentNullException.ThrowIfNull(app);
+        // Map /health in all environments so Docker, load balancers, and the mobile app heartbeat can probe it.
+        // The default "self" check is minimal and does not expose sensitive data.
+        app.MapHealthChecks("/health");
 
-            // Only health checks tagged with the "live" tag must pass for app to be considered alive
-            app.MapHealthChecks("/alive", new HealthCheckOptions
-            {
-                Predicate = r => r.Tags.Contains("live")
-            });
-        }
+        // Map /alive (liveness) in all environments so orchestrators can distinguish readiness vs liveness.
+        // Only checks tagged with "live" run here; add DB/dependency checks without "live" to keep /alive minimal.
+        app.MapHealthChecks("/alive", new HealthCheckOptions
+        {
+            Predicate = r => r.Tags.Contains("live")
+        });
 
         return app;
     }

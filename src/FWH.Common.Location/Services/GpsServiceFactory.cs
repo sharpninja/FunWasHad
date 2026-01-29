@@ -1,6 +1,5 @@
-using System;
-using Microsoft.Extensions.DependencyInjection;
 using FWH.Common.Chat.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FWH.Common.Location.Services;
 
@@ -26,7 +25,7 @@ public class GpsServiceFactory
     {
         // Try to get platform-specific implementations from DI
         // The platform-specific projects will register their implementations with a key
-        
+
         if (_platformService.IsAndroid)
         {
             // Try to get Android-specific service

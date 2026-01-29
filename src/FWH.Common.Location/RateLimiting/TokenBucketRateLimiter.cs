@@ -1,14 +1,10 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace FWH.Common.Location.RateLimiting;
 
 /// <summary>
 /// Token bucket rate limiter implementation.
 /// Limits the rate of API calls to respect external service limits.
 /// </summary>
-public class TokenBucketRateLimiter
+public sealed class TokenBucketRateLimiter : IDisposable
 {
     private readonly SemaphoreSlim _semaphore;
     private readonly int _maxTokens;
@@ -26,7 +22,7 @@ public class TokenBucketRateLimiter
     {
         if (maxTokens <= 0)
             throw new ArgumentException("Max tokens must be positive", nameof(maxTokens));
-        
+
         if (refillInterval <= TimeSpan.Zero)
             throw new ArgumentException("Refill interval must be positive", nameof(refillInterval));
 
@@ -44,22 +40,22 @@ public class TokenBucketRateLimiter
     /// <returns>Task that completes when a token is consumed</returns>
     public async Task WaitAsync(CancellationToken cancellationToken = default)
     {
-        await _semaphore.WaitAsync(cancellationToken);
+        await _semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            await RefillTokensAsync();
-            
+            await RefillTokensAsync().ConfigureAwait(false);
+
             while (_availableTokens <= 0)
             {
                 var timeSinceLastRefill = DateTime.UtcNow - _lastRefillTime;
                 var timeToWait = _refillInterval - timeSinceLastRefill;
-                
+
                 if (timeToWait > TimeSpan.Zero)
                 {
-                    await Task.Delay(timeToWait, cancellationToken);
+                    await Task.Delay(timeToWait, cancellationToken).ConfigureAwait(false);
                 }
-                
-                await RefillTokensAsync();
+
+                await RefillTokensAsync().ConfigureAwait(false);
             }
 
             _availableTokens--;
@@ -79,13 +75,13 @@ public class TokenBucketRateLimiter
         lock (_lock)
         {
             RefillTokens();
-            
+
             if (_availableTokens > 0)
             {
                 _availableTokens--;
                 return true;
             }
-            
+
             return false;
         }
     }
@@ -118,7 +114,7 @@ public class TokenBucketRateLimiter
     {
         var now = DateTime.UtcNow;
         var timeSinceLastRefill = now - _lastRefillTime;
-        
+
         if (timeSinceLastRefill >= _refillInterval)
         {
             var tokensToAdd = (int)(timeSinceLastRefill.TotalMilliseconds / _refillInterval.TotalMilliseconds);
@@ -126,4 +122,7 @@ public class TokenBucketRateLimiter
             _lastRefillTime = now;
         }
     }
+
+    /// <inheritdoc />
+    public void Dispose() => _semaphore.Dispose();
 }

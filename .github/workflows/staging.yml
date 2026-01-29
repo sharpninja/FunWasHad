@@ -21,6 +21,7 @@ env:
   REGISTRY: ghcr.io
   LOCATION_API_IMAGE: ghcr.io/${{ github.repository_owner }}/fwh-location-api
   MARKETING_API_IMAGE: ghcr.io/${{ github.repository_owner }}/fwh-marketing-api
+  LEGAL_WEB_IMAGE: ghcr.io/${{ github.repository_owner }}/fwh-legal-web
 
 jobs:
   detect_changes:
@@ -31,8 +32,10 @@ jobs:
     outputs:
       location_api_changed: ${{ steps.changes.outputs.location_api }}
       marketing_api_changed: ${{ steps.changes.outputs.marketing_api }}
+      legal_web_changed: ${{ steps.changes.outputs.legal_web }}
       mobile_changed: ${{ steps.changes.outputs.mobile }}
-      any_changes: ${{ steps.changes.outputs.location_api || steps.changes.outputs.marketing_api || steps.changes.outputs.mobile }}
+      any_changes: ${{ steps.changes.outputs.location_api || steps.changes.outputs.marketing_api || steps.changes.outputs.legal_web || steps.changes.outputs.mobile }}
+      force_build_all: ${{ steps.changes.outputs.force_build_all }}
 
     steps:
       - name: Checkout repository
@@ -43,13 +46,43 @@ jobs:
       - name: Detect file changes
         id: changes
         run: |
+          # Read pipeline variables: if force-build-all is true, run all actions
+          FORCE_BUILD=$(jq -r '.["force-build-all"] // false' .github/pipeline-variables.json 2>/dev/null || echo "false")
+          echo "force_build_all=$FORCE_BUILD" >> $GITHUB_OUTPUT
+          if [ "$FORCE_BUILD" = "true" ]; then
+            echo "🔧 force-build-all is true in .github/pipeline-variables.json; running all actions"
+            echo "location_api=true" >> $GITHUB_OUTPUT
+            echo "marketing_api=true" >> $GITHUB_OUTPUT
+            echo "legal_web=true" >> $GITHUB_OUTPUT
+            echo "mobile=true" >> $GITHUB_OUTPUT
+            echo "any_changes=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Determine HEAD commit for this run
           if [ "${{ github.event_name }}" == "pull_request" ]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
             HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           else
-            # For push events, compare with previous commit
-            BASE_SHA="${{ github.event.before }}"
             HEAD_SHA="${{ github.sha }}"
+          fi
+
+          # Default base is the previous commit for push events (traditional behavior)
+          BASE_SHA="${{ github.event.before }}"
+
+          # Prefer the head SHA from the last successful run of this workflow on the same branch
+          # so change detection is based on the last green pipeline, not just the previous commit.
+          echo "🔎 Looking up last successful staging.yml run for branch ${{ github.ref_name }}..."
+          LAST_SUCCESS_SHA=$(curl -sS \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/staging.yml/runs?branch=${{ github.ref_name }}&status=success&per_page=1" \
+            | jq -r '.workflow_runs[0].head_sha // empty')
+
+          if [ -n "$LAST_SUCCESS_SHA" ]; then
+            echo "✅ Using last successful run head_sha as BASE_SHA: $LAST_SUCCESS_SHA"
+            BASE_SHA="$LAST_SUCCESS_SHA"
+          else
+            echo "⚠️ No previous successful run found; falling back to previous commit: $BASE_SHA"
           fi
 
           # If BASE_SHA is empty or same as HEAD_SHA, check all files
@@ -57,6 +90,7 @@ jobs:
             echo "⚠️  Cannot determine base commit, assuming all files changed"
             echo "location_api=true" >> $GITHUB_OUTPUT
             echo "marketing_api=true" >> $GITHUB_OUTPUT
+            echo "legal_web=true" >> $GITHUB_OUTPUT
             echo "mobile=true" >> $GITHUB_OUTPUT
             echo "any_changes=true" >> $GITHUB_OUTPUT
             exit 0
@@ -64,6 +98,7 @@ jobs:
 
           LOCATION_CHANGED="false"
           MARKETING_CHANGED="false"
+          LEGAL_WEB_CHANGED="false"
           MOBILE_CHANGED="false"
 
           # Check for Location API changes
@@ -86,8 +121,18 @@ jobs:
             echo "marketing_api=false" >> $GITHUB_OUTPUT
           fi
 
-          # Check for Mobile app changes
-          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Mobile/|^src/FWH\.Mobile\.Data/|^src/FWH\.Common\.(Location|Chat|Imaging|Workflow)/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/staging\.yml"; then
+          # Check for Legal Web (MarkdownServer) changes
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Legal\.Web/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/staging\.yml|^src/FWH\.Legal\.Web/.*Dockerfile"; then
+            echo "✅ Legal Web files changed"
+            LEGAL_WEB_CHANGED="true"
+            echo "legal_web=true" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️  Legal Web files unchanged"
+            echo "legal_web=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Check for Mobile app changes (includes common libraries used by mobile/Android)
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/FWH\.Mobile/|^src/FWH\.Mobile\.Data/|^src/FWH\.Common\.[^/]+/|^Directory\.(Build\.(props|targets)|Packages\.props)|^\.github/workflows/staging\.yml"; then
             echo "✅ Mobile app files changed"
             MOBILE_CHANGED="true"
             echo "mobile=true" >> $GITHUB_OUTPUT
@@ -97,7 +142,12 @@ jobs:
           fi
 
           # Determine if any changes were detected
-          if [ "$LOCATION_CHANGED" == "true" ] || [ "$MARKETING_CHANGED" == "true" ] || [ "$MOBILE_CHANGED" == "true" ]; then
+          # If ANY file under src/ changed, always run build_and_test, even if
+          # a specific component filter above did not trigger.
+          if git diff --name-only "$BASE_SHA" "$HEAD_SHA" | grep -qE "^src/"; then
+            echo "✅ Detected changes under src/ - forcing build_and_test"
+            echo "any_changes=true" >> $GITHUB_OUTPUT
+          elif [ "$LOCATION_CHANGED" == "true" ] || [ "$MARKETING_CHANGED" == "true" ] || [ "$LEGAL_WEB_CHANGED" == "true" ] || [ "$MOBILE_CHANGED" == "true" ]; then
             echo "any_changes=true" >> $GITHUB_OUTPUT
           else
             echo "any_changes=false" >> $GITHUB_OUTPUT
@@ -121,7 +171,7 @@ jobs:
             "output": {
               "title": "No Build Required",
               "summary": "No relevant files changed. Build steps were skipped.",
-              "text": "This workflow run was tagged as `no-build` because no changes were detected in Location API, Marketing API, or Mobile app files."
+              "text": "This workflow run was tagged as `no-build` because no changes were detected in Location API, Marketing API, Legal Web, or Mobile app files."
             }
           }
           EOF
@@ -142,7 +192,7 @@ jobs:
       registry: ${{ steps.config.outputs.registry }}
       location_api_image: ${{ steps.config.outputs.location_api_image }}
       marketing_api_image: ${{ steps.config.outputs.marketing_api_image }}
-      railway_project_id: ${{ steps.config.outputs.railway_project_id }}
+      legal_web_image: ${{ steps.config.outputs.legal_web_image }}
     steps:
       - name: Set Configuration Values
         id: config
@@ -151,7 +201,7 @@ jobs:
           echo "registry=${{ env.REGISTRY }}" >> $GITHUB_OUTPUT
           echo "location_api_image=${{ env.LOCATION_API_IMAGE }}" >> $GITHUB_OUTPUT
           echo "marketing_api_image=${{ env.MARKETING_API_IMAGE }}" >> $GITHUB_OUTPUT
-          echo "railway_project_id=${{ secrets.RAILWAY_STAGING_PROJECT_ID }}" >> $GITHUB_OUTPUT
+          echo "legal_web_image=${{ env.LEGAL_WEB_IMAGE }}" >> $GITHUB_OUTPUT
 
   build_and_test:
     name: Build and Test
@@ -197,17 +247,43 @@ jobs:
       build_configuration: Staging
     secrets: inherit
 
+  docker_legal_web_staging:
+    name: Build Legal Web Docker Image
+    needs: [detect_changes, build_and_test, get_config]
+    if: needs.detect_changes.outputs.legal_web_changed == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/staging-docker-build-api.yml
+    with:
+      api_name: legal-web
+      image_name: ${{ needs.get_config.outputs.legal_web_image }}
+      registry: ${{ needs.get_config.outputs.registry }}
+      dockerfile_path: ./src/FWH.Legal.Web/Dockerfile.artifacts
+      artifact_name: legal-web
+      build_configuration: Staging
+    secrets: inherit
+
   deploy_railway_staging:
     name: Deploy to Railway
-    needs: [detect_changes, docker_location_api_staging, docker_marketing_api_staging, get_config]
+    needs: [detect_changes, docker_location_api_staging, docker_marketing_api_staging, docker_legal_web_staging, get_config]
+    if: |
+      always() &&
+      needs.detect_changes.outputs.any_changes == 'true' &&
+      (needs.docker_location_api_staging.result == 'success' || needs.docker_location_api_staging.result == 'skipped') &&
+      (needs.docker_marketing_api_staging.result == 'success' || needs.docker_marketing_api_staging.result == 'skipped') &&
+      (needs.docker_legal_web_staging.result == 'success' || needs.docker_legal_web_staging.result == 'skipped')
     uses: ./.github/workflows/staging-deploy-railway.yml
     with:
       location_api_changed: ${{ needs.detect_changes.outputs.location_api_changed }}
       marketing_api_changed: ${{ needs.detect_changes.outputs.marketing_api_changed }}
+      legal_web_changed: ${{ needs.detect_changes.outputs.legal_web_changed }}
       location_api_image: ${{ needs.get_config.outputs.location_api_image }}
       marketing_api_image: ${{ needs.get_config.outputs.marketing_api_image }}
-      railway_project_id: ${{ needs.get_config.outputs.railway_project_id }}
-    secrets: inherit
+      legal_web_image: ${{ needs.get_config.outputs.legal_web_image }}
+    secrets:
+      railway_project_id: ${{ secrets.RAILWAY_STAGING_PROJECT_ID }}
+      railway_token: ${{ secrets.RAILWAY_STAGING_TOKEN }}
 
   build_mobile_android_staging:
     name: Build Mobile Android
@@ -244,7 +320,61 @@ jobs:
       location_api_changed: ${{ needs.detect_changes.outputs.location_api_changed }}
       marketing_api_changed: ${{ needs.detect_changes.outputs.marketing_api_changed }}
       mobile_changed: ${{ needs.detect_changes.outputs.mobile_changed }}
-      railway_project_id: ${{ needs.get_config.outputs.railway_project_id }}
       deploy_railway_result: ${{ needs.deploy_railway_staging.result }}
       release_android_result: ${{ needs.release_android_staging.result }}
     secrets: inherit
+
+  reset_force_build:
+    name: Reset force-build-all Flag
+    needs: [detect_changes, build_and_test, docker_location_api_staging, docker_marketing_api_staging, docker_legal_web_staging, deploy_railway_staging, build_mobile_android_staging, release_android_staging, notify_deployment]
+    if: |
+      always() &&
+      needs.detect_changes.outputs.force_build_all == 'true' &&
+      (needs.build_and_test.result == 'success' || needs.build_and_test.result == 'skipped') &&
+      (needs.docker_location_api_staging.result == 'success' || needs.docker_location_api_staging.result == 'skipped') &&
+      (needs.docker_marketing_api_staging.result == 'success' || needs.docker_marketing_api_staging.result == 'skipped') &&
+      (needs.docker_legal_web_staging.result == 'success' || needs.docker_legal_web_staging.result == 'skipped') &&
+      (needs.deploy_railway_staging.result == 'success' || needs.deploy_railway_staging.result == 'skipped') &&
+      (needs.build_mobile_android_staging.result == 'success' || needs.build_mobile_android_staging.result == 'skipped') &&
+      (needs.release_android_staging.result == 'success' || needs.release_android_staging.result == 'skipped') &&
+      (needs.notify_deployment.result == 'success' || needs.notify_deployment.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Reset force-build-all to false
+        run: |
+          echo "🔄 Resetting force-build-all to false after successful workflow run"
+          
+          # Update the JSON file
+          jq '. + {"force-build-all": false}' .github/pipeline-variables.json > .github/pipeline-variables.json.tmp
+          mv .github/pipeline-variables.json.tmp .github/pipeline-variables.json
+          
+          # Verify the change
+          CURRENT_VALUE=$(jq -r '.["force-build-all"]' .github/pipeline-variables.json)
+          if [ "$CURRENT_VALUE" != "false" ]; then
+            echo "❌ Failed to reset force-build-all"
+            exit 1
+          fi
+          
+          echo "✅ force-build-all reset to false"
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if git diff --quiet .github/pipeline-variables.json; then
+            echo "⚠️  No changes to commit (force-build-all was already false)"
+          else
+            git add .github/pipeline-variables.json
+            git commit -m "chore: reset force-build-all to false after successful workflow run"
+            git push
+            echo "✅ Committed and pushed reset of force-build-all flag"
+          fi

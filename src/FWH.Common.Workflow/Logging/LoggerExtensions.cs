@@ -1,14 +1,21 @@
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
 
 namespace FWH.Common.Workflow.Logging;
 
 /// <summary>
 /// Extension methods for structured logging with correlation IDs.
 /// </summary>
-public static class LoggerExtensions
+public static partial class LoggerExtensions
 {
+    [LoggerMessage(LogLevel.Information, "Operation started: {Operation}")]
+    private static partial void LogOperationStartMessage(ILogger logger, string operation);
+
+    [LoggerMessage(LogLevel.Information, "Operation completed: {Operation} in {DurationMs}ms")]
+    private static partial void LogOperationCompleteMessage(ILogger logger, string operation, double durationMs);
+
+    [LoggerMessage(LogLevel.Error, "Operation failed: {Operation}")]
+    private static partial void LogOperationFailureMessage(ILogger logger, Exception exception, string operation);
+
     /// <summary>
     /// Begins a logging scope with correlation ID and additional properties.
     /// </summary>
@@ -23,6 +30,8 @@ public static class LoggerExtensions
         string operation,
         IDictionary<string, object>? additionalProperties = null)
     {
+        ArgumentNullException.ThrowIfNull(correlationIdService);
+        ArgumentNullException.ThrowIfNull(logger);
         var properties = new Dictionary<string, object>
         {
             ["CorrelationId"] = correlationIdService.GetCorrelationId(),
@@ -50,6 +59,8 @@ public static class LoggerExtensions
         string operation,
         IDictionary<string, object>? properties = null)
     {
+        ArgumentNullException.ThrowIfNull(correlationIdService);
+        ArgumentNullException.ThrowIfNull(logger);
         var allProperties = new Dictionary<string, object>
         {
             ["CorrelationId"] = correlationIdService.GetCorrelationId(),
@@ -67,7 +78,7 @@ public static class LoggerExtensions
 
         using (logger.BeginScope(allProperties))
         {
-            logger.LogInformation("Operation started: {Operation}", operation);
+            LogOperationStartMessage(logger, operation);
         }
     }
 
@@ -81,6 +92,8 @@ public static class LoggerExtensions
         TimeSpan duration,
         IDictionary<string, object>? properties = null)
     {
+        ArgumentNullException.ThrowIfNull(correlationIdService);
+        ArgumentNullException.ThrowIfNull(logger);
         var allProperties = new Dictionary<string, object>
         {
             ["CorrelationId"] = correlationIdService.GetCorrelationId(),
@@ -99,7 +112,7 @@ public static class LoggerExtensions
 
         using (logger.BeginScope(allProperties))
         {
-            logger.LogInformation("Operation completed: {Operation} in {DurationMs}ms", operation, duration.TotalMilliseconds);
+            LogOperationCompleteMessage(logger, operation, duration.TotalMilliseconds);
         }
     }
 
@@ -114,6 +127,9 @@ public static class LoggerExtensions
         TimeSpan? duration = null,
         IDictionary<string, object>? properties = null)
     {
+        ArgumentNullException.ThrowIfNull(correlationIdService);
+        ArgumentNullException.ThrowIfNull(exception);
+        ArgumentNullException.ThrowIfNull(logger);
         var allProperties = new Dictionary<string, object>
         {
             ["CorrelationId"] = correlationIdService.GetCorrelationId(),
@@ -137,7 +153,7 @@ public static class LoggerExtensions
 
         using (logger.BeginScope(allProperties))
         {
-            logger.LogError(exception, "Operation failed: {Operation}", operation);
+            LogOperationFailureMessage(logger, exception, operation);
         }
     }
 

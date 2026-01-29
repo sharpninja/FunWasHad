@@ -1,8 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Repositories;
 using FWH.Mobile.Data.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FWH.Mobile.Data.Extensions;
 
@@ -24,7 +24,7 @@ public static class DataServiceCollectionExtensions
         string connectionString = "DataSource=:memory:")
     {
         // Register DbContext with SQLite
-        services.AddDbContext<NotesDbContext>(options => 
+        services.AddDbContext<NotesDbContext>(options =>
             options.UseSqlite(connectionString));
 
         // Register repositories
@@ -63,7 +63,7 @@ public static class DataServiceCollectionExtensions
         services.AddScoped<INoteRepository, EfNoteRepository>();
         services.AddScoped<IWorkflowRepository, EfWorkflowRepository>();
         services.AddScoped<IConfigurationRepository, EfConfigurationRepository>();
-        
+
         return services;
     }
 
@@ -81,7 +81,7 @@ public static class DataServiceCollectionExtensions
         services.AddNotesDbContext(optionsAction);
         services.AddRepositories();
         services.AddScoped<MobileDatabaseMigrationService>();
-        
+
         return services;
     }
 }

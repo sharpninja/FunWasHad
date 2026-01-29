@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Logging;
-using System.Threading;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Common.Chat.Tests.TestFixtures;
 
@@ -112,7 +111,11 @@ public class TestLoggerProvider : ILoggerProvider
                     {
                         dict[p.Name] = p.GetValue(scope);
                     }
-                    catch { dict[p.Name] = null; }
+                    catch (Exception ex)
+                    {
+                        dict[p.Name] = null;
+                        // Optionally log or handle ex
+                    }
                 }
                 return dict;
             }
@@ -141,6 +144,7 @@ public class TestLoggerProvider : ILoggerProvider
 
     public async Task<LogEntry?> WaitForEntryAsync(Func<LogEntry, bool> predicate, int timeoutMs = 2000)
     {
+        ArgumentNullException.ThrowIfNull(predicate);
         var tcs = new TaskCompletionSource<LogEntry?>();
         void Handler(LogEntry e)
         {
@@ -163,9 +167,9 @@ public class TestLoggerProvider : ILoggerProvider
             }
         }
 
-        var task = await Task.WhenAny(tcs.Task, Task.Delay(timeoutMs));
+        var task = await Task.WhenAny(tcs.Task, Task.Delay(timeoutMs)).ConfigureAwait(true);
         LogAdded -= Handler;
-        if (task == tcs.Task) return await tcs.Task;
+        if (task == tcs.Task) return await tcs.Task.ConfigureAwait(true);
         return null;
     }
 }

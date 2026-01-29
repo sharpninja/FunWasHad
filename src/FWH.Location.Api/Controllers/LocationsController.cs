@@ -8,17 +8,16 @@ namespace FWH.Location.Api.Controllers;
 
 /// <summary>
 /// REST API surface for the shared location service.
-/// Implements TR-API-005: Location API Endpoints for device location tracking.
+/// Implements TR-API-005: Location API Endpoints.
 /// </summary>
 /// <remarks>
 /// This controller provides endpoints for:
-/// - Device location updates (TR-API-005)
 /// - Nearby business discovery (TR-API-002)
 /// - Location confirmations
 /// </remarks>
 [ApiController]
 [Route("api/[controller]")]
-public sealed class LocationsController : ControllerBase
+internal sealed class LocationsController : ControllerBase
 {
     private readonly ILocationService _locationService;
     private readonly LocationDbContext _dbContext;
@@ -75,7 +74,7 @@ public sealed class LocationsController : ControllerBase
             longitude,
             radiusMeters,
             categories,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         return Ok(results);
     }
@@ -119,15 +118,66 @@ public sealed class LocationsController : ControllerBase
             latitude,
             longitude,
             maxDistanceMeters,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         if (result == null)
         {
-            _logger.LogInformation("No business found within {MaxDistance}m of ({Latitude}, {Longitude})", maxDistanceMeters, latitude, longitude);
+            _logger.LogDebug("No business found within {MaxDistance}m of ({Latitude}, {Longitude})", maxDistanceMeters, latitude, longitude);
             return NotFound();
         }
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// Reverse-geocodes coordinates to a human-readable address.
+    /// Uses nearby business address when available, otherwise Overpass/OpenStreetMap address data.
+    /// </summary>
+    /// <param name="latitude">Latitude coordinate (-90 to 90)</param>
+    /// <param name="longitude">Longitude coordinate (-180 to 180)</param>
+    /// <param name="maxDistanceMeters">Maximum distance to search for address data in meters (default: 500)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Resolved address string, or 404 when none found</returns>
+    [HttpGet("address")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<AddressResponse>> GetAddressAsync(
+        [FromQuery] double latitude,
+        [FromQuery] double longitude,
+        [FromQuery] int maxDistanceMeters = 500,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsValidCoordinate(latitude, -90, 90))
+        {
+            return BadRequest("Latitude must be between -90 and 90 degrees.");
+        }
+
+        if (!IsValidCoordinate(longitude, -180, 180))
+        {
+            return BadRequest("Longitude must be between -180 and 180 degrees.");
+        }
+
+        if (maxDistanceMeters <= 0)
+        {
+            return BadRequest("Max distance must be greater than zero.");
+        }
+
+        var address = await _locationService.GetAddressAsync(
+            latitude,
+            longitude,
+            maxDistanceMeters,
+            cancellationToken).ConfigureAwait(false);
+
+        if (string.IsNullOrEmpty(address))
+        {
+            _logger.LogDebug("No address resolved for ({Latitude}, {Longitude}) within {MaxDistance}m",
+                latitude, longitude, maxDistanceMeters);
+            return NotFound();
+        }
+
+        _logger.LogDebug("Resolved address for ({Latitude}, {Longitude}): {Address}", latitude, longitude, address);
+        return Ok(new AddressResponse(address));
     }
 
     /// <summary>
@@ -182,7 +232,7 @@ public sealed class LocationsController : ControllerBase
         };
 
         _dbContext.LocationConfirmations.Add(entity);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Location confirmed: {Business} at ({BusinessLat},{BusinessLon}) reported from ({UserLat},{UserLon})",
@@ -192,85 +242,7 @@ public sealed class LocationsController : ControllerBase
             entity.UserLatitude,
             entity.UserLongitude);
 
-        return Created($"/api/locations/confirmed/{entity.Id}", new { entity.Id });
-    }
-
-    /// <summary>
-    /// Updates the location of a device. Used for location tracking.
-    /// Implements TR-API-005: Location API Endpoints - POST /api/location/device/{deviceId}.
-    /// </summary>
-    /// <param name="deviceId">Device ID from route (optional, can also be in request body)</param>
-    /// <param name="request">Device location update request</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Updated device location with ID and timestamp</returns>
-    /// <exception cref="BadRequestResult">Thrown when request is null, device ID is missing, or coordinates are invalid</exception>
-    /// <remarks>
-    /// This endpoint accepts device location updates for tracking purposes.
-    /// Coordinates are validated to be within valid ranges (latitude: -90 to 90, longitude: -180 to 180).
-    /// Implements TR-API-005 and TR-SEC-001 (data validation).
-    /// Supports both route-based deviceId (/api/locations/device/{deviceId}) and body-based deviceId (/api/locations/device).
-    /// </remarks>
-    [HttpPost("device")]
-    [HttpPost("device/{deviceId}")] // Route matching TR-API-005 specification
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> UpdateDeviceLocation(
-        [FromRoute] string? deviceId,
-        [FromBody] DeviceLocationUpdateRequest? request,
-        CancellationToken cancellationToken = default)
-    {
-        // Support both route-based and body-based deviceId (TR-API-005)
-        var finalDeviceId = deviceId ?? request?.DeviceId;
-
-        if (request is null)
-        {
-            return BadRequest("Request body is required.");
-        }
-
-        if (string.IsNullOrWhiteSpace(finalDeviceId))
-        {
-            return BadRequest("Device ID is required (provide in route or request body).");
-        }
-
-        // Use route deviceId if provided, otherwise use body deviceId
-        if (!string.IsNullOrWhiteSpace(deviceId) && !string.IsNullOrWhiteSpace(request.DeviceId) && deviceId != request.DeviceId)
-        {
-            return BadRequest("Device ID in route must match device ID in request body.");
-        }
-
-        var effectiveDeviceId = deviceId ?? request.DeviceId;
-
-        if (!IsValidCoordinate(request.Latitude, -90, 90))
-        {
-            return BadRequest("Latitude must be between -90 and 90 degrees.");
-        }
-
-        if (!IsValidCoordinate(request.Longitude, -180, 180))
-        {
-            return BadRequest("Longitude must be between -180 and 180 degrees.");
-        }
-
-        var entity = new DeviceLocation
-        {
-            DeviceId = effectiveDeviceId,
-            Latitude = request.Latitude,
-            Longitude = request.Longitude,
-            AccuracyMeters = request.AccuracyMeters,
-            Timestamp = request.Timestamp ?? DateTimeOffset.UtcNow,
-            RecordedAt = DateTimeOffset.UtcNow
-        };
-
-        _dbContext.DeviceLocations.Add(entity);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation(
-            "Device location updated: {DeviceId} at ({Lat:F6},{Lon:F6}) with accuracy {Accuracy:F1}m",
-            entity.DeviceId,
-            entity.Latitude,
-            entity.Longitude,
-            entity.AccuracyMeters ?? 0);
-
-        return Ok(new { entity.Id, entity.Timestamp });
+        return Created(new Uri($"/api/locations/confirmed/{entity.Id}", UriKind.Relative), new { entity.Id });
     }
 
     private static bool IsValidCoordinate(double value, double min, double max) => value >= min && value <= max;

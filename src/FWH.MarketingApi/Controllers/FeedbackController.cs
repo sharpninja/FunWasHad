@@ -17,18 +17,23 @@ namespace FWH.MarketingApi.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/[controller]")]
-public class FeedbackController : ControllerBase
+internal partial class FeedbackController : ControllerBase
 {
     private readonly MarketingDbContext _context;
     private readonly ILogger<FeedbackController> _logger;
+    private readonly FWH.MarketingApi.Services.IBlobStorageService _blobStorage;
     private const long MaxFileSize = 50 * 1024 * 1024; // 50MB
     private static readonly string[] AllowedImageTypes = { "image/jpeg", "image/png", "image/gif", "image/webp" };
     private static readonly string[] AllowedVideoTypes = { "video/mp4", "video/quicktime", "video/x-msvideo" };
 
-    public FeedbackController(MarketingDbContext context, ILogger<FeedbackController> logger)
+    public FeedbackController(
+        MarketingDbContext context,
+        ILogger<FeedbackController> logger,
+        FWH.MarketingApi.Services.IBlobStorageService blobStorage)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
     }
 
     /// <summary>
@@ -55,7 +60,7 @@ public class FeedbackController : ControllerBase
         }
 
         // Validate business exists and is subscribed
-        var business = await _context.Businesses.FindAsync(request.BusinessId);
+        var business = await _context.Businesses.FindAsync(request.BusinessId).ConfigureAwait(false);
         if (business == null)
         {
             return NotFound($"Business {request.BusinessId} not found");
@@ -97,10 +102,9 @@ public class FeedbackController : ControllerBase
         };
 
         _context.Feedbacks.Add(feedback);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
-        _logger.LogInformation("Feedback {FeedbackId} submitted for business {BusinessId} by user {UserId}",
-            feedback.Id, request.BusinessId, request.UserId);
+        Log.FeedbackSubmitted(_logger, feedback.Id, request.BusinessId, request.UserId);
 
         return CreatedAtAction(nameof(GetFeedback), new { id = feedback.Id }, feedback);
     }
@@ -128,30 +132,48 @@ public class FeedbackController : ControllerBase
     {
         if (file == null || file.Length == 0)
         {
+            Log.FileMissing(_logger);
             return BadRequest("File is required");
         }
 
         if (file.Length > MaxFileSize)
         {
-            return BadRequest($"File size exceeds maximum of {MaxFileSize / (1024 * 1024)}MB");
+            Log.FileTooLarge(_logger, file.FileName);
+            return BadRequest("File size exceeds limit");
         }
 
         if (!AllowedImageTypes.Contains(file.ContentType.ToLower()))
         {
-            return BadRequest($"Invalid image type. Allowed types: {string.Join(", ", AllowedImageTypes)}");
+            Log.FileTypeNotAllowed(_logger, file.ContentType);
+            return BadRequest("Invalid image content type");
         }
 
-        var feedback = await _context.Feedbacks.FindAsync(feedbackId);
+        var feedback = await _context.Feedbacks.FindAsync(feedbackId).ConfigureAwait(false);
         if (feedback == null)
         {
             return NotFound($"Feedback {feedbackId} not found");
         }
 
-        // In production, upload to cloud storage (S3, Azure Blob, etc.)
-        // For now, simulate storage URL
-        var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-        var storageUrl = $"/uploads/feedback/{feedbackId}/images/{fileName}";
-        var thumbnailUrl = $"/uploads/feedback/{feedbackId}/images/thumb_{fileName}";
+        // Upload file to blob storage
+        string storageUrl;
+        string? thumbnailUrl;
+
+        try
+        {
+            using var fileStream = file.OpenReadStream();
+            (storageUrl, thumbnailUrl) = await _blobStorage.UploadWithThumbnailAsync(
+                fileStream,
+                file.FileName,
+                file.ContentType,
+                $"feedback/{feedbackId}/images",
+                generateThumbnail: true,
+                cancellationToken: default).ConfigureAwait(false);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Log.AttachmentUploadFailed(_logger, feedbackId, ex);
+            return BadRequest(ex.Message);
+        }
 
         var attachment = new FeedbackAttachment
         {
@@ -166,10 +188,9 @@ public class FeedbackController : ControllerBase
         };
 
         _context.FeedbackAttachments.Add(attachment);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
-        _logger.LogInformation("Image attachment {AttachmentId} uploaded for feedback {FeedbackId}",
-            attachment.Id, feedbackId);
+        Log.AttachmentUploaded(_logger, attachment.Id, feedbackId);
 
         return CreatedAtAction(nameof(GetAttachment), new { id = attachment.Id }, attachment);
     }
@@ -197,29 +218,48 @@ public class FeedbackController : ControllerBase
     {
         if (file == null || file.Length == 0)
         {
+            Log.FileMissing(_logger);
             return BadRequest("File is required");
         }
 
         if (file.Length > MaxFileSize)
         {
-            return BadRequest($"File size exceeds maximum of {MaxFileSize / (1024 * 1024)}MB");
+            Log.FileTooLarge(_logger, file.FileName);
+            return BadRequest("File size exceeds limit");
         }
 
         if (!AllowedVideoTypes.Contains(file.ContentType.ToLower()))
         {
-            return BadRequest($"Invalid video type. Allowed types: {string.Join(", ", AllowedVideoTypes)}");
+            Log.FileTypeNotAllowed(_logger, file.ContentType);
+            return BadRequest("Invalid video content type");
         }
 
-        var feedback = await _context.Feedbacks.FindAsync(feedbackId);
+        var feedback = await _context.Feedbacks.FindAsync(feedbackId).ConfigureAwait(false);
         if (feedback == null)
         {
             return NotFound($"Feedback {feedbackId} not found");
         }
 
-        // In production, upload to cloud storage and process video
-        var fileName = $"{Guid.NewGuid()}_{file.FileName}";
-        var storageUrl = $"/uploads/feedback/{feedbackId}/videos/{fileName}";
-        var thumbnailUrl = $"/uploads/feedback/{feedbackId}/videos/thumb_{fileName}.jpg";
+        // Upload file to blob storage
+        string storageUrl;
+        string? thumbnailUrl;
+
+        try
+        {
+            using var fileStream = file.OpenReadStream();
+            (storageUrl, thumbnailUrl) = await _blobStorage.UploadWithThumbnailAsync(
+                fileStream,
+                file.FileName,
+                file.ContentType,
+                $"feedback/{feedbackId}/videos",
+                generateThumbnail: false,
+                cancellationToken: default).ConfigureAwait(false);
+        }
+        catch (InvalidOperationException ex)
+        {
+            Log.AttachmentUploadFailed(_logger, feedbackId, ex);
+            return BadRequest(ex.Message);
+        }
 
         var attachment = new FeedbackAttachment
         {
@@ -235,10 +275,9 @@ public class FeedbackController : ControllerBase
         };
 
         _context.FeedbackAttachments.Add(attachment);
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync().ConfigureAwait(false);
 
-        _logger.LogInformation("Video attachment {AttachmentId} uploaded for feedback {FeedbackId}",
-            attachment.Id, feedbackId);
+        Log.AttachmentUploaded(_logger, attachment.Id, feedbackId);
 
         return CreatedAtAction(nameof(GetAttachment), new { id = attachment.Id }, attachment);
     }
@@ -258,7 +297,7 @@ public class FeedbackController : ControllerBase
         var feedback = await _context.Feedbacks
             .Include(f => f.Business)
             .Include(f => f.Attachments)
-            .FirstOrDefaultAsync(f => f.Id == id);
+            .FirstOrDefaultAsync(f => f.Id == id).ConfigureAwait(false);
 
         if (feedback == null)
         {
@@ -277,7 +316,7 @@ public class FeedbackController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<FeedbackAttachment>> GetAttachment(long id)
     {
-        var attachment = await _context.FeedbackAttachments.FindAsync(id);
+        var attachment = await _context.FeedbackAttachments.FindAsync(id).ConfigureAwait(false);
 
         if (attachment == null)
         {
@@ -288,18 +327,25 @@ public class FeedbackController : ControllerBase
     }
 
     /// <summary>
-    /// Get all feedback for a business.
+    /// Get all feedback for a business with pagination.
     /// </summary>
     /// <param name="businessId">Business ID</param>
     /// <param name="includeAttachments">Include attachment details</param>
     /// <param name="publicOnly">Only return public, approved feedback</param>
+    /// <param name="page">Page number (1-based, default: 1)</param>
+    /// <param name="pageSize">Items per page (default: 20, max: 100)</param>
     [HttpGet("business/{businessId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<Feedback>>> GetBusinessFeedback(
+    public async Task<ActionResult<PagedResult<Feedback>>> GetBusinessFeedback(
         long businessId,
         [FromQuery] bool includeAttachments = false,
-        [FromQuery] bool publicOnly = true)
+        [FromQuery] bool publicOnly = true,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
+        var pagination = new FWH.MarketingApi.Models.PaginationParameters { Page = page, PageSize = pageSize };
+        pagination.Validate();
+
         var query = _context.Feedbacks
             .Where(f => f.BusinessId == businessId);
 
@@ -313,12 +359,23 @@ public class FeedbackController : ControllerBase
             query = query.Include(f => f.Attachments);
         }
 
+        var totalCount = await query.CountAsync().ConfigureAwait(false);
         var feedback = await query
             .OrderByDescending(f => f.SubmittedAt)
-            .Take(100)
-            .ToListAsync();
+            .Skip(pagination.Skip)
+            .Take(pagination.Take)
+            .ToListAsync().ConfigureAwait(false);
 
-        return Ok(feedback);
+        var result = new FWH.MarketingApi.Models.PagedResult<Feedback>
+        {
+            Items = feedback,
+            Page = pagination.Page,
+            PageSize = pagination.PageSize,
+            TotalCount = totalCount
+        };
+
+        Log.FeedbackPageRetrieved(_logger, feedback.Count, pagination.Page, businessId);
+        return Ok(result);
     }
 
     /// <summary>
@@ -331,7 +388,7 @@ public class FeedbackController : ControllerBase
     {
         var feedback = await _context.Feedbacks
             .Where(f => f.BusinessId == businessId && f.IsPublic && f.IsApproved)
-            .ToListAsync();
+            .ToListAsync().ConfigureAwait(false);
 
         var stats = new
         {
@@ -348,5 +405,29 @@ public class FeedbackController : ControllerBase
         };
 
         return Ok(stats);
+    }
+
+    private static partial class Log
+    {
+        [LoggerMessage(EventId = 2001, Level = LogLevel.Information, Message = "Feedback {FeedbackId} submitted for business {BusinessId} by user {UserId}")]
+        public static partial void FeedbackSubmitted(ILogger logger, long feedbackId, long businessId, string? userId);
+
+        [LoggerMessage(EventId = 2002, Level = LogLevel.Warning, Message = "File is required")]
+        public static partial void FileMissing(ILogger logger);
+
+        [LoggerMessage(EventId = 2003, Level = LogLevel.Warning, Message = "File {FileName} exceeds maximum size")]
+        public static partial void FileTooLarge(ILogger logger, string fileName);
+
+        [LoggerMessage(EventId = 2004, Level = LogLevel.Warning, Message = "File type {ContentType} not allowed")]
+        public static partial void FileTypeNotAllowed(ILogger logger, string? contentType);
+
+        [LoggerMessage(EventId = 2005, Level = LogLevel.Warning, Message = "Attachment upload failed for feedback {FeedbackId}")]
+        public static partial void AttachmentUploadFailed(ILogger logger, long feedbackId, Exception exception);
+
+        [LoggerMessage(EventId = 2006, Level = LogLevel.Information, Message = "Attachment {AttachmentId} uploaded for feedback {FeedbackId}")]
+        public static partial void AttachmentUploaded(ILogger logger, long attachmentId, long feedbackId);
+
+        [LoggerMessage(EventId = 2007, Level = LogLevel.Debug, Message = "Retrieved {Count} feedback items (page {Page}) for business {BusinessId}")]
+        public static partial void FeedbackPageRetrieved(ILogger logger, int count, int page, long businessId);
     }
 }

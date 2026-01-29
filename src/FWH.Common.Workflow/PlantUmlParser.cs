@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using FWH.Common.Workflow.Models;
 
 namespace FWH.Common.Workflow;
@@ -13,7 +10,7 @@ public sealed class PlantUmlParser
     private readonly Dictionary<string, WorkflowNode> nodes = new(StringComparer.Ordinal); // keyed by node.Id
     private readonly List<Transition> transitions = new();
     private readonly List<StartPoint> startPoints = new();
-    private int idx = 0;
+    private int idx;
 
     // store some global elements encountered
     private readonly Dictionary<string, string?> skinparams = new(StringComparer.OrdinalIgnoreCase);
@@ -22,7 +19,7 @@ public sealed class PlantUmlParser
 
     public PlantUmlParser(string plantUmlText)
     {
-        if (plantUmlText is null) throw new ArgumentNullException(nameof(plantUmlText));
+        ArgumentNullException.ThrowIfNull(plantUmlText);
 
         lines = plantUmlText
             .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
@@ -30,7 +27,7 @@ public sealed class PlantUmlParser
             .Where(l => l.Length > 0
                         && !l.StartsWith("@startuml", StringComparison.OrdinalIgnoreCase)
                         && !l.StartsWith("@enduml", StringComparison.OrdinalIgnoreCase)
-                        && !l.StartsWith("'")
+                        && !l.StartsWith('\'')
                         && !l.StartsWith("//"))
             .ToList();
     }
@@ -436,12 +433,13 @@ public sealed class PlantUmlParser
         if (token == "[*]")
         {
             const string key = "[*]";
-            if (!nodes.ContainsKey(key))
+            if (!nodes.TryGetValue(key, out var asteriskNode))
             {
-                nodes[key] = new WorkflowNode(key, "[*]");
+                asteriskNode = new WorkflowNode(key, "[*]");
+                nodes[key] = asteriskNode;
             }
 
-            return nodes[key].Id;
+            return asteriskNode.Id;
         }
 
         var label = NormalizeLabel(token);

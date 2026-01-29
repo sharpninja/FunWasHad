@@ -1,0 +1,6 @@
+{
+  "CliAgent": {
+    "CliMdPath": "CLI.md",
+    "PromptsMdPath": "scripts/modules/FWH.Prompts/prompts.md"
+  }
+}

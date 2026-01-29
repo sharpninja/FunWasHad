@@ -1,6 +1,4 @@
-using System;
 using System.Collections.ObjectModel;
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace FWH.Common.Chat.ViewModels;
@@ -19,7 +17,7 @@ public partial class ChatListViewModel(IServiceProvider? _ = null) : ViewModelBa
 
     public void AddEntry(IChatEntry<IPayload> entry)
     {
-        if (entry == null) throw new ArgumentNullException(nameof(entry));
+        ArgumentNullException.ThrowIfNull(entry);
 
         // Central duplicate prevention: skip adding a choice entry if the last entry is an identical choice
         if (Entries.Count > 0 && entry.Payload.PayloadType == PayloadTypes.Choice && Entries[^1].Payload.PayloadType == PayloadTypes.Choice)
@@ -65,12 +63,12 @@ public partial class ChatListViewModel(IServiceProvider? _ = null) : ViewModelBa
                     OnPropertyChanged(nameof(Current));
                 }
                 break;
-            
+
             case PayloadTypes.Image:
                 // Notify that Current has changed so ChatInputViewModel can detect image mode
                 OnPropertyChanged(nameof(Current));
                 break;
-                
+
             case PayloadTypes.Text:
                 // Notify that Current has changed for text entries too
                 OnPropertyChanged(nameof(Current));

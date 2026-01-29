@@ -1,14 +1,14 @@
-using Microsoft.Extensions.DependencyInjection;
 using FWH.Common.Chat.Services;
 using FWH.Common.Location;
 using FWH.Mobile.iOS.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FWH.Mobile.iOS;
 
 /// <summary>
 /// Extension methods for registering iOS-specific services
 /// </summary>
-public static class iOSServiceCollectionExtensions
+internal static class iOSServiceCollectionExtensions
 {
     /// <summary>
     /// Registers iOS-specific camera service

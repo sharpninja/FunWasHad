@@ -1,5 +1,3 @@
-using System;
-using System.Linq;
 using FWH.Common.Chat.ViewModels;
 using FWH.Common.Workflow;
 
@@ -13,10 +11,10 @@ public class WorkflowToChatConverter : IWorkflowToChatConverter
 {
     public IChatEntry<IPayload> ConvertToEntry(WorkflowStatePayload payload, string workflowId)
     {
-        if (payload == null) throw new ArgumentNullException(nameof(payload));
+        ArgumentNullException.ThrowIfNull(payload);
 
         // Check if this is a camera node
-        if (!string.IsNullOrWhiteSpace(payload.NodeLabel) && 
+        if (!string.IsNullOrWhiteSpace(payload.NodeLabel) &&
             payload.NodeLabel.Equals("camera", StringComparison.OrdinalIgnoreCase))
         {
             var imagePayload = new ImagePayload

@@ -1,10 +1,9 @@
-using System;
-using Microsoft.Extensions.DependencyInjection;
-using FWH.Common.Chat.ViewModels;
 using FWH.Common.Chat.Conversion;
 using FWH.Common.Chat.Duplicate;
 using FWH.Common.Chat.Services;
+using FWH.Common.Chat.ViewModels;
 using FWH.Common.Imaging.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FWH.Common.Chat.Extensions;
 
@@ -26,23 +25,23 @@ public static class ChatServiceCollectionExtensions
         services.AddSingleton<IWorkflowToChatConverter, WorkflowToChatConverter>();
         services.AddSingleton<IChatDuplicateDetector, ChatDuplicateDetector>();
         services.AddSingleton<ChatService>();
-        
+
         // Platform detection
         services.AddSingleton<IPlatformService, PlatformService>();
-        
+
         // Camera service factory
         services.AddSingleton<CameraServiceFactory>();
-        
+
         // Register camera service using factory
         services.AddSingleton<ICameraService>(sp =>
         {
             var factory = sp.GetRequiredService<CameraServiceFactory>();
             return factory.CreateCameraService();
         });
-        
+
         // View models
         services.AddSingleton<ChatListViewModel>();
-        services.AddSingleton<ChatInputViewModel>(sp => 
+        services.AddSingleton<ChatInputViewModel>(sp =>
             new ChatInputViewModel(sp.GetRequiredService<ChatListViewModel>()));
         services.AddSingleton<ChatViewModel>();
 
@@ -69,10 +68,10 @@ public static class ChatServiceCollectionExtensions
     public static IServiceCollection AddChatViewModels(this IServiceCollection services)
     {
         services.AddSingleton<ChatListViewModel>();
-        services.AddSingleton<ChatInputViewModel>(sp => 
+        services.AddSingleton<ChatInputViewModel>(sp =>
             new ChatInputViewModel(sp.GetRequiredService<ChatListViewModel>()));
         services.AddSingleton<ChatViewModel>();
-        
+
         return services;
     }
 
@@ -85,7 +84,7 @@ public static class ChatServiceCollectionExtensions
     {
         services.AddSingleton<IWorkflowToChatConverter, WorkflowToChatConverter>();
         services.AddSingleton<IChatDuplicateDetector, ChatDuplicateDetector>();
-        
+
         return services;
     }
 

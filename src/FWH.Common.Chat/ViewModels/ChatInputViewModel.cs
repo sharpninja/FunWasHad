@@ -1,8 +1,5 @@
-using System;
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Threading.Tasks;
 
 namespace FWH.Common.Chat.ViewModels;
 
@@ -29,12 +26,13 @@ public partial class ChatInputViewModel : ViewModelBase
 
     public ChatInputViewModel(ChatListViewModel listViewModel)
     {
+        ArgumentNullException.ThrowIfNull(listViewModel);
         listViewModel.PropertyChanged += (s, e) =>
         {
             if (e.PropertyName == nameof(ChatListViewModel.Current))
             {
                 var current = listViewModel.Current;
-                
+
                 if (current != null)
                 {
                     switch (current.Payload.PayloadType)
@@ -77,6 +75,7 @@ public partial class ChatInputViewModel : ViewModelBase
 
     public void SetChoices(ChoicePayload choicePayload)
     {
+        ArgumentNullException.ThrowIfNull(choicePayload);
         Choices = choicePayload;
         CurrentImage = null;
         InputMode = ChatInputModes.Choice;
@@ -116,11 +115,14 @@ public partial class ChatInputViewModel : ViewModelBase
     [RelayCommand]
     private async Task OpenCameraAsync()
     {
+        System.Diagnostics.Debug.WriteLine("ChatInputViewModel: OpenCameraAsync called - invoking CameraRequested event");
         CameraRequested?.Invoke(this, EventArgs.Empty);
-        await Task.CompletedTask;
+        System.Diagnostics.Debug.WriteLine("ChatInputViewModel: CameraRequested event invoked");
+        await Task.CompletedTask.ConfigureAwait(false);
     }
 
-    public void RaiseImageCaptured(byte[] imageBytes)
+    /// <summary>Raises the <see cref="ImageCaptured"/> event. Used by the view when an image is captured.</summary>
+    public void OnImageCaptured(byte[] imageBytes)
     {
         ImageCaptured?.Invoke(this, imageBytes);
     }

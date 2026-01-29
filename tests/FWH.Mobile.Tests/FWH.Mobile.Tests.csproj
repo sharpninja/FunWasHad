@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
+  <Import Project="..\..\lib\NSubstitute\NSubstitute.Reference.props" />
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
@@ -10,9 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="NSubstitute" />
-    <PackageReference Include="xunit" />
-    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="xunit.v3" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.Extensions.Http" />
   </ItemGroup>
@@ -20,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\FWH.Mobile\FWH.Mobile\FWH.Mobile.csproj" />
     <ProjectReference Include="..\..\src\FWH.Common.Location\FWH.Common.Location.csproj" />
+    <ProjectReference Include="..\..\src\FWH.Orchestrix.Mediator.Remote\FWH.Orchestrix.Mediator.Remote.csproj" />
   </ItemGroup>
 
 </Project>

@@ -11,7 +11,20 @@
     <DocFxOutputPath>$(MSBuildProjectDirectory)\_site</DocFxOutputPath>
   </PropertyGroup>
 
-  <Target Name="BuildDocFx" BeforeTargets="Build">
+  <!-- Kills any running docfx serve so _site is not locked during Clean/Build. -->
+  <Target Name="KillDocFxServe">
+    <Message Text="Stopping any running docfx serve process..." Importance="low" />
+    <Exec Command="taskkill /F /IM docfx.exe 2&gt;nul"
+          ContinueOnError="true"
+          IgnoreExitCode="true"
+          Condition="'$(OS)' == 'Windows_NT'" />
+    <Exec Command="pkill docfx 2&gt;/dev/null || true"
+          ContinueOnError="true"
+          IgnoreExitCode="true"
+          Condition="'$(OS)' != 'Windows_NT'" />
+  </Target>
+
+  <Target Name="BuildDocFx" BeforeTargets="Build" DependsOnTargets="KillDocFxServe">
     <Message Text="Building DocFX documentation site..." Importance="high" />
 
     <!-- Ensure DocFX tool is installed -->
@@ -28,7 +41,7 @@
     <Message Text="DocFX documentation site generated at: $(DocFxOutputPath)" Importance="high" />
   </Target>
 
-  <Target Name="CleanDocFx" BeforeTargets="Clean">
+  <Target Name="CleanDocFx" BeforeTargets="Clean" DependsOnTargets="KillDocFxServe">
     <Message Text="Cleaning DocFX output..." Importance="high" />
     <RemoveDir Directories="$(DocFxOutputPath)" Condition="Exists('$(DocFxOutputPath)')" />
     <RemoveDir Directories="$(MSBuildProjectDirectory)\api" Condition="Exists('$(MSBuildProjectDirectory)\api')" />

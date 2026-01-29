@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "cli-agent-config",
+  "title": "cli-agent.json",
+  "description": "Configuration for FWH.Prompts and the fwh-cli-agent VS Code extension.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "CliAgent": {
+      "type": "object",
+      "description": "Root key for CLI Agent settings. Read by: extensions/fwh-cli-agent, scripts/modules/FWH.Prompts.",
+      "additionalProperties": true,
+      "properties": {
+        "CliMdPath": {
+          "type": "string",
+          "description": "Path to CLI.md. Relative to project root or absolute. Must resolve under project/workspace root."
+        },
+        "PromptsMdPath": {
+          "type": "string",
+          "description": "Path to prompts markdown (e.g. prompts.md). Relative to project root or absolute. Used by FWH.Prompts."
+        },
+        "ExecuteMode": {
+          "type": "string",
+          "enum": ["composer", "agent-cli"],
+          "description": "How to run prompts: composer (Composer + clipboard) or agent-cli (agent -p). Used by the extension."
+        },
+        "ComposerCommand": {
+          "type": "string",
+          "description": "VS Code command ID to open Composer when ExecuteMode is composer (e.g. composer.new)."
+        },
+        "ReinitOnStart": {
+          "type": "string",
+          "description": "Legacy: was used by FWH.CLI.Agent (removed). Ignored by current consumers."
+        },
+        "RunTimeoutSeconds": {
+          "type": "string",
+          "description": "Legacy: was used by FWH.CLI.Agent (removed). Ignored by current consumers."
+        },
+        "AgentTimeoutMinutes": {
+          "type": "string",
+          "description": "Legacy: was used by FWH.CLI.Agent (removed). Ignored by current consumers."
+        },
+        "AgentPath": {
+          "type": "string",
+          "description": "Legacy: was used by FWH.CLI.Agent (removed). Ignored by current consumers."
+        }
+      }
+    }
+  }
+}

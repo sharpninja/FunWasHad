@@ -1,0 +1,34 @@
+{
+  "workbench.editorAssociations": {
+    "*.md": "default"
+  },
+  "terminal.integrated.shellArgs.windows": ["-NoProfile"],
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "args": [
+        "-NoProfile",
+        "-NoExit",
+        "-Command",
+        "$mod = Join-Path $PWD 'scripts\\modules'; if (Test-Path $mod) { $env:PSModulePath = \"$mod;$env:PSModulePath\" }; Import-Module FWH.Prompts -ErrorAction SilentlyContinue"
+      ]
+    },
+    "pwsh": {
+      "path": "pwsh.exe",
+      "args": [
+        "-NoProfile",
+        "-NoExit",
+        "-Command",
+        "$mod = Join-Path $PWD 'scripts\\modules'; if (Test-Path $mod) { $env:PSModulePath = \"$mod;$env:PSModulePath\" }; Import-Module FWH.Prompts -ErrorAction SilentlyContinue"
+      ]
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "powershell.integratedConsole.shellArgs": ["-NoProfile"],
+  "powershell.enableProfileLoading": false,
+  "github-actions.workflows.pinned.workflows": [
+    ".github/workflows/main.yml",
+    ".github/workflows/static.yml",
+    ".github/workflows/staging.yml"
+  ]
+}

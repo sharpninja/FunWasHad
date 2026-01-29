@@ -6,32 +6,27 @@ namespace FWH.Mobile.Services;
 public enum MovementState
 {
     /// <summary>
-    /// State is unknown or not yet determined.
+    /// Device is stationary (not moving significantly). Default state.
     /// </summary>
-    Unknown = 0,
-
-    /// <summary>
-    /// Device is stationary (not moving significantly).
-    /// </summary>
-    Stationary = 1,
+    Stationary = 0,
 
     /// <summary>
     /// Device is moving at walking speed (< 5 mph / 8 km/h).
     /// Continuous motion with speed less than 5 mph.
     /// </summary>
-    Walking = 2,
+    Walking = 1,
 
     /// <summary>
     /// Device is moving at riding speed (≥ 5 mph / 8 km/h).
     /// Continuous motion with speed greater than or equal to 5 mph.
     /// </summary>
-    Riding = 3,
+    Riding = 2,
 
     /// <summary>
     /// Device is moving but speed cannot be determined yet.
     /// Legacy state for backward compatibility.
     /// </summary>
-    Moving = 4
+    Moving = 3
 }
 
 /// <summary>

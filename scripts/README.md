@@ -7,6 +7,7 @@ This directory contains PowerShell scripts for managing the FunWasHad applicatio
 - **PowerShell 5.1 or later** (Windows PowerShell or PowerShell Core)
 - **.NET 9 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/9.0)
 - **Docker Desktop** - [Download](https://www.docker.com/products/docker-desktop)
+- **GitHub CLI (gh)** - Required for `Get-ActionsLogs.ps1`; [install](https://cli.github.com/) and run `gh auth login`.
 
 ## Scripts Overview
 
@@ -127,6 +128,41 @@ Creates a backup of the PostgreSQL database volume.
 
 ---
 
+### 📱 Diagnose-AndroidANR.ps1
+
+Attach to the running FunWasHad Android app via adb and collect ANR (Application Not Responding) diagnostics.
+
+**Prerequisites:** Android device or emulator connected; `adb` on PATH (Android SDK platform-tools).
+
+**Usage:**
+```powershell
+# Run diagnostics (default package app.funwashad)
+.\scripts\Diagnose-AndroidANR.ps1
+
+# Also try to pull /data/anr/traces.txt (may require root)
+.\scripts\Diagnose-AndroidANR.ps1 -PullTraces
+
+# Capture full bugreport (1–2 min), extract ANR excerpt for app.funwashad
+.\scripts\Diagnose-AndroidANR.ps1 -CaptureBugreport
+
+# Different package
+.\scripts\Diagnose-AndroidANR.ps1 -PackageId com.example.app
+```
+
+**What it does:**
+1. Lists devices and finds the app process (PID)
+2. Dumps recent logcat filtered for ANR, Input dispatching, and app tag
+3. Shows Dropbox ANR entries (if any)
+4. Shows input dispatching state and CPU top
+5. Optionally pulls ANR traces from `/data/anr` (root often required)
+6. With **`-CaptureBugreport`**: runs `adb bugreport`, saves zip to `android-anr-bugreports/`, extracts zip and writes ANR excerpt for the package to `android-anr-stack-excerpt.txt`
+
+**Output:** Logcat excerpt: `android-anr-logcat.txt`. With `-CaptureBugreport`: bugreport zip in `android-anr-bugreports/`, excerpt in `android-anr-stack-excerpt.txt`. Use **`-CopyToClipboard`** to copy the excerpt (or logcat) so you can paste into Cursor Composer. See [docs/mobile/anr-diagnosis-and-retest.md](../docs/mobile/anr-diagnosis-and-retest.md) for re-test steps.
+
+**VS Code:** Run task **android-anr-diagnose** or **android-anr-capture-bugreport** (both copy to clipboard for pasting in Composer).
+
+---
+
 ### 🔄 Restore-Database.ps1
 
 Restores a PostgreSQL database from a backup file.
@@ -155,6 +191,40 @@ Restores a PostgreSQL database from a backup file.
 - `-BackupFile` - Path to backup file (required)
 - `-VolumeName` - Docker volume name (default: `funwashad-postgres-data`)
 - `-Force` - Skip confirmation prompt
+
+---
+
+### 📥 Get-ActionsLogs.ps1
+
+Pulls workflow logs from the last completed GitHub Actions run on the current branch into the local `logs/` folder (ignored by git). Uses `gh run view --log` directly; no artifacts.
+
+**Prerequisite:** [GitHub CLI (gh)](https://cli.github.com/) installed and authenticated (`gh auth login`).
+
+**Usage:**
+```powershell
+# Pull logs for latest completed run on current branch to .\logs\run.log
+.\scripts\Get-ActionsLogs.ps1
+
+# Pull logs for a specific run
+.\scripts\Get-ActionsLogs.ps1 -RunId 21415574493
+
+# Custom folder
+.\scripts\Get-ActionsLogs.ps1 -OutputPath ".\my-logs"
+
+# Use a specific branch
+.\scripts\Get-ActionsLogs.ps1 -Branch staging
+```
+
+**What it does:**
+1. If no `-RunId`: finds the most recently completed run for the workflow on the current (or `-Branch`) branch
+2. Pulls that run’s logs via `gh run view --log`
+3. Writes them to `OutputPath\run.log` (default `.\logs\run.log`)
+
+**Parameters:**
+- `-Branch` - Git branch (default: current branch)
+- `-RunId` - Specific run ID; skips branch/workflow lookup
+- `-OutputPath` - Directory for run.log (default: `.\logs` at repo root)
+- `-Workflow` - Workflow to filter (default: `staging.yml`)
 
 ---
 
@@ -196,6 +266,125 @@ Cleans up Docker containers, volumes, and images related to FunWasHad.
 - `-Volumes` - Clean volumes only (⚠️ deletes data!)
 - `-Images` - Clean images only
 - `-Force` - Skip confirmation prompts
+
+---
+
+### 📋 Sync-Documentation.ps1
+
+Synchronizes Functional Requirements, Technical Requirements, TODO list, and Status documents to ensure consistency.
+
+**Usage:**
+```powershell
+# Validate documentation consistency (no changes)
+.\scripts\Sync-Documentation.ps1 -Mode Check
+
+# Synchronize all documentation
+.\scripts\Sync-Documentation.ps1 -Mode Sync
+
+# Watch for changes and auto-sync
+.\scripts\Sync-Documentation.ps1 -Mode Watch
+```
+
+**What it does:**
+1. ✅ Parses TODO.md for all items with identifiers (MVP-APP-001, etc.)
+2. ✅ Validates all TODO identifiers are referenced in requirements documents
+3. ✅ Updates Status.md statistics and completion counts
+4. ✅ Updates "Last updated" dates in all documents
+5. ✅ Detects inconsistencies and reports issues
+
+**Parameters:**
+- `-Mode` - Operation mode: `Check` (validate only), `Sync` (update documents), `Watch` (monitor for changes)
+- `-ProjectRoot` - Root directory of the project (default: script parent directory)
+
+**See also:** [Documentation Sync Agent Guide](../docs/DOCUMENTATION-SYNC-AGENT.md)
+
+---
+
+### 📊 Update-CoverageReport.ps1
+
+Runs tests with code coverage and updates `docs/Coverage-Report.md` (MVP-SUPPORT-004). Uses coverlet and ReportGenerator.
+
+**Usage:**
+```powershell
+# Run all tests with coverage and update the report
+.\scripts\Update-CoverageReport.ps1
+
+# Only regenerate the report from existing TestResults (e.g. after CI tests)
+.\scripts\Update-CoverageReport.ps1 -SkipTests
+
+# Use Debug configuration
+.\scripts\Update-CoverageReport.ps1 -Configuration Debug
+```
+
+**What it does:**
+1. Builds the solution and runs `dotnet test` with `--collect "XPlat code coverage"` and `coverlet.runsettings` (unless `-SkipTests`)
+2. Finds `*.cobertura.xml` under `./TestResults` (or under the repo when `-SkipTests`)
+3. Runs `dotnet tool run reportgenerator` to merge and produce Markdown
+4. Writes `docs/Coverage-Report.md` with a "Last updated" line
+
+**Prerequisites:** `dotnet tool restore` (uses `.config/dotnet-tools.json` with `dotnet-reportgenerator-globaltool`).
+
+**Parameters:**
+- `-SkipTests` - Do not run build/tests; only regenerate from existing coverage files
+- `-Configuration` - Build configuration (default: `Release`)
+- `-ProjectRoot` - Repository root (default: parent of `scripts`)
+
+---
+
+### 📦 Publish-NSubstituteWithGhToken.ps1
+
+Uses **gh** to add `write:packages` to your gh credentials, runs `Push-NSubstituteToGitHubPackages.ps1` (which uses `gh auth token`), then removes `write:packages` so the token no longer has package write. Use this when you want a temporary, scoped run without leaving write:packages on your gh session.
+
+**Usage:**
+```powershell
+# Require gh auth login first, then:
+.\scripts\Publish-NSubstituteWithGhToken.ps1
+
+# Push only; do not add feed to global NuGet config
+.\scripts\Publish-NSubstituteWithGhToken.ps1 -SkipGlobalConfig
+
+# Run the push but leave write:packages on the token afterward
+.\scripts\Publish-NSubstituteWithGhToken.ps1 -SkipScopeCleanup
+```
+
+**What it does:**
+1. Runs `gh auth refresh -s write:packages` (may open browser)
+2. Invokes `Push-NSubstituteToGitHubPackages.ps1` (token from gh)
+3. Runs `gh auth refresh -r write:packages` to remove that scope from gh
+
+**Prerequisites:** [GitHub CLI (gh)](https://cli.github.com/) installed and logged in (`gh auth login`).
+
+---
+
+### 📦 Push-NSubstituteToGitHubPackages.ps1
+
+Pushes NSubstitute 6.0.0 from the local NuGet cache (`E:\packages\NuGet\cache\nsubstitute\6.0.0`) to the GitHub Packages NuGet feed for this project and adds that feed to the **global** NuGet configuration so restore can use it. For a “gh add scope → push → remove scope” flow, use `Publish-NSubstituteWithGhToken.ps1` instead.
+
+**Usage:**
+```powershell
+# Set token (PAT with write:packages) then run
+$env:GITHUB_TOKEN = 'ghp_...'
+.\scripts\Push-NSubstituteToGitHubPackages.ps1
+
+# Or use gh (run after gh auth login)
+.\scripts\Push-NSubstituteToGitHubPackages.ps1
+
+# Or pass token explicitly
+.\scripts\Push-NSubstituteToGitHubPackages.ps1 -Token (Get-Content .\pat.txt -Raw)
+
+# Push only; do not modify global NuGet config
+.\scripts\Push-NSubstituteToGitHubPackages.ps1 -SkipGlobalConfig
+
+# Custom cache path
+.\scripts\Push-NSubstituteToGitHubPackages.ps1 -CachePath 'D:\NuGetCache\nsubstitute\6.0.0'
+```
+
+**What it does:**
+1. Validates the token (GET /user) and checks for `write:packages` via X-OAuth-Scopes
+2. Pushes every `*.nupkg` under the cache path to `https://nuget.pkg.github.com/sharpninja/index.json`
+3. Adds that feed to the user-level NuGet config (`%APPDATA%\NuGet\NuGet.Config`) as source `github-sharpninja` with your token so `dotnet restore` can pull NSubstitute 6.0 from GitHub Packages
+
+**Prerequisites:** GitHub PAT (classic) with `write:packages`, or gh logged in with that scope. The project `NuGet.config` already lists the feed; credentials are stored in the global config by this script.
 
 ---
 
@@ -540,6 +729,76 @@ For issues or questions:
 - ✅ Application startup
 - ✅ Docker cleanup
 - ✅ Comprehensive documentation
+
+---
+
+### 📝 FWH.Prompts Module
+
+PowerShell module providing templatized prompts for AI interactions with parameterized commands.
+
+**Installation:**
+```powershell
+# Import the module
+Import-Module .\scripts\modules\FWH.Prompts\FWH.Prompts.psd1
+```
+
+**Usage:**
+```powershell
+# List available prompts
+Get-AvailablePrompts
+
+# Get a filled prompt
+Get-Prompt -Name 'code-review' -Parameters @{
+    FeatureName = 'User Authentication'
+    FilePath = 'src/AuthService.cs'
+    Code = Get-Content 'src/AuthService.cs' -Raw
+}
+
+# Invoke prompt and copy to clipboard
+Invoke-Prompt -Name 'code-review' -Parameters @{...} -OutputToClipboard
+
+# Create custom prompt template
+New-PromptTemplate -Name 'custom-review' `
+    -Description 'Custom code review' `
+    -Template 'Review {Code} for {Issues}' `
+    -Parameters @('Code', 'Issues')
+```
+
+**Available Built-in Prompts:**
+- `code-review` - Request code review
+- `implement-feature` - Request feature implementation
+- `debug-issue` - Request debugging help
+- `refactor-code` - Request code refactoring
+- `write-tests` - Request unit test generation
+- `document-code` - Request code documentation
+- `optimize-performance` - Request performance optimization
+- `add-feature` - Request adding new feature
+- `fix-bug` - Request bug fix
+- `security-audit` - Request security audit
+
+**Functions:**
+- `Get-Prompt` - Get a filled prompt from template
+- `Invoke-Prompt` - Get prompt and optionally output/copy/save
+- `Get-AvailablePrompts` - List all available prompt templates
+- `Get-PromptTemplate` - Get template details
+- `New-PromptTemplate` - Create custom prompt template
+- `Remove-PromptTemplate` - Remove prompt template
+
+**Example:**
+```powershell
+# Import module
+Import-Module .\scripts\modules\FWH.Prompts\FWH.Prompts.psd1
+
+# Get code review prompt
+$prompt = Get-Prompt -Name 'code-review' -Parameters @{
+    FeatureName = 'User Authentication'
+    FilePath = 'src/FWH.Mobile/Services/AuthService.cs'
+    Code = Get-Content 'src/FWH.Mobile/Services/AuthService.cs' -Raw
+}
+
+# Copy to clipboard for use with AI
+Invoke-Prompt -Name 'code-review' -Parameters @{...} -OutputToClipboard
+```
 
 ---
 

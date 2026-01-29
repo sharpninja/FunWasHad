@@ -1,18 +1,14 @@
-using System;
-using System.Collections.Generic;
 using FWH.Common.Workflow.Actions;
 using FWH.Common.Workflow.Controllers;
 using FWH.Common.Workflow.Instance;
 using FWH.Common.Workflow.Logging;
 using FWH.Common.Workflow.Mapping;
-using FWH.Common.Workflow.Models;
 using FWH.Common.Workflow.State;
 using FWH.Common.Workflow.Storage;
 using FWH.Common.Workflow.Views;
 using FWH.Orchestrix.Contracts.Mediator;
 using FWH.Orchestrix.Mediator.Remote.Extensions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace FWH.Common.Workflow.Extensions;
@@ -68,6 +64,7 @@ public static class WorkflowServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddWorkflowActionHandler(this IServiceCollection services, IWorkflowActionHandler handler)
     {
+        ArgumentNullException.ThrowIfNull(handler);
         // Register the handler as a singleton so it will be discovered by the registrar
         services.AddSingleton<IWorkflowActionHandler>(handler);
         services.AddSingleton(handler.GetType(), handler);
@@ -77,7 +74,7 @@ public static class WorkflowServiceCollectionExtensions
     /// <summary>
     /// Register an action handler delegate by name. Convenience overload.
     /// </summary>
-    public static IServiceCollection AddWorkflowActionHandler(this IServiceCollection services, string name, System.Func<ActionHandlerContext, System.Collections.Generic.IDictionary<string,string>, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Collections.Generic.IDictionary<string,string>?>> handler)
+    public static IServiceCollection AddWorkflowActionHandler(this IServiceCollection services, string name, System.Func<ActionHandlerContext, System.Collections.Generic.IDictionary<string, string>, System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Collections.Generic.IDictionary<string, string>?>> handler)
     {
         var adapter = new WorkflowActionHandlerAdapter(name, handler);
         services.AddWorkflowActionHandler(adapter);
@@ -133,10 +130,10 @@ public static class WorkflowServiceCollectionExtensions
     public static IServiceProvider InitializeWorkflowActionHandlers(this IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(serviceProvider);
-        
+
         // Resolving the registrar triggers its constructor, which discovers and registers all handlers
         _ = serviceProvider.GetRequiredService<WorkflowActionHandlerRegistrar>();
-        
+
         return serviceProvider;
     }
 }

@@ -1,8 +1,4 @@
-using FWH.Mobile.Services;
-using FWH.Common.Chat.Services;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Threading.Tasks;
 
 namespace FWH.Mobile.Services;
 
@@ -19,7 +15,7 @@ public class ActivityTrackingService
     // Activity tracking state
     private bool _isTrackingActivity;
     private DateTimeOffset _activityStartTime;
-    private MovementState _currentActivityType = MovementState.Unknown;
+    private MovementState _currentActivityType = MovementState.Stationary;
     private double _totalDistanceMeters;
     private double _maxSpeedMph;
     private int _transitionCount;
@@ -62,8 +58,8 @@ public class ActivityTrackingService
     /// <summary>
     /// Gets the duration of the current activity.
     /// </summary>
-    public TimeSpan ActivityDuration => _isTrackingActivity 
-        ? DateTimeOffset.UtcNow - _activityStartTime 
+    public TimeSpan ActivityDuration => _isTrackingActivity
+        ? DateTimeOffset.UtcNow - _activityStartTime
         : TimeSpan.Zero;
 
     /// <summary>
@@ -89,7 +85,7 @@ public class ActivityTrackingService
     {
         _locationTrackingService.MovementStateChanged += OnMovementStateChanged;
         _locationTrackingService.LocationUpdated += OnLocationUpdated;
-        
+
         _logger.LogInformation("Activity tracking monitoring started");
     }
 
@@ -100,12 +96,12 @@ public class ActivityTrackingService
     {
         _locationTrackingService.MovementStateChanged -= OnMovementStateChanged;
         _locationTrackingService.LocationUpdated -= OnLocationUpdated;
-        
+
         if (_isTrackingActivity)
         {
             EndActivity();
         }
-        
+
         _logger.LogInformation("Activity tracking monitoring stopped");
     }
 
@@ -120,7 +116,7 @@ public class ActivityTrackingService
                 e.CurrentSpeedMph ?? 0);
 
             // Handle transitions from stationary
-            if (e.PreviousState == MovementState.Stationary || e.PreviousState == MovementState.Unknown)
+            if (e.PreviousState == MovementState.Stationary)
             {
                 if (e.CurrentState == MovementState.Walking)
                 {
@@ -172,52 +168,52 @@ public class ActivityTrackingService
     private void StartWalkingActivity(MovementStateChangedEventArgs e)
     {
         StartActivity(MovementState.Walking);
-        
+
         _notificationService.ShowSuccess(
             "Your walking activity is now being tracked",
             "Walking started");
-        
+
         _logger.LogInformation("Started walking activity");
     }
 
     private void StartRidingActivity(MovementStateChangedEventArgs e)
     {
         StartActivity(MovementState.Riding);
-        
-        var speedText = e.CurrentSpeedMph.HasValue 
-            ? $" at {e.CurrentSpeedMph:F1} mph" 
+
+        var speedText = e.CurrentSpeedMph.HasValue
+            ? $" at {e.CurrentSpeedMph:F1} mph"
             : "";
-        
+
         _notificationService.ShowSuccess(
             $"Your riding activity is now being tracked{speedText}",
             "Riding started");
-        
+
         _logger.LogInformation("Started riding activity at {Speed:F1} mph", e.CurrentSpeedMph ?? 0);
     }
 
     private void TransitionToRiding(MovementStateChangedEventArgs e)
     {
         _currentActivityType = MovementState.Riding;
-        
-        var speedText = e.CurrentSpeedMph.HasValue 
-            ? $"{e.CurrentSpeedMph:F1} mph" 
+
+        var speedText = e.CurrentSpeedMph.HasValue
+            ? $"{e.CurrentSpeedMph:F1} mph"
             : "riding speed";
-        
+
         _notificationService.ShowInfo(
             $"You're now traveling at {speedText}",
             "Now riding");
-        
+
         _logger.LogInformation("Transitioned from walking to riding at {Speed:F1} mph", e.CurrentSpeedMph ?? 0);
     }
 
     private void TransitionToWalking(MovementStateChangedEventArgs e)
     {
         _currentActivityType = MovementState.Walking;
-        
+
         _notificationService.ShowInfo(
             "You've slowed down to walking pace",
             "Now walking");
-        
+
         _logger.LogInformation("Transitioned from riding to walking");
     }
 
@@ -227,21 +223,21 @@ public class ActivityTrackingService
         var distance = TotalDistanceMiles;
         var avgSpeed = AverageSpeedMph;
         var activityType = _currentActivityType == MovementState.Walking ? "Walking" : "Riding";
-        
+
         _notificationService.ShowSuccess(
             $"Duration: {duration.TotalMinutes:F0} min\n" +
             $"Distance: {distance:F2} miles\n" +
             $"Avg Speed: {avgSpeed:F1} mph\n" +
             $"Max Speed: {_maxSpeedMph:F1} mph",
             $"{activityType} activity completed");
-        
+
         _logger.LogInformation(
             "{Activity} activity ended - Duration: {Duration:F0} min, Distance: {Distance:F2} miles, Avg Speed: {AvgSpeed:F1} mph",
             activityType,
             duration.TotalMinutes,
             distance,
             avgSpeed);
-        
+
         EndActivity();
     }
 
@@ -258,26 +254,29 @@ public class ActivityTrackingService
     private void EndActivity()
     {
         _isTrackingActivity = false;
-        _currentActivityType = MovementState.Unknown;
+        _currentActivityType = MovementState.Stationary;
     }
 
     /// <summary>
     /// Gets a summary of the current activity.
     /// </summary>
-    public string GetActivitySummary()
+    public string ActivitySummary
     {
-        if (!_isTrackingActivity)
-            return "No active activity";
+        get
+        {
+            if (!_isTrackingActivity)
+                return "No active activity";
 
-        var activityName = _currentActivityType == MovementState.Walking ? "Walking" : "Riding";
-        var duration = ActivityDuration;
-        
-        return $"{activityName}\n" +
-               $"Duration: {duration.Hours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}\n" +
-               $"Distance: {TotalDistanceMiles:F2} miles\n" +
-               $"Current Speed: {_locationTrackingService.CurrentSpeedMph:F1} mph\n" +
-               $"Avg Speed: {AverageSpeedMph:F1} mph\n" +
-               $"Max Speed: {MaxSpeedMph:F1} mph\n" +
-               $"Transitions: {_transitionCount}";
+            var activityName = _currentActivityType == MovementState.Walking ? "Walking" : "Riding";
+            var duration = ActivityDuration;
+
+            return $"{activityName}\n" +
+                   $"Duration: {duration.Hours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}\n" +
+                   $"Distance: {TotalDistanceMiles:F2} miles\n" +
+                   $"Current Speed: {_locationTrackingService.CurrentSpeedMph:F1} mph\n" +
+                   $"Avg Speed: {AverageSpeedMph:F1} mph\n" +
+                   $"Max Speed: {MaxSpeedMph:F1} mph\n" +
+                   $"Transitions: {_transitionCount}";
+        }
     }
 }

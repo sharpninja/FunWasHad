@@ -1,11 +1,13 @@
-using System;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
 namespace FWH.Common.Workflow.Actions;
 
-public class WorkflowActionHandlerRegistry : IWorkflowActionHandlerRegistry
+public partial class WorkflowActionHandlerRegistry : IWorkflowActionHandlerRegistry
 {
+    [LoggerMessage(LogLevel.Information, "Registered workflow action handler factory for {Action}")]
+    private static partial void LogRegisteredFactory(ILogger logger, string action);
+
     private readonly ConcurrentDictionary<string, Func<IServiceProvider, IWorkflowActionHandler>> _factories = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILogger<WorkflowActionHandlerRegistry>? _logger;
 
@@ -17,10 +19,11 @@ public class WorkflowActionHandlerRegistry : IWorkflowActionHandlerRegistry
     public void Register(string name, Func<IServiceProvider, IWorkflowActionHandler> factory)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
-        if (factory == null) throw new ArgumentNullException(nameof(factory));
+        ArgumentNullException.ThrowIfNull(factory);
 
         _factories[name] = factory;
-        _logger?.LogInformation("Registered workflow action handler factory for {Action}", name);
+        if (_logger != null)
+            LogRegisteredFactory(_logger, name);
     }
 
     public bool TryGetFactory(string name, out Func<IServiceProvider, IWorkflowActionHandler>? factory)

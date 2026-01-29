@@ -1,22 +1,21 @@
 using CoreLocation;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Mobile.iOS.Services;
 
 /// <summary>
 /// iOS implementation of GPS service using CLLocationManager.
 /// </summary>
-public class iOSGpsService : IGpsService
+internal class iOSGpsService : IGpsService
 {
     private readonly CLLocationManager _locationManager;
+    private readonly ILogger<iOSGpsService>? _logger;
     private TaskCompletionSource<GpsCoordinates?>? _locationTcs;
     private const int LocationTimeoutSeconds = 30;
 
-    public iOSGpsService()
+    public iOSGpsService(ILogger<iOSGpsService>? logger = null)
     {
         _locationManager = new CLLocationManager
         {
@@ -26,6 +25,7 @@ public class iOSGpsService : IGpsService
 
         _locationManager.LocationsUpdated += OnLocationsUpdated;
         _locationManager.Failed += OnLocationFailed;
+        _logger = logger;
     }
 
     public bool IsLocationAvailable
@@ -67,7 +67,7 @@ public class iOSGpsService : IGpsService
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             cts.Token.Register(() => tcs.TrySetResult(false));
 
-            return await tcs.Task;
+            return await tcs.Task.ConfigureAwait(false);
         }
 
         return false;
@@ -75,20 +75,54 @@ public class iOSGpsService : IGpsService
 
     public async Task<GpsCoordinates?> GetCurrentLocationAsync(CancellationToken cancellationToken = default)
     {
-        if (!IsLocationAvailable)
-        {
-            // Try to request permission
-            var granted = await RequestLocationPermissionAsync();
-            if (!granted)
-                return null;
-        }
+        var diagnostics = new Dictionary<string, object?>();
 
         try
         {
+            var status = CLLocationManager.Status;
+            diagnostics["AuthorizationStatus"] = status.ToString();
+            diagnostics["IsLocationAvailable"] = IsLocationAvailable;
+            diagnostics["TimeoutSeconds"] = LocationTimeoutSeconds;
+            diagnostics["DesiredAccuracy"] = _locationManager.DesiredAccuracy.ToString();
+            diagnostics["DistanceFilter"] = _locationManager.DistanceFilter.ToString();
+
+            if (!IsLocationAvailable)
+            {
+                // Try to request permission
+                var granted = await RequestLocationPermissionAsync().ConfigureAwait(false);
+                diagnostics["PermissionRequested"] = true;
+                diagnostics["PermissionGranted"] = granted;
+
+                var newStatus = CLLocationManager.Status;
+                diagnostics["AuthorizationStatusAfterRequest"] = newStatus.ToString();
+
+                if (!granted)
+                {
+                    diagnostics["Error"] = "Location permission not granted";
+                    throw new LocationServicesException(
+                        "iOS",
+                        "GetCurrentLocationAsync",
+                        $"Location permission is not granted (status: {status})",
+                        diagnostics);
+                }
+
+                // Re-check availability after permission request
+                if (!IsLocationAvailable)
+                {
+                    diagnostics["Error"] = "Location still not available after permission granted";
+                    throw new LocationServicesException(
+                        "iOS",
+                        "GetCurrentLocationAsync",
+                        "Location services are not available even after permission was granted",
+                        diagnostics);
+                }
+            }
+
             _locationTcs = new TaskCompletionSource<GpsCoordinates?>();
 
             // Start location updates
             _locationManager.StartUpdatingLocation();
+            diagnostics["LocationUpdatesStarted"] = true;
 
             // Set up timeout
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(LocationTimeoutSeconds));
@@ -96,21 +130,61 @@ public class iOSGpsService : IGpsService
 
             linkedCts.Token.Register(() =>
             {
-                _locationTcs?.TrySetResult(null);
+                if (!_locationTcs.Task.IsCompleted)
+                {
+                    diagnostics["TimedOut"] = true;
+                    _locationTcs?.TrySetResult(null);
+                }
             });
 
-            var result = await _locationTcs.Task;
+            var result = await _locationTcs.Task.ConfigureAwait(false);
 
             // Stop location updates
             _locationManager.StopUpdatingLocation();
 
+            if (result == null)
+            {
+                diagnostics["Error"] = "Location request completed but returned null";
+                throw new LocationServicesException(
+                    "iOS",
+                    "GetCurrentLocationAsync",
+                    "Location request completed but no location was obtained",
+                    diagnostics);
+            }
+
+            diagnostics["PositionObtained"] = true;
+            diagnostics["Accuracy"] = result.AccuracyMeters;
             return result;
+        }
+        catch (LocationServicesException)
+        {
+            // Ensure location updates are stopped
+            try
+            {
+                _locationManager.StopUpdatingLocation();
+            }
+            catch { }
+            throw; // Re-throw our custom exception as-is
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error getting GPS location: {ex}");
-            _locationManager.StopUpdatingLocation();
-            return null;
+            // Ensure location updates are stopped
+            try
+            {
+                _locationManager.StopUpdatingLocation();
+            }
+            catch { }
+
+            diagnostics["ExceptionType"] = ex.GetType().Name;
+            diagnostics["ExceptionMessage"] = ex.Message;
+            diagnostics["StackTrace"] = ex.StackTrace;
+
+            throw new LocationServicesException(
+                "iOS",
+                "GetCurrentLocationAsync",
+                $"Unexpected error getting GPS location: {ex.Message}",
+                diagnostics,
+                ex);
         }
     }
 
@@ -126,6 +200,7 @@ public class iOSGpsService : IGpsService
                 location.HorizontalAccuracy)
             {
                 AltitudeMeters = location.Altitude,
+                SpeedMetersPerSecond = location.Speed >= 0 ? location.Speed : null,
                 Timestamp = DateTimeOffset.FromUnixTimeSeconds((long)location.Timestamp.SecondsSinceReferenceDate)
             };
 
@@ -135,7 +210,8 @@ public class iOSGpsService : IGpsService
 
     private void OnLocationFailed(object? sender, NSErrorEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine($"Location manager failed: {e.Error}");
+        _logger?.LogError("Location manager failed: {Error}", e.Error);
+        // Set result to null - the calling method will throw LocationServicesException
         _locationTcs?.TrySetResult(null);
     }
 }

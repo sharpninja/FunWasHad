@@ -120,12 +120,9 @@ Use any SQLite viewer (e.g., DB Browser for SQLite, Azure Data Studio with SQLit
 
 ## Technical Requirements
 
-### TR-MOBILE-001: Local Device Location Tracking
-The `DeviceLocationHistory` table stores GPS location history locally on the device:
-- **Purpose**: Track user movement patterns for activity analysis
-- **Privacy**: Data is never sent to any API
-- **Retention**: Configurable, default 30 days
-- **Schema**: Includes latitude, longitude, accuracy, movement state, timestamp, and reverse-geocoded address
+The authoritative technical requirement for local device location tracking is documented in:
+
+- `docs/Project/Technical-Requirements.md` → **TR-MOBILE-001: Local Device Location Tracking**
 
 ## Related Files
 

@@ -13,11 +13,12 @@
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.AppHost" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
-    <!-- Security fix: Explicitly reference KubernetesClient 17.0.14+ to fix NU1902 vulnerability (CVE-2025-9708) -->
+    <!-- Explicit KubernetesClient 18.0.5+ to satisfy Aspire and NU1902 (CVE-2025-9708) -->
     <PackageReference Include="KubernetesClient" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FWH.Legal.Web\FWH.Legal.Web.csproj" />
     <ProjectReference Include="..\FWH.Location.Api\FWH.Location.Api.csproj" />
     <ProjectReference Include="..\FWH.MarketingApi\FWH.MarketingApi.csproj" />
   </ItemGroup>

@@ -1,10 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using FWH.Common.Location.Configuration;
 using FWH.Common.Location.Services;
-using FWH.Common.Chat.Services;
-using System;
-using System.Net.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Polly;
 using Polly.CircuitBreaker;
@@ -22,7 +18,7 @@ public static class LocationServiceCollectionExtensions
     public static IServiceCollection AddLocationServices(this IServiceCollection services)
     {
         // Register HttpClient for Overpass API with custom resilience pipeline
-        // that includes retry, circuit breaker, timeout, and fallback
+        // that includes retry, circuit breaker, timeout
         services.AddHttpClient<OverpassLocationService>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(30);
@@ -30,33 +26,7 @@ public static class LocationServiceCollectionExtensions
         })
         .AddResilienceHandler("overpass-pipeline", (ResiliencePipelineBuilder<HttpResponseMessage> builder) =>
         {
-            // 1. Fallback (outer layer - executed last if all else fails)
-            //builder.AddFallback(new FallbackStrategyOptions<HttpResponseMessage>
-            //{
-            //    ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-            //        .Handle<HttpRequestException>()
-            //        .Handle<TimeoutException>()
-            //        .Handle<BrokenCircuitException>()
-            //        .HandleResult(response => !response.IsSuccessStatusCode),
-            //    FallbackAction = args =>
-            //    {
-            //        // Return an empty JSON response that the service will interpret as no results
-            //        var fallbackResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
-            //        {
-            //            Content = new StringContent(@"{""elements"":[]}", System.Text.Encoding.UTF8, "application/json")
-            //        };
-                    
-            //        return Outcome.FromResultAsValueTask(fallbackResponse);
-            //    },
-            //    OnFallback = args =>
-            //    {
-            //        // Log when fallback is triggered
-            //        Console.WriteLine($"Fallback triggered for Overpass API: {args.Outcome.Exception?.Message}");
-            //        return default;
-            //    }
-            //});
-            
-            // 2. Circuit breaker (prevents cascading failures)
+            // 1. Circuit breaker (prevents cascading failures)
             builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage>
             {
                 SamplingDuration = TimeSpan.FromSeconds(30),
@@ -68,7 +38,7 @@ public static class LocationServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode)
             });
-            
+
             // 3. Retry with exponential backoff
             builder.AddRetry(new Polly.Retry.RetryStrategyOptions<HttpResponseMessage>
             {
@@ -81,7 +51,7 @@ public static class LocationServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NotFound)
             });
-            
+
             // 4. Timeout per attempt (inner layer - wraps each individual request)
             builder.AddTimeout(TimeSpan.FromSeconds(Timeout_Seconds));
         });
@@ -104,7 +74,7 @@ public static class LocationServiceCollectionExtensions
 
         // Register the base service
         services.AddSingleton<OverpassLocationService>();
-        
+
         // Register rate-limited decorator as the main ILocationService
         services.AddSingleton<ILocationService>(sp =>
         {
@@ -156,17 +126,16 @@ public static class LocationServiceCollectionExtensions
                     {
                         Content = new StringContent(@"{""elements"":[]}", System.Text.Encoding.UTF8, "application/json")
                     };
-                    
+
                     return Outcome.FromResultAsValueTask(fallbackResponse);
                 },
                 OnFallback = args =>
                 {
-                    // Log when fallback is triggered
-                    Console.WriteLine($"Fallback triggered for Overpass API: {args.Outcome.Exception?.Message}");
+                    // Fallback triggered - return empty result set
                     return default;
                 }
             });
-            
+
             // 2. Circuit breaker (prevents cascading failures)
             builder.AddCircuitBreaker(new CircuitBreakerStrategyOptions<HttpResponseMessage>
             {
@@ -179,7 +148,7 @@ public static class LocationServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode)
             });
-            
+
             // 3. Retry with exponential backoff
             builder.AddRetry(new Polly.Retry.RetryStrategyOptions<HttpResponseMessage>
             {
@@ -192,7 +161,7 @@ public static class LocationServiceCollectionExtensions
                     .Handle<TimeoutException>()
                     .HandleResult(response => !response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.NotFound)
             });
-            
+
             // 4. Timeout per attempt (inner layer - wraps each individual request)
             builder.AddTimeout(TimeSpan.FromSeconds(10));
         });
@@ -202,7 +171,7 @@ public static class LocationServiceCollectionExtensions
 
         // Register the base service
         services.AddSingleton<OverpassLocationService>();
-        
+
         // Register rate-limited decorator
         services.AddSingleton<ILocationService>(sp =>
         {

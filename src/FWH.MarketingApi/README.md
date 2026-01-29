@@ -31,14 +31,44 @@ Returns theme, active coupons, available menu items, and recent news.
 GET /api/marketing/{businessId}/theme
 ```
 
-#### Get Active Coupons
+#### Get Active Coupons (Paginated)
 ```http
-GET /api/marketing/{businessId}/coupons
+GET /api/marketing/{businessId}/coupons?page=1&pageSize=20
 ```
 
-#### Get Menu Items
+Returns paginated list of active coupons. Default page size is 20, maximum is 100.
+
+**Response:**
+```json
+{
+  "items": [...],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 45,
+  "totalPages": 3,
+  "hasPreviousPage": false,
+  "hasNextPage": true
+}
+```
+
+#### Get Menu Items (Paginated)
 ```http
-GET /api/marketing/{businessId}/menu?category={category}
+GET /api/marketing/{businessId}/menu?category={category}&page=1&pageSize=20
+```
+
+Returns paginated list of menu items, optionally filtered by category. Default page size is 20, maximum is 100.
+
+**Response:**
+```json
+{
+  "items": [...],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 120,
+  "totalPages": 6,
+  "hasPreviousPage": false,
+  "hasNextPage": true
+}
 ```
 
 #### Get Menu Categories
@@ -46,9 +76,24 @@ GET /api/marketing/{businessId}/menu?category={category}
 GET /api/marketing/{businessId}/menu/categories
 ```
 
-#### Get News Items
+#### Get News Items (Paginated)
 ```http
-GET /api/marketing/{businessId}/news?limit=10
+GET /api/marketing/{businessId}/news?page=1&pageSize=20
+```
+
+Returns paginated list of published news items. Default page size is 20, maximum is 100.
+
+**Response:**
+```json
+{
+  "items": [...],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 35,
+  "totalPages": 2,
+  "hasPreviousPage": false,
+  "hasNextPage": true
+}
 ```
 
 #### Find Nearby Businesses
@@ -99,9 +144,24 @@ file: <video file>
 GET /api/feedback/{id}
 ```
 
-#### Get Business Feedback
+#### Get Business Feedback (Paginated)
 ```http
-GET /api/feedback/business/{businessId}?publicOnly=true&includeAttachments=false
+GET /api/feedback/business/{businessId}?publicOnly=true&includeAttachments=false&page=1&pageSize=20
+```
+
+Returns paginated list of feedback for a business. Default page size is 20, maximum is 100.
+
+**Response:**
+```json
+{
+  "items": [...],
+  "page": 1,
+  "pageSize": 20,
+  "totalCount": 87,
+  "totalPages": 5,
+  "hasPreviousPage": false,
+  "hasNextPage": true
+}
 ```
 
 #### Get Feedback Statistics

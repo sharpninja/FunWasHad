@@ -6,138 +6,92 @@
 
 ### Requirements
 - name: Technical Requirements
-  href: Technical-Requirements.md
+  href: ~/Project/Technical-Requirements.md
 - name: Functional Requirements
-  href: Functional-Requirements.md
+  href: ~/Project/Functional-Requirements.md
 
-### API Documentation
-- name: API Reference
-  href: api/index.md
-- name: API Implementation
-  items:
-    - name: Marketing API
-      href: summaries/Marketing_API_Implementation_Summary.md
-    - name: Location API Integration
-      href: summaries/Mobile_Location_API_Integration_Summary.md
+### Project Status
+- name: Project Status
+  href: ~/Project/Status.md
+- name: TODO List
+  href: ~/Project/TODO.md
 
-### Implementation Summaries
-- name: Location & Movement
-  items:
-    - name: GPS Service
-      href: summaries/GPS_Location_Service_Implementation_Summary.md
-    - name: Location Tracking
-      href: summaries/Location_Tracking_Implementation_Summary.md
-    - name: Location Permissions
-      href: summaries/Location_Permission_Implementation_Summary.md
-    - name: Walking/Riding Detection
-      href: summaries/Walking_Riding_Detection_Summary.md
-    - name: Movement State Detection
-      href: summaries/Movement_State_Detection_Summary.md
-    - name: Stationary Detection
-      href: summaries/Stationary_Address_Change_Detection_Summary.md
+### Workflows
 - name: Workflows
   items:
-    - name: Location-Based Workflows
-      href: summaries/Location_Based_Workflow_Integration_Summary.md
-    - name: Nearby Businesses Workflow
-      href: summaries/Workflow_GPS_Nearby_Businesses_Implementation_Summary.md
-- name: Camera & Media
-  items:
-    - name: Camera Configuration
-      href: summaries/CameraConfiguration_Implementation_Summary.md
-    - name: Camera Node Integration
-      href: summaries/CameraNode_Integration_Complete.md
-- name: Infrastructure
-  items:
-    - name: Database Migrations
-      href: summaries/Database_Migration_System_Implementation.md
-    - name: PowerShell Scripts
-      href: summaries/PowerShell_Scripts_Implementation_Summary.md
-    - name: Production Enhancements
-      href: summaries/ProductionEnhancements_Summary.md
-    - name: Health Checks & Rate Limiting
-      href: summaries/HealthChecks_RateLimiting_Complete.md
-    - name: Notification System
-      href: summaries/Notification_System_Implementation_Summary.md
-    - name: Platform Service Registration
-      href: summaries/PlatformServiceRegistration_QuickReference.md
-    - name: Thread Safety Fixes
-      href: summaries/ThreadSafetyFixes_Complete.md
-    - name: Technical Requirements Completion
-      href: summaries/Technical_Requirements_Completion_Summary.md
-    - name: Orchestrix Mediator Refactoring
-      href: summaries/Orchestrix_Mediator_Refactoring_Completion_Report.md
-
-### Architecture
-- name: Architecture & Design
-  items:
-    - name: Mediator Architecture
-      href: architecture/Mediator_Architecture_Refactoring_Summary.md
-    - name: Orchestrix Mediator
-      href: architecture/Orchestrix_Mediator_Summary.md
-    - name: SRP Analysis
-      href: architecture/SRP_Analysis_And_Refactoring_Plan.md
+    - name: Workflows Index
+      href: ~/workflows/index.md
+    - name: Fun Was Had
+      href: ~/workflows/workflow.md
+    - name: New Location Detected
+      href: ~/workflows/new-location.md
 
 ### Configuration
 - name: Configuration Guides
   items:
     - name: Aspire Quick Reference
-      href: configuration/Aspire_QuickReference.md
-    - name: Aspire Integration
-      href: configuration/Aspire_Integration_Summary.md
+      href: ~/configuration/Aspire_QuickReference.md
     - name: PostgreSQL Configuration
-      href: configuration/PostgreSQL_LocalStorage_Configuration.md
+      href: ~/configuration/PostgreSQL_LocalStorage_Configuration.md
     - name: Port Configuration
-      href: configuration/Aspire_LocationAPI_Port_Configuration.md
+      href: ~/configuration/Aspire_LocationAPI_Port_Configuration.md
+    - name: Mobile App Configuration
+      href: ~/configuration/mobile-app-configuration.md
 
-### Platform-Specific
-- name: Platform Documentation
+### Deployment
+- name: Deployment Guides
   items:
-    - name: Android
-      items:
-        - name: Workflow Deployment
-          href: platform/Android_Workflow_Deployment_Summary.md
-        - name: CI/CD Enhancement
-          href: platform/Android_Workload_CI_Enhancement_Summary.md
-    - name: Windows Desktop
-      href: platform/Windows_Desktop_GPS_Implementation.md
+    - name: Docker Quick Reference
+      href: ~/deployment/Docker-Quick-Reference.md
+    - name: Docker Guide
+      href: ~/deployment/docker-guide.md
+    - name: Railway Setup Quick Start
+      href: ~/deployment/Railway-Setup-Quick-Start.md
+    - name: Railway Staging Setup
+      href: ~/deployment/railway-staging-setup.md
+    - name: Railway Connection String Troubleshooting
+      href: ~/deployment/railway-connection-string-troubleshooting.md
+
+### Implementation Summaries
+- name: Summaries
+  items:
+    - name: Deployment Fix Summary
+      href: ~/summaries/Deployment-Fix-Summary.md
+    - name: Staging Build Fixes Summary
+      href: ~/summaries/Staging-Build-Fixes-Summary.md
 
 ### Testing
 - name: Testing Documentation
   items:
-    - name: Test Implementation
-      href: testing/TestImplementationSummary.md
-    - name: Test Coverage
-      href: testing/TestCoverageRecommendations.md
-    - name: Integration Tests
-      href: testing/Integration_Tests_Update_Summary.md
-    - name: Imaging Tests
-      href: testing/FWH_Common_Imaging_Tests_Analysis.md
-    - name: GitHub Actions CI Fix
-      href: testing/GitHub_Actions_CI_Fix_Summary.md
+    - name: Test Remediation Summary
+      href: ~/testing/Test-Remediation-Summary.md
 
 ### Code Reviews
 - name: Code Reviews
   items:
-    - name: Latest Code Review (2025-01-09)
-      href: reviews/Code-Review-Report-2025-01-09.md
-    - name: Code Review Report (2025-01-08)
-      href: reviews/Code-Review-Report-2025-01-08.md
-    - name: Recommendations Implementation
-      href: reviews/Code-Review-Recommendations-Implementation-Summary.md
-    - name: Documentation Cleanup
-      href: reviews/Documentation-Cleanup-2025-01-08.md
-    - name: DocFX Build Configuration
-      href: reviews/DocFX-Build-Configuration-Summary.md
-    - name: Swagger Configuration
-      href: reviews/Swagger-Configuration-Summary.md
+    - name: Code Review Report (2025-01-27)
+      href: ~/reviews/Code-Review-Report-2025-01-27.md
 
-### References
-- name: Quick References
+### Mobile
+- name: Mobile Documentation
   items:
-    - name: Next Steps
-      href: references/Quick_Reference_Next_Steps.md
-    - name: DocFX Quick Start
-      href: references/DocFX-Quick-Start.md
-    - name: DocFX Documentation
-      href: references/README-DocFX.md
+    - name: Database Initialization
+      href: ~/mobile/database-initialization.md
+
+### Security & Storage
+- name: Security & Storage
+  items:
+    - name: API Security
+      href: ~/API-SECURITY.md
+    - name: Blob Storage
+      href: ~/BLOB-STORAGE.md
+    - name: Testing Authentication and Storage
+      href: ~/TESTING-AUTHENTICATION-AND-STORAGE.md
+
+### Documentation Tools
+- name: Documentation Tools
+  items:
+    - name: Documentation Guidelines
+      href: ~/DOCUMENTATION-GUIDELINES.md
+    - name: Documentation Sync Agent
+      href: ~/DOCUMENTATION-SYNC-AGENT.md

@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
+  <Import Project="..\..\lib\NSubstitute\NSubstitute.Reference.props" />
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net9.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <Nullable>enable</Nullable>
@@ -10,12 +11,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="NSubstitute" />
-    <PackageReference Include="xunit" />
-    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
     <PackageReference Include="coverlet.collector" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="System.Security.Permissions" />
   </ItemGroup>
 
   <ItemGroup>

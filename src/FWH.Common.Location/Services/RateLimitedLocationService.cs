@@ -1,10 +1,6 @@
-using Microsoft.Extensions.Logging;
 using FWH.Common.Location.Models;
 using FWH.Common.Location.RateLimiting;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Common.Location.Services;
 
@@ -29,7 +25,7 @@ public class RateLimitedLocationService : ILocationService
     {
         _innerService = innerService ?? throw new ArgumentNullException(nameof(innerService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        
+
         // Token bucket: maxRequestsPerMinute tokens, refill 1 token every (60/max) seconds
         var refillInterval = TimeSpan.FromSeconds(60.0 / maxRequestsPerMinute);
         _rateLimiter = new TokenBucketRateLimiter(maxRequestsPerMinute, refillInterval);
@@ -44,20 +40,20 @@ public class RateLimitedLocationService : ILocationService
     {
         // Validate coordinates
         ValidateCoordinates(latitude, longitude);
-        
+
         var availableTokens = _rateLimiter.AvailableTokens;
         _logger.LogDebug("Rate limiter status: {AvailableTokens} tokens available", availableTokens);
 
         // Wait for rate limit
-        await _rateLimiter.WaitAsync(cancellationToken);
-        
+        await _rateLimiter.WaitAsync(cancellationToken).ConfigureAwait(false);
+
         _logger.LogDebug("Rate limit passed, executing GetNearbyBusinessesAsync");
         return await _innerService.GetNearbyBusinessesAsync(
-            latitude, 
-            longitude, 
-            radiusMeters, 
-            categories, 
-            cancellationToken);
+            latitude,
+            longitude,
+            radiusMeters,
+            categories,
+            cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<BusinessLocation?> GetClosestBusinessAsync(
@@ -68,19 +64,42 @@ public class RateLimitedLocationService : ILocationService
     {
         // Validate coordinates
         ValidateCoordinates(latitude, longitude);
-        
+
         var availableTokens = _rateLimiter.AvailableTokens;
         _logger.LogDebug("Rate limiter status: {AvailableTokens} tokens available", availableTokens);
 
         // Wait for rate limit
-        await _rateLimiter.WaitAsync(cancellationToken);
-        
+        await _rateLimiter.WaitAsync(cancellationToken).ConfigureAwait(false);
+
         _logger.LogDebug("Rate limit passed, executing GetClosestBusinessAsync");
         return await _innerService.GetClosestBusinessAsync(
-            latitude, 
-            longitude, 
-            maxDistanceMeters, 
-            cancellationToken);
+            latitude,
+            longitude,
+            maxDistanceMeters,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<string?> GetAddressAsync(
+        double latitude,
+        double longitude,
+        int maxDistanceMeters = 500,
+        CancellationToken cancellationToken = default)
+    {
+        // Validate coordinates
+        ValidateCoordinates(latitude, longitude);
+
+        var availableTokens = _rateLimiter.AvailableTokens;
+        _logger.LogDebug("Rate limiter status: {AvailableTokens} tokens available for address lookup", availableTokens);
+
+        // Wait for rate limit
+        await _rateLimiter.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        _logger.LogDebug("Rate limit passed, executing GetAddressAsync");
+        return await _innerService.GetAddressAsync(
+            latitude,
+            longitude,
+            maxDistanceMeters,
+            cancellationToken).ConfigureAwait(false);
     }
 
     private static void ValidateCoordinates(double latitude, double longitude)
@@ -88,16 +107,16 @@ public class RateLimitedLocationService : ILocationService
         if (latitude < -90 || latitude > 90)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(latitude), 
-                latitude, 
+                nameof(latitude),
+                latitude,
                 "Latitude must be between -90 and 90 degrees");
         }
 
         if (longitude < -180 || longitude > 180)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(longitude), 
-                longitude, 
+                nameof(longitude),
+                longitude,
                 "Longitude must be between -180 and 180 degrees");
         }
     }

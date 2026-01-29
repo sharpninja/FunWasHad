@@ -5,6 +5,10 @@ inputs:
   dotnet-version:
     description: '.NET SDK version'
     required: true
+  cache-version:
+    description: 'Cache key version; bump to invalidate (default 2 to clear stale caches)'
+    required: false
+    default: '2'
 
 runs:
   using: composite
@@ -18,7 +22,7 @@ runs:
           ~/.dotnet/sdk-manifests
           ~/.dotnet/toolResolverCache
           C:\Program Files\dotnet\sdk-manifests
-        key: ${{ runner.os }}-dotnet-workloads-android-${{ inputs.dotnet-version }}
+        key: ${{ runner.os }}-dotnet-workloads-android-${{ inputs.cache-version }}-${{ inputs.dotnet-version }}
         restore-keys: |
+          ${{ runner.os }}-dotnet-workloads-android-${{ inputs.cache-version }}-
           ${{ runner.os }}-dotnet-workloads-android-
-          ${{ runner.os }}-dotnet-env-${{ inputs.dotnet-version }}-

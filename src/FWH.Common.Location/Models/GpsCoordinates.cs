@@ -26,6 +26,12 @@ public class GpsCoordinates
     public double? AltitudeMeters { get; set; }
 
     /// <summary>
+    /// Speed in meters per second (optional).
+    /// This is the instant speed reported by the device GPS.
+    /// </summary>
+    public double? SpeedMetersPerSecond { get; set; }
+
+    /// <summary>
     /// Timestamp when the coordinates were obtained.
     /// </summary>
     public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;

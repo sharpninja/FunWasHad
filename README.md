@@ -23,7 +23,12 @@ docker-compose down
 - Location API: http://localhost:4747/swagger
 - Marketing API: http://localhost:4749/swagger
 
-See [DOCKER.md](DOCKER.md) for detailed Docker commands and [docs/deployment/docker-guide.md](docs/deployment/docker-guide.md) for complete deployment guide.
+See [Docker Quick Reference](docs/deployment/Docker-Quick-Reference.md) for detailed Docker commands and [docs/deployment/docker-guide.md](docs/deployment/docker-guide.md) for complete deployment guide.
+
+## 📊 Project Status & Planning
+
+**👉 [View Project Status](docs/Project/Status.md)** - Current status of all MVP projects with timeline  
+**👉 [View TODO List](docs/Project/TODO.md)** - Detailed task breakdown by project
 
 ### Local Development
 
@@ -40,6 +45,30 @@ dotnet test
 # Run specific API
 cd src/FWH.Location.Api
 dotnet run
+```
+
+### Building the Android app
+
+To build the Android project (`FWH.Mobile.Android`), install the .NET Android workload first:
+
+**Windows (PowerShell or CMD):**
+```bash
+dotnet workload install android
+```
+
+**Linux / WSL (elevated privileges required):**
+```bash
+sudo dotnet workload install android
+```
+
+Optional NuGet source (if needed):
+```bash
+dotnet workload install android --source https://api.nuget.org/v3/index.json
+```
+
+Then build:
+```bash
+dotnet build src/FWH.Mobile/FWH.Mobile.Android/FWH.Mobile.Android.csproj
 ```
 
 ## 📋 Project Structure
@@ -95,8 +124,11 @@ FunWasHad/
 ### Marketing API
 - Business information management
 - Customer feedback & ratings
-- Photo attachments
-- PostgreSQL persistence
+- Photo and video attachments
+- PostgreSQL persistence with PostGIS spatial indexing
+- **Pagination:** All list endpoints support pagination (page, pageSize)
+- **Spatial Queries:** Nearby businesses use PostGIS ST_DWithin for efficient queries
+- Blob storage for file uploads with persistent volumes
 
 ### Mobile App
 - Cross-platform UI with Avalonia
@@ -150,10 +182,12 @@ The project uses two main GitHub Actions workflows:
 
 ## 📚 Documentation
 
-- **[Technical Requirements](docs/Technical-Requirements.md)** - Complete technical specifications
+- **[Project Status](docs/Project/Status.md)** - Current status of all MVP projects with Gantt chart timeline
+- **[TODO List](docs/Project/TODO.md)** - Detailed task breakdown organized by MVP project
+- **[Technical Requirements](docs/Project/Technical-Requirements.md)** - Complete technical specifications
 - **[API Documentation](docs/api/API-Documentation.md)** - RESTful API reference
 - **[Docker Guide](docs/deployment/docker-guide.md)** - Deployment and operations
-- **[Docker Quick Reference](DOCKER.md)** - Common Docker commands
+- **[Docker Quick Reference](docs/deployment/Docker-Quick-Reference.md)** - Common Docker commands
 - **[Database Initialization](docs/mobile/database-initialization.md)** - SQLite setup for mobile
 - **[Testing Guide](docs/testing/)** - Testing strategy and practices
 
@@ -194,6 +228,7 @@ This project is private and proprietary.
 - **Repository**: https://github.com/sharpninja/FunWasHad
 - **Issues**: https://github.com/sharpninja/FunWasHad/issues
 - **Documentation**: [docs/README.md](docs/README.md)
+- **Documentation Site**: https://sharpninja.github.io/FunWasHad
 
 ## 📞 Support
 

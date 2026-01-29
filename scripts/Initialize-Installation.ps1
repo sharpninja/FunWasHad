@@ -302,6 +302,16 @@ function Install-DotNetDependencies {
         # Restore packages
         dotnet restore --verbosity minimal
         Write-Success "NuGet packages restored"
+
+        # Install Android workload (needed to build FWH.Mobile.Android)
+        Write-Info "Installing .NET Android workload..."
+        try {
+            dotnet workload install android --source https://api.nuget.org/v3/index.json
+            Write-Success "Android workload installed"
+        }
+        catch {
+            Write-Warning "Android workload install failed or was skipped. To build the Android app later, run: dotnet workload install android"
+        }
     }
     catch {
         Write-ErrorMsg "Failed to restore packages: $_"
@@ -352,9 +362,9 @@ function Build-Solution {
     Push-Location $InstallPath
 
     try {
-        # Build in Release mode
-        Write-Info "Building in Release configuration..."
-        dotnet build --configuration Release --no-restore --verbosity minimal
+        # Build in Staging mode (default for local)
+        Write-Info "Building in Staging configuration..."
+        dotnet build --configuration Staging --no-restore --verbosity minimal
         Write-Success "Solution built successfully"
     }
     catch {

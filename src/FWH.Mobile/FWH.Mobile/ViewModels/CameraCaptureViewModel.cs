@@ -2,9 +2,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FWH.Common.Chat.Services;
-using System;
-using System.IO;
-using System.Threading.Tasks;
+using FWH.Mobile.Services;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Mobile.ViewModels;
 
@@ -14,6 +13,8 @@ namespace FWH.Mobile.ViewModels;
 public partial class CameraCaptureViewModel : ObservableObject
 {
     private readonly ICameraService _cameraService;
+    private readonly ILogger<CameraCaptureViewModel>? _logger;
+    private readonly IImageService? _imageService;
 
     [ObservableProperty]
     private byte[]? _capturedImage;
@@ -30,15 +31,41 @@ public partial class CameraCaptureViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "Tap to capture photo";
 
-    public CameraCaptureViewModel(ICameraService cameraService)
+    public CameraCaptureViewModel(
+        ICameraService cameraService,
+        ILogger<CameraCaptureViewModel>? logger = null,
+        IImageService? imageService = null)
     {
         _cameraService = cameraService ?? throw new ArgumentNullException(nameof(cameraService));
-        IsCameraAvailable = _cameraService.IsCameraAvailable;
+        _logger = logger;
+        _imageService = imageService;
+        // Defer IsCameraAvailable check until Activity is available
+        // Initialize to false - will be updated when actually needed
+        IsCameraAvailable = false;
     }
 
     [RelayCommand]
     private async Task CapturePhotoAsync()
     {
+        // Check camera availability when actually needed (Activity should be available by now)
+        if (!IsCameraAvailable)
+        {
+            try
+            {
+                IsCameraAvailable = _cameraService.IsCameraAvailable;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger?.LogWarning(ex, "Failed to check camera availability");
+                IsCameraAvailable = false;
+            }
+            catch (PlatformNotSupportedException ex)
+            {
+                _logger?.LogWarning(ex, "Camera not supported on this platform");
+                IsCameraAvailable = false;
+            }
+        }
+
         if (IsCapturing || !IsCameraAvailable)
             return;
 
@@ -47,7 +74,7 @@ public partial class CameraCaptureViewModel : ObservableObject
             IsCapturing = true;
             StatusMessage = "Opening camera...";
 
-            var imageBytes = await _cameraService.TakePhotoAsync();
+            var imageBytes = await _cameraService.TakePhotoAsync().ConfigureAwait(false);
 
             if (imageBytes != null && imageBytes.Length > 0)
             {
@@ -60,10 +87,15 @@ public partial class CameraCaptureViewModel : ObservableObject
                 StatusMessage = "Photo capture cancelled";
             }
         }
-        catch (Exception ex)
+        catch (OperationCanceledException ex)
+        {
+            StatusMessage = "Photo capture cancelled";
+            _logger?.LogInformation(ex, "Camera capture canceled");
+        }
+        catch (InvalidOperationException ex)
         {
             StatusMessage = $"Error: {ex.Message}";
-            System.Diagnostics.Debug.WriteLine($"Camera capture error: {ex}");
+            _logger?.LogError(ex, "Camera capture error");
         }
         finally
         {

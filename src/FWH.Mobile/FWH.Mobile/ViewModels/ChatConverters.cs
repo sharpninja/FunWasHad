@@ -1,10 +1,8 @@
-using System;
+using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Layout;
 using Avalonia.Media;
-using System.Globalization;
 using Avalonia.Media.Imaging;
-using System.IO;
 
 namespace FWH.Mobile.ViewModels;
 

@@ -1,12 +1,11 @@
-using System;
-using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
+using FWH.Common.Chat.Extensions;
+using FWH.Common.Workflow.Extensions;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Repositories;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using FWH.Common.Workflow.Extensions;
-using FWH.Common.Chat.Extensions;
 
 namespace FWH.Common.Chat.Tests.TestFixtures;
 
@@ -32,17 +31,20 @@ public class SqliteTestFixture : IDisposable
         services.AddWorkflowServices();
         services.AddChatServices();
 
-        using var sp = services.BuildServiceProvider();
-        using var scope = sp.CreateScope();
-        var ctx = scope.ServiceProvider.GetRequiredService<NotesDbContext>();
-        ctx.Database.EnsureCreated();
+        var sp = services.BuildServiceProvider();
+        using (sp as IDisposable)
+        {
+            using var scope = sp.CreateScope();
+            var ctx = scope.ServiceProvider.GetRequiredService<NotesDbContext>();
+            ctx.Database.EnsureCreated();
+        }
     }
 
     /// <summary>
     /// Create a new ServiceProvider that uses the shared in-memory SQLite connection and test logger.
     /// Callers can add/override services via the configure callback.
     /// </summary>
-    public ServiceProvider CreateServiceProvider(Action<IServiceCollection>? configure = null)
+    public IServiceProvider CreateServiceProvider(Action<IServiceCollection>? configure = null)
     {
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddProvider(LoggerProvider));

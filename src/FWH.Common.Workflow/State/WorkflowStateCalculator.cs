@@ -1,8 +1,6 @@
-using System;
-using System.Linq;
-using Microsoft.Extensions.Logging;
-using FWH.Common.Workflow.Models;
 using System.Text.Json;
+using FWH.Common.Workflow.Models;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Common.Workflow.State;
 
@@ -10,8 +8,17 @@ namespace FWH.Common.Workflow.State;
 /// Calculates workflow state and transitions.
 /// Single Responsibility: State calculation logic.
 /// </summary>
-public class WorkflowStateCalculator : IWorkflowStateCalculator
+public partial class WorkflowStateCalculator : IWorkflowStateCalculator
 {
+    [LoggerMessage(LogLevel.Debug, "Advanced to decision node {NodeId}")]
+    private static partial void LogAdvancedToDecision(ILogger logger, string nodeId);
+
+    [LoggerMessage(LogLevel.Debug, "Advanced to first action node {NodeId}")]
+    private static partial void LogAdvancedToAction(ILogger logger, string nodeId);
+
+    [LoggerMessage(LogLevel.Debug, "Failed to parse JSON action in node {NodeId}")]
+    private static partial void LogParseJsonActionFailed(ILogger logger, Exception ex, string nodeId);
+
     private readonly ILogger<WorkflowStateCalculator> _logger;
 
     public WorkflowStateCalculator(ILogger<WorkflowStateCalculator> logger)
@@ -21,7 +28,7 @@ public class WorkflowStateCalculator : IWorkflowStateCalculator
 
     public string? CalculateStartNode(WorkflowDefinition definition)
     {
-        if (definition == null) throw new ArgumentNullException(nameof(definition));
+        ArgumentNullException.ThrowIfNull(definition);
 
         var start = definition.StartPoints.FirstOrDefault()?.NodeId ?? definition.Nodes.FirstOrDefault()?.Id;
 
@@ -32,7 +39,7 @@ public class WorkflowStateCalculator : IWorkflowStateCalculator
             // Only auto-advance if the start node is literally named "start" (case-insensitive)
             // or if it's an implicit start point without a label
             var startNode = definition.Nodes.FirstOrDefault(n => n.Id == start);
-            var shouldAutoAdvance = startNode == null || 
+            var shouldAutoAdvance = startNode == null ||
                                    string.Equals(startNode.Label, "start", StringComparison.OrdinalIgnoreCase) ||
                                    string.IsNullOrWhiteSpace(startNode.Label);
 
@@ -45,11 +52,11 @@ public class WorkflowStateCalculator : IWorkflowStateCalculator
                 {
                     if (targetNode.Label?.StartsWith("if:", StringComparison.OrdinalIgnoreCase) == true)
                     {
-                        _logger.LogDebug("Advanced to decision node {NodeId}", targetId);
+                        LogAdvancedToDecision(_logger, targetId);
                         return targetId;
                     }
 
-                    _logger.LogDebug("Advanced to first action node {NodeId}", targetId);
+                    LogAdvancedToAction(_logger, targetId);
                     return targetId;
                 }
             }
@@ -60,7 +67,7 @@ public class WorkflowStateCalculator : IWorkflowStateCalculator
 
     public WorkflowStatePayload CalculateCurrentPayload(WorkflowDefinition definition, string? currentNodeId)
     {
-        if (definition == null) throw new ArgumentNullException(nameof(definition));
+        ArgumentNullException.ThrowIfNull(definition);
 
         var node = definition.Nodes.FirstOrDefault(n => n.Id == currentNodeId);
         var outgoing = definition.Transitions.Where(t => t.FromNodeId == currentNodeId).ToList();
@@ -101,7 +108,7 @@ public class WorkflowStateCalculator : IWorkflowStateCalculator
                 }
                 catch (JsonException ex)
                 {
-                    _logger.LogDebug(ex, "Failed to parse JSON action in node {NodeId}", node.Id);
+                    LogParseJsonActionFailed(_logger, ex, node.Id);
                     text = node.NoteMarkdown;
                 }
             }

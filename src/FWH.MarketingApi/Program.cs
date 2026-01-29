@@ -1,6 +1,5 @@
 using FWH.MarketingApi.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +11,7 @@ if (builder.Environment.IsDevelopment())
     {
         // Listen on all interfaces for HTTP (port configured by Aspire: 4750)
         options.ListenAnyIP(4750);
-        
+
         // Listen on all interfaces for HTTPS (port configured by Aspire: 4749)
         options.ListenAnyIP(4749, listenOptions =>
         {
@@ -37,8 +36,14 @@ builder.Services.AddControllers()
 // Add problem details
 builder.Services.AddProblemDetails();
 
-// Add Swagger/OpenAPI for Debug builds only
-#if DEBUG
+// Add blob storage service
+// For Railway staging, use local file storage with persistent volume
+// For production, consider cloud storage (S3, Azure Blob, etc.)
+builder.Services.AddSingleton<FWH.MarketingApi.Services.IBlobStorageService,
+    FWH.MarketingApi.Services.LocalFileBlobStorageService>();
+
+// Add Swagger/OpenAPI for Debug and Staging builds
+#if DEBUG || STAGING
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -62,13 +67,13 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 // Apply database migrations on startup
-await ApplyDatabaseMigrationsAsync(app);
+await ApplyDatabaseMigrationsAsync(app).ConfigureAwait(false);
 
 // Map Aspire default endpoints (health checks, metrics)
 app.MapDefaultEndpoints();
 
-// Enable Swagger UI for Debug builds only
-#if DEBUG
+// Enable Swagger UI for Debug and Staging builds
+#if DEBUG || STAGING
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
@@ -85,7 +90,29 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// Add API key authentication middleware
+// Note: In Development/Staging, authentication is optional (can be disabled via config)
+var requireAuth = app.Configuration.GetValue<bool>("ApiSecurity:RequireAuthentication", defaultValue: true);
+if (requireAuth)
+{
+    app.UseMiddleware<FWH.MarketingApi.Middleware.ApiKeyAuthenticationMiddleware>();
+}
+
 app.UseHttpsRedirection();
+
+// Serve static files from uploads directory
+var uploadsPath = app.Configuration["BlobStorage:LocalPath"]
+    ?? Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+if (Directory.Exists(uploadsPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+        RequestPath = "/uploads"
+    });
+    app.Logger.LogInformation("Static file serving enabled for uploads at /uploads");
+}
+
 app.MapControllers();
 
 static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
@@ -95,7 +122,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
 
     try
     {
-        logger.LogInformation("Checking for database migrations...");
+        logger.LogDebug("Checking for database migrations...");
 
         // Get connection string from configuration
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
@@ -111,7 +138,7 @@ static async Task ApplyDatabaseMigrationsAsync(WebApplication app)
         var migrationLogger = scope.ServiceProvider.GetRequiredService<ILogger<DatabaseMigrationService>>();
         var migrationService = new DatabaseMigrationService(connectionString, migrationLogger);
 
-        await migrationService.ApplyMigrationsAsync();
+        await migrationService.ApplyMigrationsAsync().ConfigureAwait(false);
 
         logger.LogInformation("Database migrations completed successfully");
     }

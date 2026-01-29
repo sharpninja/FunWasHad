@@ -1,15 +1,11 @@
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using FWH.Common.Workflow.Models;
-using FWH.Common.Workflow.Storage;
 using FWH.Common.Workflow.Instance;
 using FWH.Common.Workflow.Mapping;
+using FWH.Common.Workflow.Models;
 using FWH.Common.Workflow.State;
+using FWH.Common.Workflow.Storage;
 using FWH.Mobile.Data.Repositories;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace FWH.Common.Workflow.Controllers;
 
@@ -18,8 +14,77 @@ namespace FWH.Common.Workflow.Controllers;
 /// Coordinates between workflow service components and handles business rules.
 /// Single Responsibility: Orchestrate workflow operations and enforce business logic.
 /// </summary>
-public class WorkflowController : IWorkflowController
+public partial class WorkflowController : IWorkflowController
 {
+    [LoggerMessage(LogLevel.Debug, "Importing workflow {WorkflowId}")]
+    private static partial void LogImportingWorkflow(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Debug, "Workflow {WorkflowId} already exists in definition store, reusing existing definition")]
+    private static partial void LogWorkflowExists(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Debug, "Workflow {WorkflowId} already exists and is identical to requested import, skipping update")]
+    private static partial void LogWorkflowIdentical(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Information, "Workflow {WorkflowId} already exists but differs from requested import, updating definition")]
+    private static partial void LogWorkflowDifferent(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Debug, "Parsing PlantUML for workflow {WorkflowId} (content length: {Length} chars)")]
+    private static partial void LogParsingPlantUml(ILogger logger, string workflowId, int length);
+
+    [LoggerMessage(LogLevel.Debug, "Completed parsing workflow {WorkflowId} - {NodeCount} nodes, {TransitionCount} transitions")]
+    private static partial void LogParsingCompleted(ILogger logger, string workflowId, int nodeCount, int transitionCount);
+
+    [LoggerMessage(LogLevel.Information, "Imported workflow {WorkflowId}")]
+    private static partial void LogImportedWorkflow(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Debug, "Starting instance for workflow {WorkflowId}")]
+    private static partial void LogStartingInstance(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Debug, "Restored workflow {WorkflowId} to node {NodeId}")]
+    private static partial void LogRestoredWorkflow(ILogger logger, string workflowId, string nodeId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to restore workflow {WorkflowId} state")]
+    private static partial void LogRestoreFailed(ILogger logger, Exception ex, string workflowId);
+
+    [LoggerMessage(LogLevel.Information, "Started workflow {WorkflowId} at node {NodeId}")]
+    private static partial void LogStartedWorkflow(ILogger logger, string workflowId, string nodeId);
+
+    [LoggerMessage(LogLevel.Debug, "Restarting workflow {WorkflowId}")]
+    private static partial void LogRestartingWorkflow(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Information, "Restarted workflow {WorkflowId} at node {NodeId}")]
+    private static partial void LogRestartedWorkflow(ILogger logger, string workflowId, string nodeId);
+
+    [LoggerMessage(LogLevel.Information, "Persisted restart for workflow {WorkflowId}")]
+    private static partial void LogPersistedRestart(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to persist restart for workflow {WorkflowId}")]
+    private static partial void LogPersistRestartFailed(ILogger logger, Exception ex, string workflowId);
+
+    [LoggerMessage(LogLevel.Information, "Advanced workflow {WorkflowId} to node {NodeId}")]
+    private static partial void LogAdvancedWorkflow(ILogger logger, string workflowId, string nodeId);
+
+    [LoggerMessage(LogLevel.Debug, "Persisted node {NodeId} for workflow {WorkflowId}")]
+    private static partial void LogPersistedNode(ILogger logger, string? nodeId, string workflowId);
+
+    [LoggerMessage(LogLevel.Warning, "Failed to persist node for workflow {WorkflowId}")]
+    private static partial void LogPersistNodeFailed(ILogger logger, Exception ex, string workflowId);
+
+    [LoggerMessage(LogLevel.Debug, "Workflow {WorkflowId} already exists, updating instead of creating")]
+    private static partial void LogWorkflowExistsUpdating(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Information, "Updated existing workflow {WorkflowId}")]
+    private static partial void LogUpdatedWorkflow(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Information, "Created new workflow {WorkflowId}")]
+    private static partial void LogCreatedWorkflow(ILogger logger, string workflowId);
+
+    [LoggerMessage(LogLevel.Error, "Failed to persist workflow {WorkflowId}")]
+    private static partial void LogPersistWorkflowFailed(ILogger logger, Exception ex, string workflowId);
+
+    [LoggerMessage(LogLevel.Warning, "Error executing action for node {NodeId}")]
+    private static partial void LogActionExecutionError(ILogger logger, Exception ex, string nodeId);
+
     private readonly IServiceProvider _serviceProvider;
     private readonly IWorkflowDefinitionStore _definitionStore;
     private readonly IWorkflowInstanceManager _instanceManager;
@@ -52,22 +117,44 @@ public class WorkflowController : IWorkflowController
             throw new ArgumentNullException(nameof(plantUmlText));
 
         var workflowId = id ?? Guid.NewGuid().ToString();
-        _logger.LogDebug("Importing workflow {WorkflowId}", workflowId);
+        LogImportingWorkflow(_logger, workflowId);
 
-        // Parse PlantUML
+        // Parse PlantUML to get the definition for comparison
+        LogParsingPlantUml(_logger, workflowId, plantUmlText.Length);
         var parser = new PlantUmlParser(plantUmlText);
         var definition = parser.Parse(id, name);
+        LogParsingCompleted(_logger, workflowId, definition.Nodes.Count, definition.Transitions.Count);
 
-        // Store definition
+        // Check if workflow definition already exists in memory store
+        var existingDefinition = _definitionStore.GetById(workflowId);
+        if (existingDefinition != null)
+        {
+            // Compare the parsed definition with the existing one
+            // WorkflowDefinition is a record, so equality comparison checks all properties
+            if (AreWorkflowsEqual(existingDefinition, definition))
+            {
+                LogWorkflowIdentical(_logger, workflowId);
+                // Ensure instance is started
+                await StartInstanceAsync(workflowId).ConfigureAwait(false);
+                return existingDefinition;
+            }
+            else
+            {
+                LogWorkflowDifferent(_logger, workflowId);
+                // Update with new definition
+            }
+        }
+
+        // Store definition (new or updated)
         _definitionStore.Store(definition);
 
         // Initialize instance
-        await StartInstanceAsync(definition.Id);
+        await StartInstanceAsync(definition.Id).ConfigureAwait(false);
 
         // Persist to database
-        await PersistDefinitionAsync(definition);
+        await PersistDefinitionAsync(definition).ConfigureAwait(false);
 
-        _logger.LogInformation("Imported workflow {WorkflowId}", definition.Id);
+        LogImportedWorkflow(_logger, definition.Id);
         return definition;
     }
 
@@ -76,8 +163,8 @@ public class WorkflowController : IWorkflowController
         if (string.IsNullOrWhiteSpace(workflowId))
             throw new ArgumentNullException(nameof(workflowId));
 
-        var definition = _definitionStore.Get(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
-        _logger.LogDebug("Starting instance for workflow {WorkflowId}", workflowId);
+        var definition = _definitionStore.GetById(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
+        LogStartingInstance(_logger, workflowId);
 
         // Try to restore from persistence
         var repo = GetRepository();
@@ -85,26 +172,25 @@ public class WorkflowController : IWorkflowController
         {
             try
             {
-                var persisted = await repo.GetByIdAsync(workflowId);
+                var persisted = await repo.GetByIdAsync(workflowId).ConfigureAwait(false);
                 if (persisted != null && !string.IsNullOrWhiteSpace(persisted.CurrentNodeId))
                 {
                     _instanceManager.SetCurrentNode(workflowId, persisted.CurrentNodeId);
-                    _logger.LogDebug("Restored workflow {WorkflowId} to node {NodeId}", 
-                        workflowId, persisted.CurrentNodeId);
+                    LogRestoredWorkflow(_logger, workflowId, persisted.CurrentNodeId);
                     return;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to restore workflow {WorkflowId} state", workflowId);
+                LogRestoreFailed(_logger, ex, workflowId);
             }
         }
 
         // Calculate and set start node
         var startNode = _stateCalculator.CalculateStartNode(definition);
         _instanceManager.SetCurrentNode(workflowId, startNode);
-        
-        _logger.LogInformation("Started workflow {WorkflowId} at node {NodeId}", workflowId, startNode);
+
+        LogStartedWorkflow(_logger, workflowId, startNode);
 
         // Also attempt to execute an inline action attached to the original start node (before auto-advance)
         var originalStart = definition.StartPoints.FirstOrDefault()?.NodeId ?? definition.Nodes.FirstOrDefault()?.Id;
@@ -137,8 +223,8 @@ public class WorkflowController : IWorkflowController
         if (string.IsNullOrWhiteSpace(workflowId))
             throw new ArgumentNullException(nameof(workflowId));
 
-        var definition = _definitionStore.Get(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
-        _logger.LogDebug("Restarting workflow {WorkflowId}", workflowId);
+        var definition = _definitionStore.GetById(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
+        LogRestartingWorkflow(_logger, workflowId);
 
         // Clear current state
         _instanceManager.ClearCurrentNode(workflowId);
@@ -146,8 +232,8 @@ public class WorkflowController : IWorkflowController
         // Calculate new start node (don't call StartInstanceAsync as it would try to restore from DB)
         var startNode = _stateCalculator.CalculateStartNode(definition);
         _instanceManager.SetCurrentNode(workflowId, startNode);
-        
-        _logger.LogInformation("Restarted workflow {WorkflowId} at node {NodeId}", workflowId, startNode);
+
+        LogRestartedWorkflow(_logger, workflowId, startNode);
 
         // Persist the restart (update DB to new start node)
         var repo = GetRepository();
@@ -155,22 +241,22 @@ public class WorkflowController : IWorkflowController
         {
             try
             {
-                await repo.UpdateCurrentNodeIdAsync(workflowId, startNode);
-                _logger.LogInformation("Persisted restart for workflow {WorkflowId}", workflowId);
+                await repo.UpdateCurrentNodeIdAsync(workflowId, startNode).ConfigureAwait(false);
+                LogPersistedRestart(_logger, workflowId);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to persist restart for workflow {WorkflowId}", workflowId);
+                LogPersistRestartFailed(_logger, ex, workflowId);
             }
         }
-        
+
         // Execute action on start node if present
         if (!string.IsNullOrWhiteSpace(startNode))
         {
             var startNodeObj = definition.Nodes.FirstOrDefault(n => n.Id == startNode);
             if (startNodeObj != null)
             {
-                await TryExecuteNodeActionAsync(definition, workflowId, startNodeObj);
+                await TryExecuteNodeActionAsync(definition, workflowId, startNodeObj).ConfigureAwait(false);
             }
         }
     }
@@ -180,7 +266,7 @@ public class WorkflowController : IWorkflowController
         if (string.IsNullOrWhiteSpace(workflowId))
             throw new ArgumentNullException(nameof(workflowId));
 
-        var definition = _definitionStore.Get(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
+        var definition = _definitionStore.GetById(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
         var currentNodeId = _instanceManager.GetCurrentNode(workflowId);
         var payload = _stateCalculator.CalculateCurrentPayload(definition, currentNodeId);
 
@@ -192,11 +278,11 @@ public class WorkflowController : IWorkflowController
         if (string.IsNullOrWhiteSpace(workflowId))
             throw new ArgumentNullException(nameof(workflowId));
 
-        var definition = _definitionStore.Get(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
+        var definition = _definitionStore.GetById(workflowId) ?? throw new InvalidOperationException($"Unknown workflow id: {workflowId}");
         var currentNodeId = _instanceManager.GetCurrentNode(workflowId);
         if (currentNodeId == null)
         {
-            await StartInstanceAsync(workflowId);
+            await StartInstanceAsync(workflowId).ConfigureAwait(false);
             currentNodeId = _instanceManager.GetCurrentNode(workflowId);
         }
 
@@ -213,15 +299,15 @@ public class WorkflowController : IWorkflowController
         _instanceManager.SetCurrentNode(workflowId, newNodeId);
 
         // Persist state
-        await PersistCurrentNodeAsync(workflowId, newNodeId);
+        await PersistCurrentNodeAsync(workflowId, newNodeId).ConfigureAwait(false);
 
-        _logger.LogInformation("Advanced workflow {WorkflowId} to node {NodeId}", workflowId, newNodeId);
+        LogAdvancedWorkflow(_logger, workflowId, newNodeId);
 
         // After advancing, if the new node is an action node execute it and auto-advance if possible
         var newNodeObj = definition.Nodes.FirstOrDefault(n => n.Id == newNodeId);
         if (newNodeObj != null)
         {
-            await TryExecuteNodeActionAsync(definition, workflowId, newNodeObj);
+            await TryExecuteNodeActionAsync(definition, workflowId, newNodeObj).ConfigureAwait(false);
         }
 
         return true;
@@ -244,20 +330,20 @@ public class WorkflowController : IWorkflowController
     }
 
     private string? ResolveChoiceValue(
-        List<Transition> outgoing, 
-        WorkflowDefinition definition, 
+        List<Transition> outgoing,
+        WorkflowDefinition definition,
         object? choiceValue)
     {
         // Match by node ID
         if (choiceValue is string sVal)
         {
-            var match = outgoing.FirstOrDefault(t => 
+            var match = outgoing.FirstOrDefault(t =>
                 string.Equals(t.ToNodeId, sVal, StringComparison.Ordinal));
             if (match != null)
                 return match.ToNodeId;
 
             // Match by node label
-            var byLabel = outgoing.FirstOrDefault(t => 
+            var byLabel = outgoing.FirstOrDefault(t =>
                 definition.Nodes.FirstOrDefault(n => n.Id == t.ToNodeId)?.Label == sVal);
             if (byLabel != null)
                 return byLabel.ToNodeId;
@@ -289,26 +375,26 @@ public class WorkflowController : IWorkflowController
 
         try
         {
-            using var scope = _logger.BeginScope(new Dictionary<string, object> 
-            { 
-                ["Operation"] = "UpdateCurrentNodeId", 
+            using var scope = _logger.BeginScope(new Dictionary<string, object>
+            {
+                ["Operation"] = "UpdateCurrentNodeId",
                 ["WorkflowId"] = workflowId,
                 ["NodeId"] = nodeId ?? "null"
             });
-            
-            await repo.UpdateCurrentNodeIdAsync(workflowId, nodeId);
-            _logger.LogDebug("Persisted node {NodeId} for workflow {WorkflowId}", nodeId, workflowId);
+
+            await repo.UpdateCurrentNodeIdAsync(workflowId, nodeId).ConfigureAwait(false);
+            LogPersistedNode(_logger, nodeId, workflowId);
         }
         catch (Exception ex)
         {
-            using var warnScope = _logger.BeginScope(new Dictionary<string, object> 
-            { 
-                ["Operation"] = "UpdateCurrentNodeId", 
+            using var warnScope = _logger.BeginScope(new Dictionary<string, object>
+            {
+                ["Operation"] = "UpdateCurrentNodeId",
                 ["WorkflowId"] = workflowId,
                 ["NodeId"] = nodeId ?? "null"
             });
-            
-            _logger.LogWarning(ex, "Failed to persist node for workflow {WorkflowId}", workflowId);
+
+            LogPersistNodeFailed(_logger, ex, workflowId);
         }
     }
 
@@ -320,27 +406,38 @@ public class WorkflowController : IWorkflowController
 
         try
         {
-            using var scope = _logger.BeginScope(new Dictionary<string, object> 
-            { 
-                ["Operation"] = "PersistDefinition", 
-                ["WorkflowId"] = definition.Id 
+            using var scope = _logger.BeginScope(new Dictionary<string, object>
+            {
+                ["Operation"] = "PersistDefinition",
+                ["WorkflowId"] = definition.Id
             });
-            
+
             var dataModel = _mapper.ToDataModel(definition);
             dataModel.CurrentNodeId = _instanceManager.GetCurrentNode(definition.Id) ?? dataModel.CurrentNodeId;
-            
-            await repo.CreateAsync(dataModel);
-            _logger.LogInformation("Persisted workflow {WorkflowId}", definition.Id);
+
+            // Check if workflow already exists - use upsert pattern
+            var existing = await repo.GetByIdAsync(definition.Id).ConfigureAwait(false);
+            if (existing != null)
+            {
+                LogWorkflowExistsUpdating(_logger, definition.Id);
+                await repo.UpdateAsync(dataModel).ConfigureAwait(false);
+                LogUpdatedWorkflow(_logger, definition.Id);
+            }
+            else
+            {
+                await repo.CreateAsync(dataModel).ConfigureAwait(false);
+                LogCreatedWorkflow(_logger, definition.Id);
+            }
         }
         catch (Exception ex)
         {
-            using var errScope = _logger.BeginScope(new Dictionary<string, object> 
-            { 
-                ["Operation"] = "PersistDefinition", 
-                ["WorkflowId"] = definition.Id 
+            using var errScope = _logger.BeginScope(new Dictionary<string, object>
+            {
+                ["Operation"] = "PersistDefinition",
+                ["WorkflowId"] = definition.Id
             });
-            
-            _logger.LogError(ex, "Failed to persist workflow {WorkflowId}", definition.Id);
+
+            LogPersistWorkflowFailed(_logger, ex, definition.Id);
         }
     }
 
@@ -349,11 +446,71 @@ public class WorkflowController : IWorkflowController
         return _serviceProvider.GetService<IWorkflowRepository>();
     }
 
+    /// <summary>
+    /// Compares two workflow definitions to determine if they are identical.
+    /// Compares Id, Name, Nodes (all properties via record equality), Transitions (all properties), and StartPoints.
+    /// Uses order-independent comparison for collections.
+    /// </summary>
+    private static bool AreWorkflowsEqual(WorkflowDefinition existing, WorkflowDefinition incoming)
+    {
+        // Compare basic properties
+        if (existing.Id != incoming.Id || existing.Name != incoming.Name)
+            return false;
+
+        // Compare nodes (order-independent, using record equality for full comparison)
+        if (existing.Nodes.Count != incoming.Nodes.Count)
+            return false;
+
+        var existingNodes = existing.Nodes.OrderBy(n => n.Id).ToList();
+        var incomingNodes = incoming.Nodes.OrderBy(n => n.Id).ToList();
+        for (int i = 0; i < existingNodes.Count; i++)
+        {
+            // WorkflowNode is a record, so equality compares all properties (Id, Label, JsonMetadata, NoteMarkdown)
+            if (existingNodes[i] != incomingNodes[i])
+                return false;
+        }
+
+        // Compare transitions (order-independent, using record equality)
+        if (existing.Transitions.Count != incoming.Transitions.Count)
+            return false;
+
+        var existingTransitions = existing.Transitions
+            .OrderBy(t => t.Id)
+            .ThenBy(t => t.FromNodeId)
+            .ThenBy(t => t.ToNodeId)
+            .ToList();
+        var incomingTransitions = incoming.Transitions
+            .OrderBy(t => t.Id)
+            .ThenBy(t => t.FromNodeId)
+            .ThenBy(t => t.ToNodeId)
+            .ToList();
+        for (int i = 0; i < existingTransitions.Count; i++)
+        {
+            // Transition is a record, so equality compares all properties (Id, FromNodeId, ToNodeId, Condition)
+            if (existingTransitions[i] != incomingTransitions[i])
+                return false;
+        }
+
+        // Compare start points (order-independent)
+        var existingStartPoints = existing.StartPoints.OrderBy(s => s.NodeId).ToList();
+        var incomingStartPoints = incoming.StartPoints.OrderBy(s => s.NodeId).ToList();
+        if (existingStartPoints.Count != incomingStartPoints.Count)
+            return false;
+        for (int i = 0; i < existingStartPoints.Count; i++)
+        {
+            // StartPoint is a record, so equality compares all properties
+            if (existingStartPoints[i] != incomingStartPoints[i])
+                return false;
+        }
+
+        return true;
+    }
+
     private async Task TryExecuteNodeActionAsync(WorkflowDefinition definition, string workflowId, WorkflowNode node)
     {
         try
         {
-            var executed = await _actionExecutor.ExecuteAsync(workflowId, node, definition);
+            var executed = await _actionExecutor.ExecuteAsync(workflowId, node, definition).ConfigureAwait(false);
             if (!executed) return;
 
             // If executed and there is a single outgoing transition, advance automatically
@@ -362,12 +519,12 @@ public class WorkflowController : IWorkflowController
             {
                 var next = outgoing[0].ToNodeId;
                 _instanceManager.SetCurrentNode(workflowId, next);
-                await PersistCurrentNodeAsync(workflowId, next);
+                await PersistCurrentNodeAsync(workflowId, next).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error executing action for node {NodeId}", node.Id);
+            LogActionExecutionError(_logger, ex, node.Id);
         }
     }
 }

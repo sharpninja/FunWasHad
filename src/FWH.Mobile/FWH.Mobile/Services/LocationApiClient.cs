@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
 using FWH.Mobile.Options;
@@ -53,7 +54,7 @@ public sealed class LocationApiClient : ILocationService
         CancellationToken cancellationToken = default)
     {
         var requestUri = BuildNearbyUri(latitude, longitude, radiusMeters, categories);
-        return await SendCollectionRequestAsync(requestUri, cancellationToken);
+        return await SendCollectionRequestAsync(requestUri, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<BusinessLocation?> GetClosestBusinessAsync(
@@ -66,7 +67,7 @@ public sealed class LocationApiClient : ILocationService
 
         try
         {
-            using var response = await _httpClient.GetAsync(requestUri, cancellationToken);
+            using var response = await _httpClient.GetAsync(new Uri(requestUri, UriKind.Relative), cancellationToken).ConfigureAwait(false);
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
@@ -74,11 +75,47 @@ public sealed class LocationApiClient : ILocationService
             }
 
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<BusinessLocation>(_serializerOptions, cancellationToken);
+            return await response.Content.ReadFromJsonAsync<BusinessLocation>(_serializerOptions, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             _logger.LogError(ex, "Failed to fetch closest business from Location API.");
+            return null;
+        }
+    }
+
+    public async Task<string?> GetAddressAsync(
+        double latitude,
+        double longitude,
+        int maxDistanceMeters = 500,
+        CancellationToken cancellationToken = default)
+    {
+        var requestUri = BuildAddressUri(latitude, longitude, maxDistanceMeters);
+
+        try
+        {
+            using var response = await _httpClient.GetAsync(new Uri(requestUri, UriKind.Relative), cancellationToken).ConfigureAwait(false);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.LogDebug("Location API returned 404 for address at ({Latitude}, {Longitude})", latitude, longitude);
+                return null;
+            }
+
+            response.EnsureSuccessStatusCode();
+            var dto = await response.Content.ReadFromJsonAsync<AddressResponseDto>(_serializerOptions, cancellationToken).ConfigureAwait(false);
+            var address = dto?.Address;
+
+            if (!string.IsNullOrEmpty(address))
+            {
+                _logger.LogDebug("Location API resolved address for ({Latitude}, {Longitude}): {Address}", latitude, longitude, address);
+            }
+
+            return address;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            _logger.LogError(ex, "Failed to fetch address from Location API for ({Latitude}, {Longitude})", latitude, longitude);
             return null;
         }
     }
@@ -116,7 +153,7 @@ public sealed class LocationApiClient : ILocationService
                 "api/locations/device",
                 request,
                 _serializerOptions,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             response.EnsureSuccessStatusCode();
             return true;
@@ -132,10 +169,10 @@ public sealed class LocationApiClient : ILocationService
     {
         try
         {
-            using var response = await _httpClient.GetAsync(requestUri, cancellationToken);
+            using var response = await _httpClient.GetAsync(new Uri(requestUri, UriKind.Relative), cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
 
-            var locations = await response.Content.ReadFromJsonAsync<List<BusinessLocation>>(_serializerOptions, cancellationToken);
+            var locations = await response.Content.ReadFromJsonAsync<List<BusinessLocation>>(_serializerOptions, cancellationToken).ConfigureAwait(false);
             return locations ?? Enumerable.Empty<BusinessLocation>();
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
@@ -173,6 +210,15 @@ public sealed class LocationApiClient : ILocationService
         return builder.ToString();
     }
 
+    private static string BuildAddressUri(double latitude, double longitude, int maxDistanceMeters)
+    {
+        var builder = new StringBuilder("api/locations/address?");
+        AppendCoordinateParameters(builder, latitude, longitude);
+        builder.Append("&maxDistanceMeters=");
+        builder.Append(maxDistanceMeters.ToString(CultureInfo.InvariantCulture));
+        return builder.ToString();
+    }
+
     private static void AppendCoordinateParameters(StringBuilder builder, double latitude, double longitude)
     {
         builder.Append("latitude=");
@@ -187,3 +233,9 @@ public sealed class LocationApiClient : ILocationService
         return new Uri(formatted, UriKind.Absolute);
     }
 }
+
+/// <summary>
+/// DTO for Location API address response (GET /api/locations/address).
+/// </summary>
+internal sealed record AddressResponseDto(
+    [property: JsonPropertyName("address")] string? Address);

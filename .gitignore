@@ -43,6 +43,7 @@ Generated\ Files/
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
+analyzer-build.txt
 
 # NUnit
 *.VisualState.xml
@@ -56,6 +57,12 @@ dlldata.c
 
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
+
+# Android ANR diagnostics (scripts/Diagnose-AndroidANR.ps1)
+android-anr-logcat.txt
+android-anr-stack-excerpt.txt
+android-anr-traces/
+android-anr-bugreports/
 
 # .NET Core
 project.lock.json
@@ -146,6 +153,7 @@ _TeamCity*
 coverage*.json
 coverage*.xml
 coverage*.info
+coverage-report/
 
 # Visual Studio code coverage results
 *.coverage
@@ -285,6 +293,9 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+# VS Code extension build output
+extensions/**/out/
+
 # Visual Studio 6 build log
 *.plg
 
@@ -401,3 +412,10 @@ FodyWeavers.xsd
 solution-config.props
 # Publish Profiles
 !**/Properties/PublishProfiles/*.pubxml
+
+# Local workflow logs (Get-ActionsLogs.ps1)
+logs/
+
+# User Secrets Setup Scripts (contain Railway PostgreSQL credentials)
+setup-user-secrets.ps1
+setup-user-secrets.sh

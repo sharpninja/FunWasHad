@@ -60,22 +60,22 @@
             <Button Command="{Binding CapturePhotoCommand}"
                     IsEnabled="{Binding IsCameraAvailable}"
                     Padding="24,12"
-                    MinWidth="140"
-                    HorizontalContentAlignment="Center">
-                <TextBlock Text="Take Photo"
-                           FontSize="14"
-                           FontWeight="SemiBold" />
+                    MinWidth="60"
+                    MinHeight="60"
+                    HorizontalContentAlignment="Center"
+                    ToolTip.Tip="Take Photo">
+                <TextBlock Text="📷" FontSize="24" />
             </Button>
 
             <!-- Clear Button -->
             <Button Command="{Binding ClearPhotoCommand}"
                     IsVisible="{Binding HasImage}"
                     Padding="24,12"
-                    MinWidth="100"
-                    HorizontalContentAlignment="Center">
-                <TextBlock Text="Clear"
-                           FontSize="14"
-                           FontWeight="SemiBold" />
+                    MinWidth="60"
+                    MinHeight="60"
+                    HorizontalContentAlignment="Center"
+                    ToolTip.Tip="Clear">
+                <TextBlock Text="✕" FontSize="24" />
             </Button>
         </StackPanel>
 

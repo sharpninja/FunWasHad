@@ -1,13 +1,9 @@
 using FWH.Common.Location;
 using FWH.Common.Location.Models;
+using FWH.Mobile.Configuration;
 using FWH.Mobile.Data.Data;
 using FWH.Mobile.Data.Entities;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace FWH.Mobile.Services;
 
@@ -18,13 +14,16 @@ namespace FWH.Mobile.Services;
 /// Monitors for address changes when device remains stationary.
 /// TR-MOBILE-001: Device location is tracked locally only, never sent to API.
 /// </summary>
-public class LocationTrackingService : ILocationTrackingService
+public class LocationTrackingService : ILocationTrackingService, IDisposable
 {
     private readonly IGpsService _gpsService;
     private readonly NotesDbContext _dbContext;
     private readonly ILocationService _locationService;
     private readonly LocationWorkflowService? _locationWorkflowService;
+    private readonly LocationSettings _locationSettings;
     private readonly ILogger<LocationTrackingService> _logger;
+    private readonly IImageService? _imageService;
+    private readonly IThemeService? _themeService;
     private readonly string _deviceId;
     private CancellationTokenSource? _trackingCts;
     private Task? _trackingTask;
@@ -32,7 +31,7 @@ public class LocationTrackingService : ILocationTrackingService
     private GpsCoordinates? _lastReportedLocation;
 
     // Movement state tracking
-    private MovementState _currentMovementState = MovementState.Unknown;
+    private MovementState _currentMovementState = MovementState.Stationary;
     private DateTimeOffset _lastStateChangeTime = DateTimeOffset.UtcNow;
     private readonly Queue<(DateTimeOffset timestamp, double distance, double? speed)> _recentMovements = new();
     private const int MaxRecentMovements = 10;
@@ -50,19 +49,28 @@ public class LocationTrackingService : ILocationTrackingService
         IGpsService gpsService,
         NotesDbContext dbContext,
         ILocationService locationService,
+        LocationSettings locationSettings,
         ILogger<LocationTrackingService> logger,
-        LocationWorkflowService? locationWorkflowService = null)
+        LocationWorkflowService? locationWorkflowService = null,
+        IImageService? imageService = null,
+        IThemeService? themeService = null)
     {
         _gpsService = gpsService ?? throw new ArgumentNullException(nameof(gpsService));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _locationService = locationService ?? throw new ArgumentNullException(nameof(locationService));
+        _locationSettings = locationSettings ?? throw new ArgumentNullException(nameof(locationSettings));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _locationWorkflowService = locationWorkflowService;
+        _imageService = imageService;
+        _themeService = themeService;
 
         _deviceId = Guid.NewGuid().ToString();
 
         MinimumDistanceMeters = 50.0;
-        PollingInterval = TimeSpan.FromSeconds(30);
+        PollingInterval = _locationSettings.GetPollingInterval();
+        // Dispatch interval (UI/event cadence) is configurable via the same setting;
+        // default is once per second when PollingIntervalMode is "normal".
+        DispatchInterval = _locationSettings.GetPollingInterval();
         StationaryThresholdDuration = TimeSpan.FromMinutes(3);
         StationaryDistanceThresholdMeters = 10.0;
         WalkingRidingSpeedThresholdMph = 5.0;
@@ -70,6 +78,11 @@ public class LocationTrackingService : ILocationTrackingService
 
         // Subscribe to NewLocationAddress event to trigger workflow
         NewLocationAddress += OnNewLocationAddress;
+
+        if (!_locationSettings.IsTrackingEnabled)
+        {
+            _logger.LogWarning("Location tracking is configured as 'off' (PollingIntervalMode='off'). Tracking will be disabled.");
+        }
     }
 
     public bool IsTracking => _trackingTask != null && !_trackingTask.IsCompleted;
@@ -82,8 +95,16 @@ public class LocationTrackingService : ILocationTrackingService
     public double? CurrentSpeedKmh => _currentSpeedMetersPerSecond.HasValue
         ? GpsCalculator.MetersPerSecondToKmh(_currentSpeedMetersPerSecond.Value)
         : null;
+    public string? CurrentAddress => _lastKnownAddress;
     public double MinimumDistanceMeters { get; set; }
     public TimeSpan PollingInterval { get; set; }
+    /// <summary>
+    /// How often to dispatch location and movement state updates to listeners.
+    /// This is separate from provider sampling and distance thresholds so the UI
+    /// can update smoothly (e.g., once per second) while storage still honors
+    /// <see cref="MinimumDistanceMeters"/>.
+    /// </summary>
+    public TimeSpan DispatchInterval { get; set; } = TimeSpan.FromSeconds(1);
     public TimeSpan StationaryThresholdDuration { get; set; }
     public double StationaryDistanceThresholdMeters { get; set; }
     public double WalkingRidingSpeedThresholdMph { get; set; }
@@ -102,22 +123,114 @@ public class LocationTrackingService : ILocationTrackingService
             return;
         }
 
+        if (!_locationSettings.IsTrackingEnabled)
+        {
+            _logger.LogWarning("Location tracking is disabled (PollingIntervalMode='off'). Cannot start tracking.");
+            return;
+        }
+
         if (!_gpsService.IsLocationAvailable)
         {
             _logger.LogWarning("GPS service is not available");
-            var hasPermission = await _gpsService.RequestLocationPermissionAsync();
+            var hasPermission = await _gpsService.RequestLocationPermissionAsync().ConfigureAwait(false);
             if (!hasPermission)
             {
-                _logger.LogError("Location permission denied");
-                throw new InvalidOperationException("Location permission is required for tracking");
+                _logger.LogWarning("Location permission not yet granted, tracking will start when permission is available");
+                // Don't throw - allow tracking to start and it will work once permission is granted
+                // The tracking loop will handle the case where location is not available
             }
         }
 
-        _logger.LogInformation("Starting location tracking with {Distance}m threshold and {Speed} mph walking/riding threshold",
+        _logger.LogDebug("Starting location tracking with {Distance}m threshold and {Speed} mph walking/riding threshold",
             MinimumDistanceMeters, WalkingRidingSpeedThresholdMph);
 
         _trackingCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _trackingTask = TrackLocationLoopAsync(_trackingCts.Token);
+
+        // Initialize with current location asynchronously (non-blocking)
+        // Don't await this to prevent blocking UI thread during app startup
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                // Use a shorter timeout for initial location to avoid ANR
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                var initialLocation = await _gpsService.GetCurrentLocationAsync(timeoutCts.Token).ConfigureAwait(false);
+
+                if (initialLocation != null && initialLocation.IsValid())
+                {
+                    _lastKnownLocation = initialLocation;
+                    _lastReportedLocation = initialLocation;
+                    _lastLocationTime = initialLocation.Timestamp;
+                    _logger.LogInformation("Location tracking initialized with current location: {Latitude:F6}, {Longitude:F6}",
+                        initialLocation.Latitude, initialLocation.Longitude);
+
+                    // Always determine movement state on startup. Stationary is the default.
+                    MovementState initialState;
+                    if (initialLocation.SpeedMetersPerSecond.HasValue)
+                    {
+                        var speed = initialLocation.SpeedMetersPerSecond.Value;
+                        _currentSpeedMetersPerSecond = speed;
+                        initialState = DetermineMovementStateFromSpeed(speed);
+                        _logger.LogInformation(
+                            "Initial movement state determined from GPS speed: {State} (speed: {Speed:F1} mph)",
+                            initialState,
+                            GpsCalculator.MetersPerSecondToMph(speed));
+                    }
+                    else
+                    {
+                        initialState = MovementState.Stationary;
+                        _logger.LogInformation("Initial movement state set to Stationary (no speed data yet)");
+                    }
+
+                    _currentMovementState = initialState;
+                    _lastStateChangeTime = DateTimeOffset.UtcNow;
+                    var initialEventArgs = new MovementStateChangedEventArgs(
+                        MovementState.Stationary,
+                        initialState,
+                        DateTimeOffset.UtcNow,
+                        null,
+                        TimeSpan.Zero,
+                        _currentSpeedMetersPerSecond);
+                    MovementStateChanged?.Invoke(this, initialEventArgs);
+
+                    // Immediately get address for initial location
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await CheckForAddressChangeAsync(initialLocation).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Error getting initial address");
+                        }
+                    }, cancellationToken);
+
+                    // Trigger location updated event for initial location
+                    LocationUpdated?.Invoke(this, initialLocation);
+                }
+                else
+                {
+                    _logger.LogDebug("Could not get initial location, tracking loop will obtain it");
+                }
+            }
+            catch (LocationServicesException ex)
+            {
+                _logger.LogWarning(ex,
+                    "Location service error during initialization. Platform: {Platform}, Operation: {Operation}. Tracking loop will retry.",
+                    ex.Platform,
+                    ex.Operation);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogDebug("Initial location request timed out, tracking loop will obtain location");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Initial location request completed, tracking loop will obtain location");
+            }
+        }, cancellationToken);
     }
 
     public async Task StopTrackingAsync()
@@ -127,7 +240,7 @@ public class LocationTrackingService : ILocationTrackingService
             return;
         }
 
-        _logger.LogInformation("Stopping location tracking");
+        _logger.LogDebug("Stopping location tracking");
 
         ResetStationaryCountdown();
 
@@ -137,7 +250,7 @@ public class LocationTrackingService : ILocationTrackingService
         {
             try
             {
-                await _trackingTask;
+                await _trackingTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -149,7 +262,7 @@ public class LocationTrackingService : ILocationTrackingService
         _trackingCts = null;
         _trackingTask = null;
 
-        _logger.LogInformation("Location tracking stopped");
+        _logger.LogDebug("Location tracking stopped");
     }
 
     private async Task TrackLocationLoopAsync(CancellationToken cancellationToken)
@@ -159,86 +272,153 @@ public class LocationTrackingService : ILocationTrackingService
             try
             {
                 // Get current location
-                var currentLocation = await _gpsService.GetCurrentLocationAsync(cancellationToken);
+                var currentLocation = await _gpsService.GetCurrentLocationAsync(cancellationToken).ConfigureAwait(false);
 
                 if (currentLocation == null || !currentLocation.IsValid())
                 {
                     _logger.LogWarning("Failed to get valid GPS coordinates");
-                    await Task.Delay(PollingInterval, cancellationToken);
+                    await Task.Delay(DispatchInterval, cancellationToken).ConfigureAwait(false);
                     continue;
                 }
 
+                var previousKnownLocation = _lastKnownLocation;
                 _lastKnownLocation = currentLocation;
                 var currentTime = currentLocation.Timestamp;
 
-                // Calculate distance and speed from last known location
-                double? distanceMoved = null;
-                double? speed = null;
+                // Use device's instant speed if available and non-zero; otherwise calculate from distance/time.
+                // On Android, device speed is often 0 even when moving, so treat 0 as unavailable.
+                var deviceSpeed = currentLocation.SpeedMetersPerSecond;
+                double? speed = deviceSpeed is > 0 ? deviceSpeed : null;
 
-                if (_lastReportedLocation != null && _lastLocationTime.HasValue)
+                // Calculate step distance from previous known location (per-sample),
+                // separate from distance used for persistence thresholds.
+                double? stepDistance = null;
+
+                if (previousKnownLocation != null && _lastLocationTime.HasValue)
                 {
-                    distanceMoved = GpsCalculator.CalculateDistance(
-                        _lastReportedLocation.Latitude,
-                        _lastReportedLocation.Longitude,
+                    stepDistance = GpsCalculator.CalculateDistance(
+                        previousKnownLocation.Latitude,
+                        previousKnownLocation.Longitude,
                         currentLocation.Latitude,
                         currentLocation.Longitude);
 
-                    // Calculate speed
-                    speed = GpsCalculator.CalculateSpeed(
-                        _lastReportedLocation.Latitude,
-                        _lastReportedLocation.Longitude,
-                        _lastLocationTime.Value,
-                        currentLocation.Latitude,
-                        currentLocation.Longitude,
-                        currentTime);
+                    // If device didn't provide usable speed, calculate it from step distance/time
+                    if (!speed.HasValue)
+                    {
+                        speed = GpsCalculator.CalculateSpeed(
+                            previousKnownLocation.Latitude,
+                            previousKnownLocation.Longitude,
+                            _lastLocationTime.Value,
+                            currentLocation.Latitude,
+                            currentLocation.Longitude,
+                            currentTime);
+                    }
 
+                    // Update current speed tracking
                     if (speed.HasValue && speed.Value >= 0)
                     {
                         _currentSpeedMetersPerSecond = speed.Value;
 
                         _logger.LogDebug(
-                            "Speed: {SpeedMph:F1} mph ({SpeedKmh:F1} km/h, {SpeedMs:F2} m/s)",
+                            "Speed: {SpeedMph:F1} mph ({SpeedKmh:F1} km/h, {SpeedMs:F2} m/s) {Source}",
                             GpsCalculator.MetersPerSecondToMph(speed.Value),
                             GpsCalculator.MetersPerSecondToKmh(speed.Value),
-                            speed.Value);
+                            speed.Value,
+                            deviceSpeed is > 0 ? "[device]" : "[calculated]");
                     }
 
-                    // Track recent movements for state detection
-                    TrackMovement(currentTime, distanceMoved.Value, speed);
+                    // Track recent movements for state detection using step distance
+                    TrackMovement(currentTime, stepDistance.Value, speed);
 
-                    // Detect and update movement state
-                    UpdateMovementState(distanceMoved.Value, speed);
+                    // Detect and update movement state from step distance
+                    UpdateMovementState(stepDistance.Value, speed);
                 }
                 else
                 {
-                    // First location reading
+                    // First location reading in loop (startup may not have run or may have failed).
+                    // Determine state from speed; default is Stationary.
                     _lastLocationTime = currentTime;
+                    var deviceSpeedMps = currentLocation.SpeedMetersPerSecond;
+                    var stateFromSpeed = (deviceSpeedMps.HasValue && deviceSpeedMps.Value > 0)
+                        ? DetermineMovementStateFromSpeed(deviceSpeedMps.Value)
+                        : MovementState.Stationary;
+                    _currentMovementState = stateFromSpeed;
+                    _lastStateChangeTime = DateTimeOffset.UtcNow;
+                    _logger.LogInformation("Movement state set on first fix: {State}", stateFromSpeed);
+                    try
+                    {
+                        MovementStateChanged?.Invoke(this, new MovementStateChangedEventArgs(
+                            MovementState.Stationary,
+                            stateFromSpeed,
+                            DateTimeOffset.UtcNow,
+                            null,
+                            TimeSpan.Zero,
+                            currentLocation.SpeedMetersPerSecond));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "MovementStateChanged handler threw: {Type} - {Message}", ex.GetType().Name, ex.Message);
+                    }
                 }
 
-                // Check if we should send update
+                // Always notify UI of current location so coordinates display updates in real time.
+                // Persistence to DB (SendLocationUpdateAsync) is still gated by minimum distance.
+                try
+                {
+                    LocationUpdated?.Invoke(this, currentLocation);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "LocationUpdated handler threw: {Type} - {Message}", ex.GetType().Name, ex.Message);
+                }
+
+                // Check if we should persist update to local DB
                 if (ShouldSendLocationUpdate(currentLocation))
                 {
-                    await SendLocationUpdateAsync(currentLocation, cancellationToken);
+                    await SendLocationUpdateAsync(currentLocation, cancellationToken).ConfigureAwait(false);
                     _lastLocationTime = currentTime;
                 }
 
                 // Wait for next polling interval
-                await Task.Delay(PollingInterval, cancellationToken);
+                await Task.Delay(DispatchInterval, cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
                 // Normal cancellation
                 throw;
             }
-            catch (Exception ex)
+            catch (LocationServicesException ex)
             {
-                _logger.LogError(ex, "Error in location tracking loop");
+                // Log detailed location service exception with all diagnostics
+                _logger.LogError(ex,
+                    "Location service error in tracking loop. Platform: {Platform}, Operation: {Operation}, Diagnostics: {Diagnostics}",
+                    ex.Platform,
+                    ex.Operation,
+                    string.Join(", ", ex.Diagnostics.Select(kvp => $"{kvp.Key}={kvp.Value}")));
                 LocationUpdateFailed?.Invoke(this, ex);
 
                 // Wait before retrying
                 try
                 {
-                    await Task.Delay(PollingInterval, cancellationToken);
+                    await Task.Delay(DispatchInterval, cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Error in location tracking loop: {Type} - {Message}. Will retry after delay.",
+                    ex.GetType().Name,
+                    ex.Message);
+                LocationUpdateFailed?.Invoke(this, ex);
+
+                // Wait before retrying
+                try
+                {
+                    await Task.Delay(DispatchInterval, cancellationToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -265,7 +445,7 @@ public class LocationTrackingService : ILocationTrackingService
         var newState = DetermineMovementState(distanceMoved, speed);
 
         // Check if state has changed
-        if (newState != _currentMovementState && newState != MovementState.Unknown)
+        if (newState != _currentMovementState)
         {
             var previousState = _currentMovementState;
             var transitionTime = DateTimeOffset.UtcNow;
@@ -302,12 +482,19 @@ public class LocationTrackingService : ILocationTrackingService
                 durationInPreviousState,
                 _currentSpeedMetersPerSecond);
 
-            MovementStateChanged?.Invoke(this, eventArgs);
+            try
+            {
+                MovementStateChanged?.Invoke(this, eventArgs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "MovementStateChanged handler threw: {Type} - {Message}", ex.GetType().Name, ex.Message);
+            }
         }
         else if (_currentMovementState == MovementState.Stationary && _stationaryCountdownCts != null)
         {
             // Still stationary and countdown is active, reset it on any location change
-            _logger.LogDebug("Location changed while stationary, resetting address check countdown");
+            _logger.LogTrace("Location changed while stationary, resetting address check countdown");
             ResetStationaryCountdown();
             StartStationaryCountdown();
         }
@@ -321,7 +508,7 @@ public class LocationTrackingService : ILocationTrackingService
         if (_lastKnownLocation == null)
             return;
 
-        _logger.LogInformation("Device became stationary, starting {Delay} countdown for address change check",
+        _logger.LogDebug("Device became stationary, starting {Delay} countdown for address change check",
             StationaryAddressCheckDelay);
 
         _stationaryLocationForAddressCheck = _lastKnownLocation;
@@ -332,12 +519,12 @@ public class LocationTrackingService : ILocationTrackingService
         {
             try
             {
-                await Task.Delay(StationaryAddressCheckDelay, _stationaryCountdownCts.Token);
+                await Task.Delay(StationaryAddressCheckDelay, _stationaryCountdownCts.Token).ConfigureAwait(false);
 
                 // Countdown expired, check for address change
                 if (_stationaryLocationForAddressCheck != null)
                 {
-                    await CheckForAddressChangeAsync(_stationaryLocationForAddressCheck);
+                    await CheckForAddressChangeAsync(_stationaryLocationForAddressCheck).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -367,19 +554,39 @@ public class LocationTrackingService : ILocationTrackingService
     {
         try
         {
-            _logger.LogInformation("Checking for address change at ({Lat:F6}, {Lon:F6})",
+            _logger.LogDebug("Checking for address change at ({Lat:F6}, {Lon:F6})",
                 location.Latitude, location.Longitude);
 
-            // Get closest business/POI to determine address
-            var closestBusiness = await _locationService.GetClosestBusinessAsync(
+            // Try to get address from location service (reverse geocoding)
+            var currentAddress = await _locationService.GetAddressAsync(
                 location.Latitude,
                 location.Longitude,
-                maxDistanceMeters: 100); // Check within 100m
+                maxDistanceMeters: 500, // Check within 500m for address data
+                cancellationToken: default).ConfigureAwait(false);
 
-            var currentAddress = closestBusiness?.Address ??
-                                $"{location.Latitude:F6}, {location.Longitude:F6}";
+            // Try to get closest business
+            BusinessLocation? closestBusiness = null;
+            try
+            {
+                closestBusiness = await _locationService.GetClosestBusinessAsync(
+                    location.Latitude,
+                    location.Longitude,
+                    maxDistanceMeters: 100, // Check within 100m for businesses
+                    cancellationToken: default).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Error getting closest business, continuing without business info");
+            }
 
-            _logger.LogDebug("Current address: {Address}, Previous address: {PreviousAddress}",
+            // Fallback to coordinates if no address found
+            if (string.IsNullOrEmpty(currentAddress))
+            {
+                currentAddress = $"{location.Latitude:F6}, {location.Longitude:F6}";
+                _logger.LogDebug("No address found, using coordinates as fallback");
+            }
+
+            _logger.LogTrace("Current address: {Address}, Previous address: {PreviousAddress}",
                 currentAddress, _lastKnownAddress ?? "none");
 
             // Check if address has changed
@@ -403,6 +610,12 @@ public class LocationTrackingService : ILocationTrackingService
             {
                 _logger.LogDebug("Address unchanged: {Address}", currentAddress);
             }
+
+            // Save place where user became stationary (only if address changed or this is first time)
+            if (_lastKnownAddress != currentAddress || _lastKnownAddress == null)
+            {
+                await SaveStationaryPlaceAsync(location, currentAddress, closestBusiness).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
@@ -410,11 +623,181 @@ public class LocationTrackingService : ILocationTrackingService
         }
     }
 
+    private async Task SaveStationaryPlaceAsync(
+        GpsCoordinates location,
+        string address,
+        BusinessLocation? business)
+    {
+        try
+        {
+            var place = new StationaryPlaceEntity
+            {
+                DeviceId = _deviceId,
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                Address = address,
+                StationaryAt = DateTimeOffset.UtcNow,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            // Add business information if available
+            if (business != null)
+            {
+                place.BusinessName = business.Name;
+                place.Category = business.Category;
+                // Use business address if available, otherwise use the resolved address
+                if (!string.IsNullOrEmpty(business.Address))
+                {
+                    place.Address = business.Address;
+                }
+            }
+
+            _dbContext.StationaryPlaces.Add(place);
+            await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+
+            _logger.LogInformation("Saved stationary place: {BusinessName} at {Address}",
+                place.BusinessName ?? "Unknown", place.Address);
+
+            // Apply business theme if available (only when business has an Id, e.g. from Marketing DB)
+            if (business != null && business.Id != null && _themeService != null)
+            {
+                var businessId = business.Id.Value;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var applied = await _themeService.ApplyBusinessThemeAsync(businessId).ConfigureAwait(false);
+                        if (applied)
+                        {
+                            _logger.LogInformation("Applied business theme for business {BusinessId}", businessId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to apply business theme for business {BusinessId}", businessId);
+                    }
+                });
+            }
+            else if (business == null && _themeService != null)
+            {
+                // No business detected, check for city theme
+                var (city, state, country) = ExtractCityStateCountryFromAddress(address);
+                if (!string.IsNullOrEmpty(city))
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var applied = await _themeService.ApplyCityThemeAsync(city, state, country).ConfigureAwait(false);
+                            if (applied)
+                            {
+                                _logger.LogInformation("Applied city theme for city {CityName}", city);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to apply city theme for city {CityName}", city);
+                        }
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving stationary place");
+        }
+    }
+
+    /// <summary>
+    /// Extracts city, state, and country from an address string.
+    /// </summary>
+    private static (string? city, string? state, string? country) ExtractCityStateCountryFromAddress(string address)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+            return (null, null, null);
+
+        // Simple parsing: look for common patterns
+        // Format: "Street, City, State Country" or "Street, City, State, Country"
+        var parts = address.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (parts.Length < 2)
+            return (null, null, null);
+
+        // Last part might be "State Country" or just "Country"
+        var lastPart = parts[^1];
+        var secondLastPart = parts.Length >= 3 ? parts[^2] : null;
+
+        string? city = null;
+        string? state = null;
+        string? country = null;
+
+        // Try to extract city (usually second-to-last or third-to-last)
+        if (parts.Length >= 2)
+        {
+            city = parts[^2];
+        }
+
+        // Try to extract state and country from last part
+        var lastPartWords = lastPart.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (lastPartWords.Length >= 2)
+        {
+            // Assume format: "State Country"
+            state = string.Join(" ", lastPartWords.Take(lastPartWords.Length - 1));
+            country = lastPartWords[^1];
+        }
+        else if (lastPartWords.Length == 1)
+        {
+            // Could be either state or country - assume country if it's a known country code/name
+            var possibleCountry = lastPartWords[0];
+            if (possibleCountry.Length == 2 || possibleCountry.Equals("USA", StringComparison.OrdinalIgnoreCase) ||
+                possibleCountry.Equals("United States", StringComparison.OrdinalIgnoreCase))
+            {
+                country = possibleCountry;
+            }
+            else
+            {
+                state = possibleCountry;
+            }
+        }
+
+        return (city, state, country);
+    }
+
+    /// <summary>
+    /// Determines movement state from speed alone (for initial location when distance is not available).
+    /// Invalid or negative speed is treated as Stationary.
+    /// </summary>
+    private MovementState DetermineMovementStateFromSpeed(double speedMetersPerSecond)
+    {
+        if (speedMetersPerSecond < 0)
+        {
+            return MovementState.Stationary; // Invalid reading, assume not moving
+        }
+
+        var speedMph = GpsCalculator.MetersPerSecondToMph(speedMetersPerSecond);
+        
+        // Use a small threshold to account for GPS noise (e.g., 0.5 mph)
+        const double stationaryThresholdMph = 0.5;
+        
+        if (speedMph < stationaryThresholdMph)
+        {
+            return MovementState.Stationary;
+        }
+        else if (speedMph >= WalkingRidingSpeedThresholdMph)
+        {
+            return MovementState.Riding;
+        }
+        else
+        {
+            return MovementState.Walking;
+        }
+    }
+
     private MovementState DetermineMovementState(double currentDistance, double? currentSpeed)
     {
         if (_recentMovements.Count == 0)
         {
-            return MovementState.Unknown;
+            return MovementState.Stationary;
         }
 
         // Get movements within the stationary threshold duration
@@ -424,25 +807,52 @@ public class LocationTrackingService : ILocationTrackingService
             .ToList();
 
         // Need sufficient data points to make determination
-        var requiredSamples = Math.Max(3, (int)(StationaryThresholdDuration.TotalSeconds / PollingInterval.TotalSeconds));
-        if (recentMovementsInWindow.Count < requiredSamples)
+        // Use a reasonable minimum (3-5 samples) rather than requiring the full threshold duration
+        // This allows faster state detection while still requiring some history for stationary detection
+        // For full analysis, we want enough samples to cover a meaningful time window, but not the full 3 minutes
+        var minRequiredSamples = 3; // Minimum samples for any detection
+        var preferredSamples = Math.Min(10, (int)(TimeSpan.FromSeconds(10).TotalSeconds / PollingInterval.TotalSeconds)); // ~10 seconds of data
+        
+        // If we have very few samples, use speed-based early detection
+        if (recentMovementsInWindow.Count < minRequiredSamples)
         {
             // Not enough data yet, but check if currently moving with valid speed
-            if (currentSpeed.HasValue && currentDistance >= MinimumDistanceMeters)
+            // Use speed-based detection even with small distances for faster response
+            if (currentSpeed.HasValue && currentSpeed.Value > 0)
             {
                 var speedMph = GpsCalculator.MetersPerSecondToMph(currentSpeed.Value);
-                if (speedMph >= WalkingRidingSpeedThresholdMph)
+                // Use a small threshold to account for GPS noise (0.5 mph)
+                const double earlyDetectionStationaryThresholdMph = 0.5;
+                
+                if (speedMph < earlyDetectionStationaryThresholdMph)
+                {
+                    // Very slow or stationary
+                    if (currentDistance < StationaryDistanceThresholdMeters)
+                    {
+                        return MovementState.Stationary;
+                    }
+                }
+                else if (speedMph >= WalkingRidingSpeedThresholdMph)
                 {
                     return MovementState.Riding;
                 }
-                else if (speedMph > 0)
+                else
                 {
                     return MovementState.Walking;
                 }
             }
+            // If speed not available but we're moving a reasonable distance, check distance
+            else if (currentDistance >= StationaryDistanceThresholdMeters * 2)
+            {
+                // Moving but no speed data - use Moving state as fallback
+                return MovementState.Moving;
+            }
 
             return _currentMovementState;
         }
+        
+        // If we have some samples but not enough for full analysis, use simplified logic with speed
+        bool useFullAnalysis = recentMovementsInWindow.Count >= preferredSamples;
 
         // Calculate statistics
         var avgDistance = recentMovementsInWindow.Average(m => m.distance);
@@ -455,15 +865,56 @@ public class LocationTrackingService : ILocationTrackingService
             : null;
 
         _logger.LogDebug(
-            "Movement analysis: avg={AvgDist:F1}m, max={MaxDist:F1}m, avgSpeed={AvgSpeed:F2} m/s ({AvgSpeedMph:F1} mph), samples={Count}",
+            "Movement analysis: avg={AvgDist:F1}m, max={MaxDist:F1}m, avgSpeed={AvgSpeed:F2} m/s ({AvgSpeedMph:F1} mph), samples={Count}, fullAnalysis={FullAnalysis}",
             avgDistance,
             maxDistance,
             avgSpeed ?? 0,
             avgSpeed.HasValue ? GpsCalculator.MetersPerSecondToMph(avgSpeed.Value) : 0,
-            recentMovementsInWindow.Count);
+            recentMovementsInWindow.Count,
+            useFullAnalysis);
 
         // Determine state based on movement patterns and speed
+        // Use speed as primary indicator if available, fallback to distance patterns
+        const double stationaryThresholdMph = 0.5;
+        double? speedToCheck = currentSpeed ?? avgSpeed;
 
+        // If we have speed data, use it as primary indicator (faster and more accurate)
+        if (speedToCheck.HasValue)
+        {
+            var speedMph = GpsCalculator.MetersPerSecondToMph(speedToCheck.Value);
+            
+            if (speedMph < stationaryThresholdMph)
+            {
+                // Very slow - check if truly stationary based on distance patterns
+                if (useFullAnalysis)
+                {
+                    // With enough samples, use distance patterns to confirm stationary
+                    if (maxDistance < StationaryDistanceThresholdMeters && avgDistance < StationaryDistanceThresholdMeters / 2)
+                    {
+                        return MovementState.Stationary;
+                    }
+                    // Small movements but slow speed - might be GPS drift, maintain current state
+                }
+                else
+                {
+                    // With fewer samples, be more conservative - if distance is small, assume stationary
+                    if (currentDistance < StationaryDistanceThresholdMeters && maxDistance < StationaryDistanceThresholdMeters)
+                    {
+                        return MovementState.Stationary;
+                    }
+                }
+            }
+            else if (speedMph >= WalkingRidingSpeedThresholdMph)
+            {
+                return MovementState.Riding;
+            }
+            else
+            {
+                return MovementState.Walking;
+            }
+        }
+
+        // Speed not available - use distance patterns
         // Check for stationary state
         if (maxDistance < StationaryDistanceThresholdMeters && avgDistance < StationaryDistanceThresholdMeters / 2)
         {
@@ -471,27 +922,19 @@ public class LocationTrackingService : ILocationTrackingService
         }
 
         // Check for continuous motion (walking or riding)
-        if (currentDistance >= MinimumDistanceMeters || avgDistance >= StationaryDistanceThresholdMeters * 2 || maxDistance >= MinimumDistanceMeters)
+        // Use a lower threshold for detection - don't require MinimumDistanceMeters (50m) for state changes
+        if (currentDistance >= StationaryDistanceThresholdMeters || avgDistance >= StationaryDistanceThresholdMeters || maxDistance >= StationaryDistanceThresholdMeters)
         {
-            // Device is moving, now determine if walking or riding based on speed
-            double? speedToCheck = currentSpeed ?? avgSpeed;
-
-            if (speedToCheck.HasValue)
+            // Device is moving but no speed data - use Moving state as fallback
+            // With more samples, we could infer walking vs riding, but without speed it's uncertain
+            if (useFullAnalysis && (avgDistance >= StationaryDistanceThresholdMeters * 2 || maxDistance >= MinimumDistanceMeters))
             {
-                var speedMph = GpsCalculator.MetersPerSecondToMph(speedToCheck.Value);
-
-                if (speedMph >= WalkingRidingSpeedThresholdMph)
-                {
-                    return MovementState.Riding;
-                }
-                else if (speedMph > 0)
-                {
-                    return MovementState.Walking;
-                }
+                return MovementState.Moving;
             }
-
-            // Speed not available or invalid, use legacy Moving state
-            return MovementState.Moving;
+            else if (!useFullAnalysis && currentDistance >= StationaryDistanceThresholdMeters)
+            {
+                return MovementState.Moving;
+            }
         }
 
         // Maintain current state if unclear
@@ -522,7 +965,7 @@ public class LocationTrackingService : ILocationTrackingService
     {
         try
         {
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Storing location locally: ({Lat:F6}, {Lon:F6}) - State: {State}, Speed: {Speed:F1} mph",
                 location.Latitude,
                 location.Longitude,
@@ -544,10 +987,10 @@ public class LocationTrackingService : ILocationTrackingService
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
-            await _dbContext.DeviceLocationHistory.AddAsync(locationEntity, cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            await _dbContext.DeviceLocationHistory.AddAsync(locationEntity, cancellationToken).ConfigureAwait(false);
+            await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            _logger.LogInformation("Location stored locally (ID: {LocationId})", locationEntity.Id);
+            _logger.LogDebug("Location stored locally (ID: {LocationId})", locationEntity.Id);
             _lastReportedLocation = location;
             LocationUpdated?.Invoke(this, location);
         }
@@ -562,11 +1005,11 @@ public class LocationTrackingService : ILocationTrackingService
     {
         try
         {
-            _logger.LogInformation("NewLocationAddress event: {Address}", e.CurrentAddress);
+            _logger.LogDebug("NewLocationAddress event: {Address}", e.CurrentAddress);
 
             if (_locationWorkflowService != null)
             {
-                await _locationWorkflowService.HandleNewLocationAddressAsync(e);
+                await _locationWorkflowService.HandleNewLocationAddressAsync(e).ConfigureAwait(false);
             }
             else
             {
@@ -576,6 +1019,63 @@ public class LocationTrackingService : ILocationTrackingService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling NewLocationAddress event");
+        }
+    }
+
+    /// <summary>
+    /// Disposes of all resources, ensuring proper cleanup of CancellationTokenSource instances.
+    /// </summary>
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Protected dispose method to handle resource cleanup.
+    /// </summary>
+    /// <param name="disposing">True if called from Dispose(), false if from finalizer</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            // Stop tracking if still active. Do not block the calling thread (Dispose may run on main thread
+            // during activity lifecycle) — cancel so the loop exits; avoid Wait() to prevent ANR.
+            if (IsTracking)
+            {
+                try
+                {
+                    _trackingCts?.Cancel();
+                    _trackingCts?.Dispose();
+                    _trackingCts = null;
+                    _trackingTask = null;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error stopping tracking during disposal");
+                }
+            }
+
+            // Ensure stationary countdown is reset
+            ResetStationaryCountdown();
+
+            // Dispose tracking cancellation token source if still exists
+            if (_trackingCts != null)
+            {
+                try
+                {
+                    _trackingCts.Cancel();
+                    _trackingCts.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error disposing tracking cancellation token source");
+                }
+                finally
+                {
+                    _trackingCts = null;
+                }
+            }
         }
     }
 }

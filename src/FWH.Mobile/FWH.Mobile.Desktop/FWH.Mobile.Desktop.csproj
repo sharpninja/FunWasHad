@@ -28,7 +28,7 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug' and '$(Configuration)' != 'Staging'">All</PrivateAssets>
     </PackageReference>
   </ItemGroup>
-  
+
   <!-- Windows SDK reference - use FrameworkReference instead of PackageReference for better compatibility -->
   <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0-windows'))">
     <FrameworkReference Include="Microsoft.Windows.SDK.NET.Ref" />
@@ -37,5 +37,12 @@
   <ItemGroup>
     <ProjectReference Include="..\FWH.Mobile\FWH.Mobile.csproj" />
     <ProjectReference Include="..\..\FWH.Common.Location\FWH.Common.Location.csproj" />
+  </ItemGroup>
+
+  <!-- Allow test projects to access internal types -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>FWH.Mobile.Desktop.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 </Project>

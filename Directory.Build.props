@@ -1,16 +1,29 @@
 <Project>
   <PropertyGroup>
+    <!-- Default to Staging for local builds when no configuration is specified (CI passes -c explicitly) -->
+    <Configuration Condition="'$(Configuration)' == ''">Staging</Configuration>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
 
     <!--
-      Adding NoWarn to remove build warnings
-      NU1507: Warning when there are multiple package sources when using CPM with no source mapping
-      NETSDK1201: Warning that specifying RID won't create self containing app
-      PRI257: Ignore default language (en) not being one of the included resources (eg en-us, en-uk)
+      Code analyzers (MVP-SUPPORT-003): .NET analyzers across the solution.
+      - EnableNETAnalyzers: on by default for SDK 5+; explicit for clarity.
+      - AnalysisLevel: 9.0-all = all rules recommended for .NET 9; override in .editorconfig per project if needed.
+      - Analyzer violations report as warnings by default; set TreatWarningsAsErrors or rule severity in .editorconfig to elevate.
     -->
-    <NoWarn>$(NoWarn);NU1507;NETSDK1201;PRI257;NU1605</NoWarn>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>9.0-all</AnalysisLevel>
   </PropertyGroup>
+  
+  <!-- Enable Microsoft Testing Platform for xUnit 3 test projects -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true' OR '$(MSBuildProjectName)' == 'PlantUmlRender.Tests' OR '$(MSBuildProjectName)' == 'FWH.Common.Chat.Tests' OR '$(MSBuildProjectName)' == 'FWH.MarketingApi.Tests' OR '$(MSBuildProjectName)' == 'FWH.Common.Workflow.Tests' OR '$(MSBuildProjectName)' == 'FWH.Mobile.Data.Tests' OR '$(MSBuildProjectName)' == 'FWH.Mobile.Services.Tests' OR '$(MSBuildProjectName)' == 'FWH.Common.Location.Tests' OR '$(MSBuildProjectName)' == 'FWH.Common.Imaging.Tests' OR '$(MSBuildProjectName)' == 'FWH.Mobile.Tests' OR '$(MSBuildProjectName)' == 'FWH.Location.Api.Tests' OR '$(MSBuildProjectName)' == 'FWH.Mobile.Desktop.Tests'">
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+  </PropertyGroup>
+
+  <!-- Microsoft.CodeAnalysis.NetAnalyzers: CA rules (null checks, disposal, async, security, etc.). PrivateAssets=all: analyzers only, not flow to downstream. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" PrivateAssets="all" />
+  </ItemGroup>
 </Project>

@@ -14,10 +14,18 @@
     <PackageVersion Include="Avalonia.iOS" Version="11.3.9" />
     <PackageVersion Include="Avalonia.Browser" Version="11.3.9" />
     <PackageVersion Include="Avalonia.Android" Version="11.3.9" />
+    <PackageVersion Include="Mapsui.Avalonia" Version="5.0.0" />
+    <!-- Font Awesome Icons for Avalonia UI (replacing MaterialIcons) -->
+    <PackageVersion Include="Projektanker.Icons.Avalonia" Version="9.6.2" />
+    <PackageVersion Include="Projektanker.Icons.Avalonia.FontAwesome" Version="9.6.2" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
     <PackageVersion Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.2.0" />
+    <!-- Code analyzers (MVP-SUPPORT-003); NetAnalyzers also in root Directory.Packages.props -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
   </ItemGroup>
 </Project>

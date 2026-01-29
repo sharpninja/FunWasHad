@@ -9,15 +9,23 @@ on:
       marketing_api_changed:
         required: true
         type: string
+      legal_web_changed:
+        required: true
+        type: string
       location_api_image:
         required: true
         type: string
       marketing_api_image:
         required: true
         type: string
-      railway_project_id:
+      legal_web_image:
         required: true
         type: string
+    secrets:
+      railway_project_id:
+        required: true
+      railway_token:
+        required: true
 
 jobs:
   deploy_railway:
@@ -27,12 +35,12 @@ jobs:
     if: |
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/staging') &&
-      (inputs.location_api_changed == 'true' || inputs.marketing_api_changed == 'true')
+      (inputs.location_api_changed == 'true' || inputs.marketing_api_changed == 'true' || inputs.legal_web_changed == 'true')
     environment:
       name: staging
       url: https://staging.up.railway.app
     env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_TOKEN: ${{ secrets.railway_token }}
 
     steps:
       - name: Checkout repository
@@ -43,23 +51,28 @@ jobs:
         run: |
           LOCATION_IMAGE="${{ inputs.location_api_image }}:staging-latest"
           MARKETING_IMAGE="${{ inputs.marketing_api_image }}:staging-latest"
+          LEGAL_WEB_IMAGE="${{ inputs.legal_web_image }}:staging-latest"
           echo "location_image=$LOCATION_IMAGE" >> $GITHUB_OUTPUT
           echo "marketing_image=$MARKETING_IMAGE" >> $GITHUB_OUTPUT
+          echo "legal_web_image=$LEGAL_WEB_IMAGE" >> $GITHUB_OUTPUT
           echo "📦 Location API image: $LOCATION_IMAGE"
           echo "📦 Marketing API image: $MARKETING_IMAGE"
+          echo "📦 Legal Web (MarkdownServer) image: $LEGAL_WEB_IMAGE"
 
       - name: Verify previous Docker builds succeeded
         run: |
           echo "🔍 Verifying Docker images were built successfully..."
           echo "✅ Location API Docker image: ${{ inputs.location_api_image }}:staging-latest"
           echo "✅ Marketing API Docker image: ${{ inputs.marketing_api_image }}:staging-latest"
+          echo "✅ Legal Web Docker image: ${{ inputs.legal_web_image }}:staging-latest"
           echo ""
           echo "💡 Note: Railway services must be pre-configured in dashboard to use Docker images from GHCR"
           echo "💡 Configure in Railway: Service Settings → Source → Docker Image"
           echo "💡 Image paths:"
           echo "   - Location API: ${{ inputs.location_api_image }}:staging-latest"
           echo "   - Marketing API: ${{ inputs.marketing_api_image }}:staging-latest"
-          echo "💡 Dashboard: https://railway.com/project/${{ inputs.railway_project_id }}"
+          echo "   - Legal Web: ${{ inputs.legal_web_image }}:staging-latest"
+          echo "💡 Dashboard: https://railway.com/project/${{ secrets.railway_project_id }}"
 
       - name: Deploy Location API to Railway
         if: inputs.location_api_changed == 'true'
@@ -69,12 +82,16 @@ jobs:
         if: inputs.marketing_api_changed == 'true'
         run: railway redeploy -s staging-marketing-api -y
 
+      - name: Deploy Legal Web to Railway
+        if: inputs.legal_web_changed == 'true'
+        run: railway redeploy -s staging-legal-web -y
+
       - name: Wait for deployments
         run: sleep 60
 
       - name: Health check Location API
         run: |
           echo "🏥 Checking Location API health..."
-          echo "💡 Check Railway dashboard for the service URL: https://railway.com/project/${{ inputs.railway_project_id }}"
+          echo "💡 Check Railway dashboard for the service URL: https://railway.com/project/${{ secrets.railway_project_id }}"
           echo "⚠️  Health check skipped - use Railway dashboard to verify deployment status"
         continue-on-error: true

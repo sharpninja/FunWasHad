@@ -13,14 +13,34 @@ namespace FWH.Mobile.Desktop.Tests.Services;
 /// </summary>
 public class WindowsGpsServiceTests
 {
+    /// <summary>
+    /// Tests that WindowsGpsService constructor completes without throwing exceptions.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The WindowsGpsService constructor's ability to initialize without throwing exceptions, even if Windows location services are not available.</para>
+    /// <para><strong>Data involved:</strong> A new WindowsGpsService instance created using the default constructor. No additional configuration or setup is required.</para>
+    /// <para><strong>Why the data matters:</strong> The constructor should be safe to call regardless of Windows location service availability. It should initialize the service object without throwing exceptions, allowing the service to be created and then checked for availability via IsLocationAvailable. This enables dependency injection scenarios where services are constructed before their capabilities are known.</para>
+    /// <para><strong>Expected outcome:</strong> The constructor should complete without throwing any exceptions.</para>
+    /// <para><strong>Reason for expectation:</strong> Object construction should be a lightweight operation that doesn't depend on external services being available. The constructor should initialize internal state only, and actual location service availability should be checked via IsLocationAvailable or GetCurrentLocationAsync. The null exception confirms construction succeeded, allowing the service to be safely instantiated in DI containers.</para>
+    /// </remarks>
     [Fact]
-    public void Constructor_ShouldNotThrow()
+    public void ConstructorShouldNotThrow()
     {
         // Act & Assert
         var exception = Record.Exception(() => new WindowsGpsService());
         Assert.Null(exception);
     }
 
+    /// <summary>
+    /// Tests that WindowsGpsService.IsLocationAvailable returns a boolean value indicating whether location services are available on the Windows device.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The WindowsGpsService.IsLocationAvailable property's ability to return a boolean value indicating location service availability.</para>
+    /// <para><strong>Data involved:</strong> A new WindowsGpsService instance. The IsLocationAvailable property is accessed, which should return a boolean value (true if location services are available, false otherwise).</para>
+    /// <para><strong>Why the data matters:</strong> Location availability must be checked before attempting to get location data. The property should return a valid boolean value that accurately reflects whether Windows location services are available and enabled on the device. This enables the application to handle unavailable location services gracefully.</para>
+    /// <para><strong>Expected outcome:</strong> IsLocationAvailable should return a boolean value (true or false), confirming the property works correctly.</para>
+    /// <para><strong>Reason for expectation:</strong> The property should query Windows location service availability and return a boolean result. The exact value (true/false) depends on device configuration and permissions, but it should always be a valid boolean. The type assertion confirms the property returns the correct type, enabling conditional logic based on availability.</para>
+    /// </remarks>
     [Fact]
     public void IsLocationAvailable_ShouldReturnBool()
     {
@@ -34,8 +54,18 @@ public class WindowsGpsServiceTests
         Assert.IsType<bool>(isAvailable);
     }
 
+    /// <summary>
+    /// Tests that WindowsGpsService.RequestLocationPermissionAsync returns a boolean value indicating whether location permission was granted.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The WindowsGpsService.RequestLocationPermissionAsync method's ability to request location permission from Windows and return a boolean result.</para>
+    /// <para><strong>Data involved:</strong> A new WindowsGpsService instance. RequestLocationPermissionAsync is called, which should request location permission from Windows and return a boolean value (true if granted, false if denied).</para>
+    /// <para><strong>Why the data matters:</strong> Location permission is required to access GPS data on Windows. The method should request permission from the operating system and return a clear result indicating whether permission was granted. This enables the application to handle permission denial gracefully.</para>
+    /// <para><strong>Expected outcome:</strong> RequestLocationPermissionAsync should return a boolean value (true or false), confirming the method works correctly and returns a valid result.</para>
+    /// <para><strong>Reason for expectation:</strong> The method should interact with Windows location permission APIs and return a boolean result. The exact value (true/false) depends on user consent and system settings, but it should always be a valid boolean. The type assertion confirms the method returns the correct type, enabling conditional logic based on permission status.</para>
+    /// </remarks>
     [Fact]
-    public async Task RequestLocationPermissionAsync_ShouldReturnBool()
+    public async Task RequestLocationPermissionAsyncShouldReturnBool()
     {
         // Arrange
         var service = new WindowsGpsService();
@@ -82,7 +112,8 @@ public class WindowsGpsServiceTests
     {
         // Arrange
         var service = new WindowsGpsService();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(5));
 
         // Act
         var coordinates = await service.GetCurrentLocationAsync(cts.Token);
@@ -96,8 +127,8 @@ public class WindowsGpsServiceTests
     {
         // Arrange
         var service = new WindowsGpsService();
-        using var cts = new CancellationTokenSource();
-        
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+
         // Act
         var task = service.GetCurrentLocationAsync(cts.Token);
         cts.Cancel(); // Cancel immediately
@@ -270,8 +301,18 @@ public class GpsCoordinatesValidationTests
         Assert.Null(coordinates.AltitudeMeters);
     }
 
+    /// <summary>
+    /// Tests that GpsCoordinates optional properties (AccuracyMeters, AltitudeMeters, Timestamp) can be set using object initializer syntax, allowing all properties to be configured.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The GpsCoordinates class's support for object initializer syntax, allowing all properties (including optional ones) to be set during object creation.</para>
+    /// <para><strong>Data involved:</strong> A GpsCoordinates instance created using object initializer syntax with all properties set: Latitude=37.7749, Longitude=-122.4194, AccuracyMeters=50.0, AltitudeMeters=100.0, Timestamp=UtcNow. This tests that optional properties can be set when provided.</para>
+    /// <para><strong>Why the data matters:</strong> Object initializer syntax provides a convenient way to create coordinate objects with all properties set in a single statement. This is useful when all GPS data is available and needs to be set. The test validates that the class supports this initialization pattern.</para>
+    /// <para><strong>Expected outcome:</strong> All properties should match the values set in the object initializer: Latitude=37.7749, Longitude=-122.4194, AccuracyMeters=50.0, AltitudeMeters=100.0, and Timestamp should not be the default value.</para>
+    /// <para><strong>Reason for expectation:</strong> The GpsCoordinates class should support object initializer syntax, allowing all properties to be set during initialization. The property values should be set exactly as specified in the initializer. The matching values confirm that object initializer syntax works correctly and all properties can be set, providing flexibility in coordinate creation.</para>
+    /// </remarks>
     [Fact]
-    public void GpsCoordinates_OptionalProperties_CanBeSet()
+    public void GpsCoordinatesOptionalPropertiesCanBeSet()
     {
         // Arrange & Act
         var coordinates = new GpsCoordinates

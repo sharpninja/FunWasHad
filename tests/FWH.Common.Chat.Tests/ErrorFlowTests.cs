@@ -1,17 +1,10 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Threading;
+using FWH.Common.Chat.Tests.TestFixtures;
+using FWH.Common.Chat.ViewModels;
+using FWH.Common.Workflow;
+using FWH.Mobile.Data.Models;
+using FWH.Mobile.Data.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.EntityFrameworkCore;
-using FWH.Common.Chat.Tests.TestFixtures;
-using FWH.Mobile.Data.Data;
-using FWH.Mobile.Data.Repositories;
-using FWH.Mobile.Data.Models;
-using FWH.Common.Workflow;
-using FWH.Common.Chat.ViewModels;
-using FWH.Common.Chat;
 using Xunit;
 
 namespace FWH.Common.Chat.Tests;
@@ -57,8 +50,18 @@ public class ErrorFlowTests : IClassFixture<SqliteTestFixture>
         public Task<bool> UpdateCurrentNodeIdAsync(string workflowDefinitionId, string? currentNodeId, CancellationToken cancellationToken = default) => _inner.UpdateCurrentNodeIdAsync(workflowDefinitionId, currentNodeId, cancellationToken);
     }
 
+    /// <summary>
+    /// Tests that when the workflow repository throws an exception during UpdateCurrentNodeIdAsync, the error is logged with proper scopes (Operation, WorkflowId) and the exception is captured.
+    /// </summary>
+    /// <remarks>
+    /// <para><strong>What is being tested:</strong> The error handling and logging behavior when workflow state persistence fails due to repository exceptions.</para>
+    /// <para><strong>Data involved:</strong> A ThrowOnUpdateRepository wrapper that throws InvalidOperationException when UpdateCurrentNodeIdAsync is called. A workflow with branching node A is imported, rendered to chat, and a choice is selected, which triggers workflow advancement and attempts to update the current node ID, causing the exception.</para>
+    /// <para><strong>Why the data matters:</strong> Database failures, connection issues, or constraint violations can cause repository operations to throw exceptions. The workflow system must handle these gracefully by logging errors with sufficient context (operation name, workflow ID) for debugging. This test validates that exceptions are caught, logged with proper scopes, and don't crash the application.</para>
+    /// <para><strong>Expected outcome:</strong> After selecting a choice, a log entry should be captured with Level=Error or Warning, containing scopes with Operation="UpdateCurrentNodeId" and WorkflowId matching the workflow definition ID, and the Exception property should not be null.</para>
+    /// <para><strong>Reason for expectation:</strong> The workflow controller should catch exceptions from UpdateCurrentNodeIdAsync, create a logging scope with Operation="UpdateCurrentNodeId" and WorkflowId, and log the error. The scopes allow filtering logs by operation and workflow, and the exception details enable debugging. The presence of the exception in the log confirms error details are preserved for troubleshooting.</para>
+    /// </remarks>
     [Fact]
-    public async Task Advance_WhenRepoThrows_UpdateLogsExceptionAndContainsCorrelationAndWorkflowScope()
+    public async Task AdvanceWhenRepoThrowsUpdateLogsExceptionAndContainsCorrelationAndWorkflowScope()
     {
         var sp = _fixture.CreateServiceProvider(services =>
         {
@@ -78,20 +81,20 @@ public class ErrorFlowTests : IClassFixture<SqliteTestFixture>
         var chatList = sp.GetRequiredService<ChatListViewModel>();
 
         var plant = "@startuml\n[*] --> A\n:A;\nA --> B\nA --> C\n@enduml";
-        var def = await wfSvc.ImportWorkflowAsync(plant, "wf_err_update", "ErrUpdate");
+        var def = await wfSvc.ImportWorkflowAsync(plant, "wf_err_update", "ErrUpdate").ConfigureAwait(true);
 
         // Render and select first choice which will trigger UpdateCurrentNodeIdAsync that throws
-        await chatSvc.RenderWorkflowStateAsync(def.Id);
+        await chatSvc.RenderWorkflowStateAsync(def.Id).ConfigureAwait(true);
         var choiceEntry = chatList.Entries.Last() as ChoiceChatEntry;
         Assert.NotNull(choiceEntry);
         var first = choiceEntry!.Choices[0];
 
-        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)first.SelectChoiceCommand).ExecuteAsync(first);
+        await ((CommunityToolkit.Mvvm.Input.IAsyncRelayCommand)first.SelectChoiceCommand).ExecuteAsync(first).ConfigureAwait(true);
 
         // Wait for repository UpdateCurrentNodeId Operation log (warning/error) containing WorkflowId
         var log = await _fixture.LoggerProvider.WaitForEntryAsync(e =>
             (e.Level == LogLevel.Error || e.Level == LogLevel.Warning) && e.ScopesParsed.Any(d => d.ContainsKey("Operation") && d["Operation"]?.ToString() == "UpdateCurrentNodeId" && d.ContainsKey("WorkflowId") && d["WorkflowId"]?.ToString() == def.Id)
-        );
+        ).ConfigureAwait(true);
 
         Assert.NotNull(log);
         Assert.True(log!.Level == LogLevel.Warning || log.Level == LogLevel.Error);
@@ -100,7 +103,7 @@ public class ErrorFlowTests : IClassFixture<SqliteTestFixture>
     }
 
     [Fact]
-    public async Task Import_WhenRepoThrows_ErrorLoggedWithPersistScope()
+    public async Task ImportWhenRepoThrowsErrorLoggedWithPersistScope()
     {
         var sp = _fixture.CreateServiceProvider(services =>
         {
@@ -114,12 +117,12 @@ public class ErrorFlowTests : IClassFixture<SqliteTestFixture>
 
         var plant = "@startuml\n[*] --> Start\n:Start;\nStart --> End\n@enduml";
 
-        var def = await wfSvc.ImportWorkflowAsync(plant, "wf_err_create", "ErrCreate");
+        var def = await wfSvc.ImportWorkflowAsync(plant, "wf_err_create", "ErrCreate").ConfigureAwait(true);
 
         // Wait for error log with PersistDefinition scope
         var log = await _fixture.LoggerProvider.WaitForEntryAsync(e =>
             e.Level == LogLevel.Error && e.ScopesParsed.Any(d => d.ContainsKey("Operation") && d["Operation"]?.ToString() == "PersistDefinition" && d.ContainsKey("WorkflowId") && d["WorkflowId"]?.ToString() == def.Id)
-        );
+        ).ConfigureAwait(true);
 
         Assert.NotNull(log);
         Assert.Equal(LogLevel.Error, log!.Level);

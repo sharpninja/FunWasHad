@@ -1,7 +1,10 @@
 using Avalonia.Controls;
+using Avalonia.Media;
+using Avalonia.VisualTree;
 using FWH.Mobile.ViewModels;
-using FWH.Common.Chat.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace FWH.Mobile.Views;
 
@@ -9,28 +12,33 @@ public partial class MainView : UserControl
 {
     public MainView()
     {
-        InitializeComponent();
-        
-        Loaded += (_, _) =>
-        {
-            var logViewer = this.FindControl<LogViewerControl>("LogViewer");
-            if (logViewer != null)
-            {
-                logViewer.DataContext = App.ServiceProvider.GetRequiredService<LogViewerViewModel>();
-            }
+        // Set DataContext to MainViewModel before InitializeComponent
+        ViewModel = App.ServiceProvider.GetRequiredService<MainViewModel>();
 
-            // Set DataContext for MovementStateControl
-            var movementStateControl = this.FindControl<MovementStateControl>("MovementState");
-            if (movementStateControl != null)
+        InitializeComponent();
+
+        // Set up log view row height based on build configuration
+        this.Loaded += (s, e) =>
+        {
+            var grid = this.FindControl<Grid>("MainGrid");
+            if (grid != null && grid.RowDefinitions.Count > 1)
             {
-                movementStateControl.DataContext = App.ServiceProvider.GetRequiredService<MovementStateViewModel>();
+                var logViewRow = grid.RowDefinitions[1];
+                if (ViewModel.ShowLogViewAlways)
+                {
+                    logViewRow.Height = new GridLength(1, GridUnitType.Star);
+                }
+                else
+                {
+                    logViewRow.Height = new GridLength(0);
+                }
             }
         };
     }
 
-    public FWH.Common.Chat.ViewModels.ChatViewModel? ViewModel
+    public MainViewModel? ViewModel
     {
-        get => DataContext as FWH.Common.Chat.ViewModels.ChatViewModel;
+        get => DataContext as MainViewModel;
         set => DataContext = value;
     }
 }

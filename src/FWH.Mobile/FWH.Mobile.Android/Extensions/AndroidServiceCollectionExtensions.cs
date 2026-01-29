@@ -1,9 +1,8 @@
-using Android.App;
-using Microsoft.Extensions.DependencyInjection;
 using FWH.Common.Chat.Services;
 using FWH.Common.Location;
-using FWH.Mobile.Droid.Services;
 using FWH.Mobile.Android.Services;
+using FWH.Mobile.Droid.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FWH.Mobile.Android;
 

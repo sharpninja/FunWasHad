@@ -16,6 +16,9 @@ jobs:
   build_and_test:
     name: Build and Test
     runs-on: windows-2022
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: Checkout repository
@@ -35,21 +38,28 @@ jobs:
           build-outputs-key-suffix: -${{ github.sha }}
 
       - name: Restore dependencies
-        run: |
-          dotnet restore FunWasHad.sln
-          dotnet restore src/FWH.Location.Api/FWH.Location.Api.csproj
-          dotnet restore src/FWH.MarketingApi/FWH.MarketingApi.csproj
+        run: dotnet restore FunWasHad.sln
 
       - name: Build solution
         run: |
           dotnet build src/FWH.Location.Api/FWH.Location.Api.csproj --no-restore --configuration ${{ inputs.build_configuration }}
           dotnet build src/FWH.MarketingApi/FWH.MarketingApi.csproj --no-restore --configuration ${{ inputs.build_configuration }}
+          dotnet build src/FWH.Legal.Web/FWH.Legal.Web.csproj --no-restore --configuration ${{ inputs.build_configuration }}
 
       - name: Run tests
-        run: |
-          dotnet test tests/FWH.Common.Location.Tests/FWH.Common.Location.Tests.csproj --configuration ${{ inputs.build_configuration }} --verbosity normal
-          dotnet test tests/FWH.MarketingApi.Tests/FWH.MarketingApi.Tests.csproj --configuration ${{ inputs.build_configuration }} --verbosity normal
-        continue-on-error: true
+        run: dotnet test FunWasHad.sln --configuration ${{ inputs.build_configuration }} --no-restore --settings coverlet.runsettings --collect "XPlat code coverage" --verbosity normal
+
+      - name: Restore dotnet tools
+        run: dotnet tool restore
+
+      - name: Update coverage report
+        run: ./scripts/Update-CoverageReport.ps1 -SkipTests
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: docs/Coverage-Report.md
 
       - name: Publish Location API
         run: dotnet publish src/FWH.Location.Api/FWH.Location.Api.csproj --configuration ${{ inputs.build_configuration }} --output ./publish/location-api --no-restore
@@ -69,4 +79,14 @@ jobs:
         with:
           name: marketing-api
           path: ./publish/marketing-api
+          retention-days: 1
+
+      - name: Publish Legal Web (MarkdownServer)
+        run: dotnet publish src/FWH.Legal.Web/FWH.Legal.Web.csproj --configuration ${{ inputs.build_configuration }} --output ./publish/legal-web --no-restore
+
+      - name: Upload Legal Web artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: legal-web
+          path: ./publish/legal-web
           retention-days: 1

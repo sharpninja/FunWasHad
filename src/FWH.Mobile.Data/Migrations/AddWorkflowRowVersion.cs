@@ -12,6 +12,7 @@ public partial class AddWorkflowRowVersion : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
+        ArgumentNullException.ThrowIfNull(migrationBuilder);
         migrationBuilder.AddColumn<byte[]>(
             name: "RowVersion",
             table: "WorkflowDefinitions",
@@ -23,6 +24,7 @@ public partial class AddWorkflowRowVersion : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        ArgumentNullException.ThrowIfNull(migrationBuilder);
         migrationBuilder.DropColumn(
             name: "RowVersion",
             table: "WorkflowDefinitions");
