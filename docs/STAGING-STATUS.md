@@ -5,14 +5,14 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 ## Latest Run Information
 
-- **Run Number**: #122
-- **Run ID**: 21491953612
+- **Run Number**: #121
+- **Run ID**: 21491952639
 - **Status**: failure
 - **Branch**: develop
 - **Commit**: [`0cf821b`](https://github.com/sharpninja/FunWasHad/commit/0cf821b50e6b641dd34c707d8732a6c3e377480f)
-- **Started**: 2026-01-29T19:31:22Z
-- **Completed**: 2026-01-29T19:34:43Z
-- **Run URL**: [View on GitHub](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612)
+- **Started**: 2026-01-29T19:31:20Z
+- **Completed**: 2026-01-29T19:35:54Z
+- **Run URL**: [View on GitHub](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639)
 
 ---
 
@@ -20,14 +20,14 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 | Job Name | Status | Duration | Conclusion |
 |----------|--------|----------|------------|
-| Detect Changes | completed | 7s | success |
 | Get Configuration | completed | 4s | success |
-| Build and Test / Build and Test | completed | 180s | failure |
-| Build Legal Web Docker Image | completed | -1s | skipped |
-| Build Marketing API Docker Image | completed | -1s | skipped |
-| Build Mobile Android | completed | -1s | skipped |
-| Build Location API Docker Image | completed | -1s | skipped |
-| Deploy to Railway / Deploy to Railway Staging | completed | 0s | skipped |
+| Detect Changes | completed | 4s | success |
+| Build and Test / Build and Test | completed | 172s | failure |
+| Deploy to Railway / Deploy to Railway Staging | completed | 81s | success |
+| Build Mobile Android | completed | 0s | skipped |
+| Build Legal Web Docker Image | completed | 0s | skipped |
+| Build Location API Docker Image | completed | 0s | skipped |
+| Build Marketing API Docker Image | completed | 0s | skipped |
 | Notify Deployment Status / Notify Deployment Status | completed | 3s | success |
 | Create Android Release | completed | 0s | skipped |
 | Reset force-build-all Flag | completed | 0s | skipped |
@@ -36,11 +36,26 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 ## Detailed Job Information
 
+### Get Configuration
+
+- **Status**: completed
+- **Conclusion**: success
+- **Job ID**: [`61916518494`](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639/job/61916518494)
+
+#### Steps:
+
+| Step | Status | Conclusion |
+|------|--------|------------|
+| Set up job | completed | success |
+| Set Configuration Values | completed | success |
+| Complete job | completed | success |
+
+
 ### Detect Changes
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61916521159`](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612/job/61916521159)
+- **Job ID**: [`61916518516`](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639/job/61916518516)
 
 #### Steps:
 
@@ -54,26 +69,11 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 | Complete job | completed | success |
 
 
-### Get Configuration
-
-- **Status**: completed
-- **Conclusion**: success
-- **Job ID**: [`61916521180`](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612/job/61916521180)
-
-#### Steps:
-
-| Step | Status | Conclusion |
-|------|--------|------------|
-| Set up job | completed | success |
-| Set Configuration Values | completed | success |
-| Complete job | completed | success |
-
-
 ### Build and Test / Build and Test
 
 - **Status**: completed
 - **Conclusion**: failure
-- **Job ID**: [`61916537301`](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612/job/61916537301)
+- **Job ID**: [`61916531630`](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639/job/61916531630)
 
 #### Steps:
 
@@ -101,46 +101,64 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 | Complete job | completed | success |
 
 
-### Build Legal Web Docker Image
+### Deploy to Railway / Deploy to Railway Staging
 
 - **Status**: completed
-- **Conclusion**: skipped
-- **Job ID**: [`61916862236`](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612/job/61916862236)
+- **Conclusion**: success
+- **Job ID**: [`61916838638`](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639/job/61916838638)
 
+#### Steps:
 
-### Build Marketing API Docker Image
-
-- **Status**: completed
-- **Conclusion**: skipped
-- **Job ID**: [`61916862288`](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612/job/61916862288)
+| Step | Status | Conclusion |
+|------|--------|------------|
+| Set up job | completed | success |
+| Initialize containers | completed | success |
+| Checkout repository | completed | success |
+| Get image tags | completed | success |
+| Verify previous Docker builds succeeded | completed | success |
+| Deploy Location API to Railway | completed | success |
+| Deploy Marketing API to Railway | completed | success |
+| Deploy Legal Web to Railway | completed | success |
+| Wait for deployments | completed | success |
+| Health check Location API | completed | success |
+| Post Checkout repository | completed | success |
+| Stop containers | completed | success |
+| Complete job | completed | success |
 
 
 ### Build Mobile Android
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61916862387`](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612/job/61916862387)
+- **Job ID**: [`61916838707`](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639/job/61916838707)
+
+
+### Build Legal Web Docker Image
+
+- **Status**: completed
+- **Conclusion**: skipped
+- **Job ID**: [`61916838749`](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639/job/61916838749)
 
 
 ### Build Location API Docker Image
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61916862415`](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612/job/61916862415)
+- **Job ID**: [`61916838958`](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639/job/61916838958)
 
 
-### Deploy to Railway / Deploy to Railway Staging
+### Build Marketing API Docker Image
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61916862743`](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612/job/61916862743)
+- **Job ID**: [`61916839009`](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639/job/61916839009)
 
 
 ### Notify Deployment Status / Notify Deployment Status
 
 - **Status**: completed
 - **Conclusion**: success
-- **Job ID**: [`61916863086`](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612/job/61916863086)
+- **Job ID**: [`61916984663`](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639/job/61916984663)
 
 #### Steps:
 
@@ -158,14 +176,14 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61916863312`](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612/job/61916863312)
+- **Job ID**: [`61916984792`](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639/job/61916984792)
 
 
 ### Reset force-build-all Flag
 
 - **Status**: completed
 - **Conclusion**: skipped
-- **Job ID**: [`61916871623`](https://github.com/sharpninja/FunWasHad/actions/runs/21491953612/job/61916871623)
+- **Job ID**: [`61916994595`](https://github.com/sharpninja/FunWasHad/actions/runs/21491952639/job/61916994595)
 
 
 ---
@@ -178,11 +196,11 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 <summary>View Error Log Excerpt</summary>
 
 ```
-2026-01-29T19:34:32.8908889Z D:\a\FunWasHad\FunWasHad\src\FWH.AppHost\FWH.AppHost.csproj : error NU1605: Warning As Error: Detected package downgrade: KubernetesClient from 18.0.5 to 17.0.14. Reference the package directly from the project to select a different version.  [D:\a\FunWasHad\FunWasHad\FunWasHad.sln]
-2026-01-29T19:34:32.8912044Z D:\a\FunWasHad\FunWasHad\src\FWH.AppHost\FWH.AppHost.csproj : error NU1605:  FWH.AppHost -> Aspire.Hosting.AppHost 13.1.0 -> KubernetesClient (>= 18.0.5)  [D:\a\FunWasHad\FunWasHad\FunWasHad.sln]
-2026-01-29T19:34:32.8913535Z D:\a\FunWasHad\FunWasHad\src\FWH.AppHost\FWH.AppHost.csproj : error NU1605:  FWH.AppHost -> KubernetesClient (>= 17.0.14) [D:\a\FunWasHad\FunWasHad\FunWasHad.sln]
-2026-01-29T19:34:32.9081244Z   Failed to restore D:\a\FunWasHad\FunWasHad\src\FWH.AppHost\FWH.AppHost.csproj (in 38.6 sec).
-2026-01-29T19:34:33.2261711Z ##[error]Process completed with exit code 1.
+2026-01-29T19:34:20.6054348Z D:\a\FunWasHad\FunWasHad\src\FWH.AppHost\FWH.AppHost.csproj : error NU1605: Warning As Error: Detected package downgrade: KubernetesClient from 18.0.5 to 17.0.14. Reference the package directly from the project to select a different version.  [D:\a\FunWasHad\FunWasHad\FunWasHad.sln]
+2026-01-29T19:34:20.6057097Z D:\a\FunWasHad\FunWasHad\src\FWH.AppHost\FWH.AppHost.csproj : error NU1605:  FWH.AppHost -> Aspire.Hosting.AppHost 13.1.0 -> KubernetesClient (>= 18.0.5)  [D:\a\FunWasHad\FunWasHad\FunWasHad.sln]
+2026-01-29T19:34:20.6058992Z D:\a\FunWasHad\FunWasHad\src\FWH.AppHost\FWH.AppHost.csproj : error NU1605:  FWH.AppHost -> KubernetesClient (>= 17.0.14) [D:\a\FunWasHad\FunWasHad\FunWasHad.sln]
+2026-01-29T19:34:20.6116827Z   Failed to restore D:\a\FunWasHad\FunWasHad\src\FWH.AppHost\FWH.AppHost.csproj (in 19.57 sec).
+2026-01-29T19:34:20.7631329Z ##[error]Process completed with exit code 1.
 ```
 </details>
 
@@ -195,4 +213,4 @@ It shows the status of the most recent staging.yml workflow run on the develop b
 ---
 
 
-*Last updated: 2026-01-29 19:34:55 UTC*
+*Last updated: 2026-01-29 19:36:05 UTC*
