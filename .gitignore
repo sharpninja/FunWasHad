@@ -415,3 +415,7 @@ solution-config.props
 
 # Local workflow logs (Get-ActionsLogs.ps1)
 logs/
+
+# User Secrets Setup Scripts (contain Railway PostgreSQL credentials)
+setup-user-secrets.ps1
+setup-user-secrets.sh
