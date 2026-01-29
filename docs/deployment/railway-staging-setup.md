@@ -2,6 +2,17 @@
 
 Complete guide for configuring Railway staging environment for FunWasHad APIs.
 
+## 🌐 Railway URL pattern
+
+Public URLs follow this pattern:
+
+| Environment | Location API | Marketing API | Legal Web |
+|-------------|--------------|---------------|-----------|
+| **Staging** | `https://funwashad-location-api-staging.up.railway.app` | `https://funwashad-marketing-api-staging.up.railway.app` | `https://funwashad-legal-web-staging.up.railway.app` |
+| **Production** | `https://funwashad-location-api-production.up.railway.app` | `https://funwashad-marketing-api-production.up.railway.app` | `https://funwashad-legal-web-production.up.railway.app` |
+
+The mobile app (Development and Staging builds) is configured to use the staging URLs above.
+
 ## 📋 Prerequisites
 
 - ✅ Railway account at https://railway.app
@@ -109,7 +120,7 @@ Logging__LogLevel__Microsoft.EntityFrameworkCore=Information
 ### Generate Public URL:
 1. Click **"Settings"** → **"Networking"**
 2. Click **"Generate Domain"**
-3. Copy the URL (e.g., `staging-location-api-production-xxxx.up.railway.app`)
+3. Copy the URL (e.g., `funwashad-location-api-staging.up.railway.app`)
 
 ---
 
@@ -167,7 +178,7 @@ This ensures uploaded files (feedback attachments) persist across deployments.
 ### Generate Public URL:
 1. Click **"Settings"** → **"Networking"**
 2. Click **"Generate Domain"**
-3. Copy the URL (e.g., `staging-marketing-api-production-xxxx.up.railway.app`)
+3. Copy the URL (e.g., `funwashad-marketing-api-staging.up.railway.app`)
 
 ---
 
@@ -231,10 +242,10 @@ https://railway.com/project/9dce0bf4-23a8-4e8b-bdda-7ce048c0c73d
 # Get your URLs from Railway dashboard first!
 
 # Location API
-curl https://staging-location-api-production-xxxx.up.railway.app/health
+curl https://funwashad-location-api-staging.up.railway.app/health
 
 # Marketing API
-curl https://staging-marketing-api-production-xxxx.up.railway.app/health
+curl https://funwashad-marketing-api-staging.up.railway.app/health
 
 # Expected response:
 # {"status":"Healthy"}
@@ -244,10 +255,10 @@ curl https://staging-marketing-api-production-xxxx.up.railway.app/health
 
 ```bash
 # Location API - Nearby businesses
-curl "https://staging-location-api-production-xxxx.up.railway.app/api/locations/nearby?latitude=40.7128&longitude=-74.0060&radiusMeters=1000"
+curl "https://funwashad-location-api-staging.up.railway.app/api/locations/nearby?latitude=40.7128&longitude=-74.0060&radiusMeters=1000"
 
 # Marketing API - Health (if no data yet)
-curl "https://staging-marketing-api-production-xxxx.up.railway.app/health"
+curl "https://funwashad-marketing-api-staging.up.railway.app/health"
 ```
 
 ---

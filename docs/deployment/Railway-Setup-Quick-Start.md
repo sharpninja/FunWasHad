@@ -64,8 +64,8 @@ ConnectionStrings__marketing=${{Postgres.DATABASE_URL}}
 
 Test health endpoints:
 ```bash
-curl https://staging-location-api-production-xxxx.up.railway.app/health
-curl https://staging-marketing-api-production-xxxx.up.railway.app/health
+curl https://funwashad-location-api-staging.up.railway.app/health
+curl https://funwashad-marketing-api-staging.up.railway.app/health
 ```
 
 Expected: `{"status":"Healthy"}`
