@@ -142,9 +142,9 @@ jobs:
               Write-Host "  - $path" -ForegroundColor Gray
             }
             Write-Host "Also searched: src\FWH.Mobile\FWH.Mobile.Android (recursive)" -ForegroundColor Gray
-            # Set empty output so condition check works, then exit with error
-            Write-Host "APK_PATH=" >> $env:GITHUB_OUTPUT
-            Write-Host "APK_NAME=" >> $env:GITHUB_OUTPUT
+            # Set empty output so condition check works (same encoding as success case), then exit with error
+            "APK_PATH=" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8NoBOM -Append
+            "APK_NAME=" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8NoBOM -Append
             exit 1
           }
 
