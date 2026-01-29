@@ -375,6 +375,12 @@ jobs:
           else
             git add .github/pipeline-variables.json
             git commit -m "chore: reset force-build-all to false after successful workflow run"
-            git push
+            BRANCH="${{ github.ref_name }}"
+            git fetch origin "$BRANCH"
+            git rebase "origin/$BRANCH"
+            if ! git push origin "HEAD:$BRANCH"; then
+              echo "⚠️  Push failed (branch may have moved or permissions insufficient). Reset will retry on next run."
+              exit 1
+            fi
             echo "✅ Committed and pushed reset of force-build-all flag"
           fi
